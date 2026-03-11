@@ -58,6 +58,8 @@ class Q_SLICER_MODULE_SUBJECTHIERARCHY_WIDGETS_EXPORT qMRMLSubjectHierarchyTreeV
   Q_PROPERTY(bool contextMenuEnabled READ contextMenuEnabled WRITE setContextMenuEnabled)
   /// This property controls whether the Edit properties context menu action is visible. Visible by default
   Q_PROPERTY(bool editMenuActionVisible READ editMenuActionVisible WRITE setEditMenuActionVisible)
+  /// This property controls whether the add node context menu of the scene is visible for node types specified in "nodeTypes" property.
+  Q_PROPERTY(bool addNodeMenuActionVisible READ addNodeMenuActionVisible WRITE setAddNodeMenuActionVisible)
   /// This property controls whether the Select role context menu sub-menu is visible. Visible by default
   Q_PROPERTY(bool selectRoleSubMenuVisible READ selectRoleSubMenuVisible WRITE setSelectRoleSubMenuVisible)
   /// Flag determining whether multiple items can be selected
@@ -71,6 +73,8 @@ class Q_SLICER_MODULE_SUBJECTHIERARCHY_WIDGETS_EXPORT qMRMLSubjectHierarchyTreeV
   Q_PROPERTY(bool colorColumnVisible READ colorColumnVisible WRITE setColorColumnVisible)
   Q_PROPERTY(bool transformColumnVisible READ transformColumnVisible WRITE setTransformColumnVisible)
   Q_PROPERTY(bool descriptionColumnVisible READ descriptionColumnVisible WRITE setDescriptionColumnVisible)
+  Q_PROPERTY(QStringList pluginAllowList READ pluginAllowList WRITE setPluginAllowList)
+  Q_PROPERTY(QStringList pluginBlockList READ pluginBlockList WRITE setPluginBlockList)
 
   /// This property controls whether an extra item is added before any subject hierarchy item under
   /// the scene item for indicating 'None' selection.
@@ -101,20 +105,23 @@ class Q_SLICER_MODULE_SUBJECTHIERARCHY_WIDGETS_EXPORT qMRMLSubjectHierarchyTreeV
   /// \deprecated Kept only for backwards compatibility. Use addItemAttributeFilter() or removeItemAttributeFilter() instead.
   Q_PROPERTY(QString attributeValueFilter READ attributeValueFilter WRITE setAttributeValueFilter)
 
+  /// Double-clicking the color will show a standard terminology selector if true, otherwise show simple color picker
+  Q_PROPERTY(bool useTerminologySelector READ useTerminologySelector WRITE setUseTerminologySelector)
+
 public:
   typedef QTreeView Superclass;
-  qMRMLSubjectHierarchyTreeView(QWidget *parent=nullptr);
+  qMRMLSubjectHierarchyTreeView(QWidget* parent = nullptr);
   ~qMRMLSubjectHierarchyTreeView() override;
 
 public:
-  Q_INVOKABLE vtkMRMLScene* mrmlScene()const;
+  Q_INVOKABLE vtkMRMLScene* mrmlScene() const;
 
   /// Return the subject hierarchy node found in the current MRML scene.
   /// While the scene is closing, this method may return a null pointer.
-  Q_INVOKABLE vtkMRMLSubjectHierarchyNode* subjectHierarchyNode()const;
+  Q_INVOKABLE vtkMRMLSubjectHierarchyNode* subjectHierarchyNode() const;
 
   /// Get current (=selected) item. If there are multiple items selected, then the first one is returned
-  Q_INVOKABLE vtkIdType currentItem()const;
+  Q_INVOKABLE vtkIdType currentItem() const;
   /// Get current (=selected) items.
   QList<vtkIdType> currentItems();
   /// Get current (=selected) items.
@@ -122,27 +129,30 @@ public:
   Q_INVOKABLE void currentItems(vtkIdList* selectedItems);
 
   /// Convenience method to set current item by associated data node.
-  virtual vtkMRMLNode* currentNode()const;
+  Q_INVOKABLE virtual vtkMRMLNode* currentNode() const;
 
   /// Get root item of the tree
-  Q_INVOKABLE vtkIdType rootItem()const;
+  Q_INVOKABLE vtkIdType rootItem() const;
   /// Get root item visibility
-  bool showRootItem()const;
+  bool showRootItem() const;
+
+  /// Get whether the "Create node" actions are shown in the context menu of the scene
+  bool addNodeMenuActionVisible() const;
 
   /// Get whether multi-selection is enabled
   bool multiSelection();
 
-  QStringList includeItemAttributeNamesFilter()const;
-  QStringList includeNodeAttributeNamesFilter()const;
-  QStringList excludeItemAttributeNamesFilter()const;
-  QStringList excludeNodeAttributeNamesFilter()const;
-  QString attributeValueFilter()const;
-  QString attributeNameFilter()const;
+  QStringList includeItemAttributeNamesFilter() const;
+  QStringList includeNodeAttributeNamesFilter() const;
+  QStringList excludeItemAttributeNamesFilter() const;
+  QStringList excludeNodeAttributeNamesFilter() const;
+  QString attributeValueFilter() const;
+  QString attributeNameFilter() const;
   /// Set attribute filter that allows showing only items that have the specified attribute and their parents.
   /// \param attributeName Name of the attribute by which the items are filtered
   /// \param attributeValue Value of the specified attribute that needs to match this given value in order
   ///   for it to be shown. If empty, then existence of the attribute is enough to show. Empty by default
-  Q_INVOKABLE void setAttributeFilter(const QString& attributeName, const QVariant& attributeValue=QVariant());
+  Q_INVOKABLE void setAttributeFilter(const QString& attributeName, const QVariant& attributeValue = QVariant());
   /// Remove item attribute filtering \sa setAttribute
   Q_INVOKABLE void removeAttributeFilter();
   /// Add single item attribute filter specifying attribute name, value, include/exclude, and class name
@@ -152,7 +162,7 @@ public:
   ///   - Include filter means that only the items are shown that match the filter.
   ///   - Exclude filter hides items that match the filter. Overrides include filters.
   ///   True by default (i.e. include filter).
-  Q_INVOKABLE void addItemAttributeFilter(QString attributeName, QVariant attributeValue=QString(), bool include=true);
+  Q_INVOKABLE void addItemAttributeFilter(QString attributeName, QVariant attributeValue = QString(), bool include = true);
   /// Remove single item attribute filter specifying each attribute \sa addAttributeFilter
   Q_INVOKABLE void removeItemAttributeFilter(QString attributeName, QVariant attributeValue, bool include);
   /// Remove all item attribute filters specifying a given attribute name and include flag
@@ -165,42 +175,55 @@ public:
   ///   - Exclude filter hides items that match the filter. Overrides include filters.
   ///   True by default (i.e. include filter).
   /// \param className Only filter attributes on a certain type. Empty by default (i.e. allow all classes)
-  Q_INVOKABLE void addNodeAttributeFilter(QString attributeName, QVariant attributeValue=QString(), bool include=true, QString className=QString());
+  Q_INVOKABLE void addNodeAttributeFilter(QString attributeName, QVariant attributeValue = QString(), bool include = true, QString className = QString());
   /// Remove single node attribute filter specifying each attribute \sa addAttributeFilter
   Q_INVOKABLE void removeNodeAttributeFilter(QString attributeName, QVariant attributeValue, bool include, QString className);
   /// Remove all node attribute filters specifying a given attribute name and include flag
   Q_INVOKABLE void removeNodeAttributeFilter(QString attributeName, bool include);
 
-
   /// Set level filter that allows showing only items at a specified level and their parents. Show all items if empty
-  void setLevelFilter(QStringList &levelFilter);
-  QStringList levelFilter()const;
+  void setLevelFilter(QStringList& levelFilter);
+  QStringList levelFilter() const;
 
   /// Set name filter that allows showing only items containing a specified string (case-insensitive). Show all items if empty
-  void setNameFilter(QString &nameFilter);
-  QString nameFilter()const;
+  void setNameFilter(QString& nameFilter);
+  QString nameFilter() const;
 
   /// Set node type filter that allows showing only data nodes of a certain type. Show all data nodes if empty
   void setNodeTypes(const QStringList& types);
-  QStringList nodeTypes()const;
+  QStringList nodeTypes() const;
+
+  /// BaseName is the name used to generate a node name for all the new created
+  /// nodes.
+  /// If nodeType is not specified for setBaseName() then base name is set for all already defined node types.
+  /// If nodeType is not specified for baseName() then base name of the first node type is returned.
+  void setBaseName(const QString& baseName, const QString& nodeType = "");
+  QString baseName(const QString& nodeType = "") const;
+
+  /// NodeTypeLabel is the name displayed to the user as node type. By default the node's tag is used.
+  /// Configuration is useful for cases when a more specific type name is preferred (e.g., instead of
+  /// the generic "Create new SubjectHierarchy" option, a module can set up the widget to show
+  /// "Create new Measurements"). If label is set to empty then the default label is used.
+  Q_INVOKABLE void setNodeTypeLabel(const QString& label, const QString& nodeType);
+  Q_INVOKABLE QString nodeTypeLabel(const QString& nodeType) const;
 
   /// Set child node types filter that allows hiding certain data node subclasses that would otherwise be
   /// accepted by the data node type filter. Show all data nodes if empty
   void setHideChildNodeTypes(const QStringList& types);
-  QStringList hideChildNodeTypes()const;
+  QStringList hideChildNodeTypes() const;
 
-  Q_INVOKABLE qMRMLSortFilterSubjectHierarchyProxyModel* sortFilterProxyModel()const;
-  Q_INVOKABLE qMRMLSubjectHierarchyModel* model()const;
+  Q_INVOKABLE qMRMLSortFilterSubjectHierarchyProxyModel* sortFilterProxyModel() const;
+  Q_INVOKABLE qMRMLSubjectHierarchyModel* model() const;
 
   /// Determine the number of shown items
-  Q_INVOKABLE int displayedItemCount()const;
+  Q_INVOKABLE int displayedItemCount() const;
 
-  bool highlightReferencedItems()const;
-  bool contextMenuEnabled()const;
-  bool editMenuActionVisible()const;
-  bool selectRoleSubMenuVisible()const;
-  bool noneEnabled()const;
-  QString noneDisplay()const;
+  bool highlightReferencedItems() const;
+  bool contextMenuEnabled() const;
+  bool editMenuActionVisible() const;
+  bool selectRoleSubMenuVisible() const;
+  bool noneEnabled() const;
+  QString noneDisplay() const;
 
   /// Set visibility column visibility
   void setVisibilityColumnVisible(bool visible);
@@ -217,6 +240,21 @@ public:
   /// Set description column visibility
   void setDescriptionColumnVisible(bool visible);
   bool descriptionColumnVisible();
+
+  /// Returns true if standard terminologies are used for choosing color.
+  /// If false then simple selectors are used.
+  bool useTerminologySelector() const;
+
+  /// Get list of subject hierarchy plugins that are enabled.
+  /// An empty allowlist means all plugins are enabled. That is the default.
+  QStringList pluginAllowList() const;
+  /// Get list of subject hierarchy plugins that are disabled.
+  /// An empty blocklist means all plugins are enabled. That is the default.
+  QStringList pluginBlockList() const;
+
+  /// Finds the first node that is visible in the tree and is of the specified class
+  /// (either exactly that class or it is a class derived from that class).
+  Q_INVOKABLE vtkMRMLNode* findFirstNodeByClass(const QString& className) const;
 
 public slots:
   /// Set MRML scene
@@ -236,6 +274,9 @@ public slots:
   /// Set root item visibility
   void setShowRootItem(bool show);
 
+  /// Set whether to show the "Create node" actions in the context menu of the scene
+  void setAddNodeMenuActionVisible(bool show);
+
   /// Rename currently selected one item by popping up a dialog
   void renameCurrentItem();
   /// Delete selected subject hierarchy items and associated data nodes
@@ -248,6 +289,17 @@ public slots:
   void toggleVisibilityOfSelectedItems();
   /// Edit properties of current item
   virtual void editCurrentItem();
+
+  /// \brief Creates a node of the same type as in the "node types" property.
+  ///
+  /// Its name is generated using \a basename.
+  ///
+  /// \return The new node or nullptr if \a nodeType is not among the allowed
+  /// node types specified using setNodeTypes().
+  ///
+  /// \sa nodeTypes()
+  /// \sa baseName()
+  virtual vtkMRMLNode* addNode(QString nodeType);
 
   /// Handle expand item requests in the subject hierarchy tree. Expands branch
   virtual void expandItem(vtkIdType itemID);
@@ -269,11 +321,15 @@ public slots:
   /// Set list of subject hierarchy plugins that are enabled.
   /// \param allowlist List of allowed subject hierarchy plugin names.
   ///   An empty allowlist means all plugins are enabled. That is the default.
-  void setPluginAllowlist(QStringList allowlist);
+  void setPluginAllowList(QStringList allowlist);
+  /// Deprecated. Use setPluginAllowList instead.
+  void setPluginAllowlist(QStringList allowlist) { this->setPluginAllowList(allowlist); }
   /// Set list of subject hierarchy plugins that are disabled.
   /// \param blocklist List of blocked subject hierarchy plugin names.
   ///   An empty blocklist means all plugins are enabled. That is the default.
-  void setPluginBlocklist(QStringList blocklist);
+  void setPluginBlockList(QStringList blocklist);
+  /// Deprecated. Use setPluginBlockList instead.
+  void setPluginBlocklist(QStringList blocklist) { this->setPluginBlockList(blocklist); }
   /// Disable subject hierarchy plugin by adding it to the blocklist \sa setPluginBlocklist
   /// \param plugin Name of the plugin to disable
   void disablePlugin(QString plugin);
@@ -294,7 +350,7 @@ public slots:
   /// Show hint to user about context menus
   /// \param visibility True if visibility context menu hint is to be shown, false for general context menu. False by default
   /// \return Flag indicating whether hint could be shown (i.e. there was an item in the tree is displayable)
-  bool showContextMenuHint(bool visibility=false);
+  bool showContextMenuHint(bool visibility = false);
 
   void setHighlightReferencedItems(bool highlightOn);
   void setContextMenuEnabled(bool enabled);
@@ -313,27 +369,34 @@ public slots:
   void setAttributeNameFilter(QString& filter);
   void setAttributeValueFilter(QString& filter);
 
+  /// Set if standard terminologies are used for choosing segment name and color.
+  void setUseTerminologySelector(bool useTerminologySelector);
+
 signals:
   void currentItemChanged(vtkIdType);
+  void currentNodeChanged(vtkMRMLNode*);
   void currentItemsChanged(QList<vtkIdType>);
   void currentItemModified(vtkIdType);
 
+  /// Signal emitted when \a node is added by the user
+  void nodeAddedByUser(vtkMRMLNode* node);
+
 protected slots:
-  virtual void onSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
+  virtual void onSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
 
   /// Updates subject hierarchy item expanded property when item is expanded
-  virtual void onItemExpanded(const QModelIndex &expandedItemIndex);
+  virtual void onItemExpanded(const QModelIndex& expandedItemIndex);
   /// Updates subject hierarchy item expanded property when item is collapsed
-  virtual void onItemCollapsed(const QModelIndex &collapsedItemIndex);
+  virtual void onItemCollapsed(const QModelIndex& collapsedItemIndex);
 
   /// Update root item to restore view
   /// (e.g. after tree was updated in the model from the subject hierarchy)
   virtual void updateRootItem();
 
   /// Propagate item modified event
-  virtual void onSubjectHierarchyItemModified(vtkObject *caller, void *callData);
+  virtual void onSubjectHierarchyItemModified(vtkObject* caller, void* callData);
   /// Propagate item transform modified event
-  virtual void onSubjectHierarchyItemTransformModified(vtkObject *caller, void *callData);
+  virtual void onSubjectHierarchyItemTransformModified(vtkObject* caller, void* callData);
 
   /// Called when scene close is started.
   virtual void onMRMLSceneStartClose(vtkObject* sceneObject);
@@ -346,10 +409,7 @@ protected slots:
 
   void onCustomContextMenu(const QPoint& point);
 
-  virtual void onTransformActionSelected();
-  virtual void onTransformInteractionInViewToggled(bool show);
-  virtual void onTransformEditProperties();
-  virtual void onCreateNewTransform();
+  virtual void addNode();
 
 protected:
   /// Set the subject hierarchy node found in the given scene. Called only internally.

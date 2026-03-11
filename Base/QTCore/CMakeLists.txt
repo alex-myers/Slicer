@@ -14,28 +14,26 @@ endif()
 #
 # ModuleDescriptionParser - Required to define ModuleDescriptionParser_INCLUDE_DIRS
 #
-if(Slicer_BUILD_CLI_SUPPORT)
-  find_package(SlicerExecutionModel REQUIRED ModuleDescriptionParser)
+find_package(SlicerExecutionModel REQUIRED ModuleDescriptionParser)
 
-  #
-  # ITK
-  #
-  set(${PROJECT_NAME}_ITK_COMPONENTS
-    # Import ITK targets required by ModuleDescriptionParser
-    ${ModuleDescriptionParser_ITK_COMPONENTS}
-    # Import ITK targets required by CTKImageProcessingITKCore
-    ITKCommon
-    )
-  find_package(ITK 4.6 COMPONENTS ${${PROJECT_NAME}_ITK_COMPONENTS} REQUIRED)
-  if(ITK_VERSION VERSION_GREATER_EQUAL "5.3")
-    foreach(factory_uc IN ITEMS "IMAGEIO" "MESHIO" "TRANSFORMIO")
-      set(ITK_NO_${factory_uc}_FACTORY_REGISTER_MANAGER 1)
-    endforeach()
-  else()
-    set(ITK_NO_IO_FACTORY_REGISTER_MANAGER 1) # See Libs/ITKFactoryRegistration/CMakeLists.txt
-  endif()
-  include(${ITK_USE_FILE})
+#
+# ITK
+#
+set(${PROJECT_NAME}_ITK_COMPONENTS
+  # Import ITK targets required by ModuleDescriptionParser
+  ${ModuleDescriptionParser_ITK_COMPONENTS}
+  # Import ITK targets required by CTKImageProcessingITKCore
+  ITKCommon
+  )
+find_package(ITK 4.6 COMPONENTS ${${PROJECT_NAME}_ITK_COMPONENTS} REQUIRED)
+if(ITK_VERSION VERSION_GREATER_EQUAL "5.3")
+  foreach(factory_uc IN ITEMS "IMAGEIO" "MESHIO" "TRANSFORMIO")
+    set(ITK_NO_${factory_uc}_FACTORY_REGISTER_MANAGER 1)
+  endforeach()
+else()
+  set(ITK_NO_IO_FACTORY_REGISTER_MANAGER 1) # See Libs/ITKFactoryRegistration/CMakeLists.txt
 endif()
+include(${ITK_USE_FILE})
 
 #
 # qRestAPI
@@ -60,14 +58,9 @@ set(KIT_export_directive "Q_SLICER_BASE_QTCORE_EXPORT")
 set(KIT_include_directories
   ${MRMLLogic_INCLUDE_DIRS}
   ${MRMLDisplayableManager_INCLUDE_DIRS}
+  ${ModuleDescriptionParser_INCLUDE_DIRS}
+  ${MRMLCLI_INCLUDE_DIRS}
   )
-
-if(Slicer_BUILD_CLI_SUPPORT)
-  list(APPEND KIT_include_directories
-    ${ModuleDescriptionParser_INCLUDE_DIRS}
-    ${MRMLCLI_INCLUDE_DIRS}
-    )
-endif()
 
 # Source files
 set(KIT_SRCS
@@ -146,42 +139,6 @@ set_source_files_properties(
   WRAP_EXCLUDE
   )
 
-# Headers that should run through moc
-set(KIT_MOC_SRCS
-  qSlicerAbstractCoreModule.h
-  qSlicerAbstractModuleFactoryManager.h
-  qSlicerCoreCommandOptions.h
-  qSlicerCoreApplication.h
-  qSlicerCoreIOManager.h
-  qSlicerFileReader.h
-  qSlicerFileWriter.h
-  qSlicerIO.h
-  qSlicerModuleFactoryManager.h
-  qSlicerModuleManager.h
-  qSlicerRelativePathMapper.h
-  qSlicerSceneBundleReader.h
-  )
-
-if(Slicer_BUILD_EXTENSIONMANAGER_SUPPORT)
-  list(APPEND KIT_MOC_SRCS
-    qSlicerExtensionDownloadTask.h
-    qSlicerExtensionsManagerModel.h
-    )
-endif()
-
-if(Slicer_BUILD_APPLICATIONUPDATE_SUPPORT)
-  list(APPEND KIT_MOC_SRCS
-    qSlicerApplicationUpdateManager.h
-    )
-endif()
-
-if(Slicer_USE_PYTHONQT)
-  list(APPEND KIT_MOC_SRCS
-    qSlicerScriptedFileReader.h
-    qSlicerScriptedFileWriter.h
-    )
-endif()
-
 # Additional Target libraries
 set(KIT_target_libraries
   ${QT_LIBRARIES}
@@ -192,11 +149,19 @@ set(KIT_target_libraries
   CTKImageProcessingITKCore
   CTKVisualizationVTKCore
   ${ITK_LIBRARIES}
+  ModuleDescriptionParser
   )
 
 if(Slicer_BUILD_DICOM_SUPPORT)
+  # Support namespaced DCMTK targets
+  foreach(lib IN LISTS DCMTK_LIBRARIES)
+    if(TARGET "DCMTK::${lib}")
+      list(APPEND KIT_target_libraries DCMTK::${lib})
+    else()
+      list(APPEND KIT_target_libraries ${lib})
+    endif()
+  endforeach()
   list(APPEND KIT_target_libraries
-    ${DCMTK_LIBRARIES}
     CTKDICOMCore
     )
 endif()
@@ -204,13 +169,6 @@ endif()
 if(Slicer_BUILD_EXTENSIONMANAGER_SUPPORT OR Slicer_BUILD_APPLICATIONUPDATE_SUPPORT)
   list(APPEND KIT_target_libraries
     qRestAPI
-    )
-endif()
-
-if(Slicer_BUILD_CLI_SUPPORT)
-  list(APPEND KIT_target_libraries
-    ${ITK_LIBRARIES}
-    ModuleDescriptionParser
     )
 endif()
 
@@ -259,11 +217,6 @@ if(Slicer_USE_PYTHONQT)
     qSlicerCorePythonManager.h
     )
 
-  # Headers that should run through moc
-  list(APPEND KIT_MOC_SRCS
-    qSlicerCorePythonManager.h
-    )
-
 endif()
 
 SlicerMacroBuildBaseQtLibrary(
@@ -271,7 +224,6 @@ SlicerMacroBuildBaseQtLibrary(
   EXPORT_DIRECTIVE ${KIT_export_directive}
   INCLUDE_DIRECTORIES ${KIT_include_directories}
   SRCS ${KIT_SRCS}
-  MOC_SRCS ${KIT_MOC_SRCS}
   TARGET_LIBRARIES ${KIT_target_libraries}
   RESOURCES ${KIT_resources}
   WRAP_PYTHONQT

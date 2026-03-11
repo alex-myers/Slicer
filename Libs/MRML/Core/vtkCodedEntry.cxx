@@ -37,8 +37,8 @@ void vtkCodedEntry::Initialize()
 //----------------------------------------------------------------------------
 void vtkCodedEntry::PrintSelf(ostream& os, vtkIndent indent)
 {
-  Superclass::PrintSelf(os,indent);
-  os << indent << "CodeValue: " << (this->CodeValue?this->CodeValue:"(none)") << "\n";
+  Superclass::PrintSelf(os, indent);
+  os << indent << "CodeValue: " << (this->CodeValue ? this->CodeValue : "(none)") << "\n";
   os << indent << "CodingSchemeDesignator: " << (this->CodingSchemeDesignator ? this->CodingSchemeDesignator : "(none)") << "\n";
   os << indent << "CodeMeaning: " << (this->CodeMeaning ? this->CodeMeaning : "(none)") << "\n";
 }
@@ -56,8 +56,7 @@ void vtkCodedEntry::Copy(vtkCodedEntry* aEntry)
 }
 
 //----------------------------------------------------------------------------
-void vtkCodedEntry::SetValueSchemeMeaning(const std::string& value,
-  const std::string& scheme, const std::string& meaning)
+void vtkCodedEntry::SetValueSchemeMeaning(const std::string& value, const std::string& scheme, const std::string& meaning)
 {
   this->SetCodeValue(value.c_str());
   this->SetCodingSchemeDesignator(scheme.c_str());
@@ -98,10 +97,10 @@ std::vector<std::string> vtkCodedEntry::GetValueSchemeMeaning()
 //----------------------------------------------------------------------------
 std::string vtkCodedEntry::GetAsPrintableString()
 {
-  std::string printable = std::string("(")
-    + (this->CodeValue ? this->CodeValue : "(none)") + ", "
-    + (this->CodingSchemeDesignator ? this->CodingSchemeDesignator : "(none)") + ", \""
-    + (this->CodeMeaning ? this->CodeMeaning : "") + "\")";
+  std::string printable = std::string("(")                                                                    //
+                          + (this->CodeValue ? this->CodeValue : "(none)") + ", "                             //
+                          + (this->CodingSchemeDesignator ? this->CodingSchemeDesignator : "(none)") + ", \"" //
+                          + (this->CodeMeaning ? this->CodeMeaning : "") + "\")";
   return printable;
 }
 
@@ -177,4 +176,67 @@ bool vtkCodedEntry::SetFromString(const std::string& content)
   }
   // CodeMeaning is optional
   return success;
+}
+
+//----------------------------------------------------------------------------
+bool vtkCodedEntry::AreEqual(vtkCodedEntry* entry1, vtkCodedEntry* entry2)
+{
+  if (entry1 == entry2)
+  {
+    // they are the same object or both nullptr
+    return true;
+  }
+  if (!entry1 || !entry2)
+  {
+    // only one is nullptr
+    return false;
+  }
+  // Neither entry is nullptr
+  if ((entry1->GetCodeValue() == nullptr) != (entry2->GetCodeValue() == nullptr))
+  {
+    // Only one of them is nullptr
+    return false;
+  }
+  if (entry2->GetCodeValue() && entry1->GetCodeValue() && strcmp(entry2->GetCodeValue(), entry1->GetCodeValue()) != 0)
+  {
+    return false;
+  }
+  if ((entry1->GetCodingSchemeDesignator() == nullptr) != (entry2->GetCodingSchemeDesignator() == nullptr))
+  {
+    // Only one of them is nullptr
+    return false;
+  }
+  if (entry2->GetCodingSchemeDesignator() && entry1->GetCodingSchemeDesignator() //
+      && strcmp(entry2->GetCodingSchemeDesignator(), entry1->GetCodingSchemeDesignator()) != 0)
+  {
+    return false;
+  }
+  if ((entry1->GetCodeMeaning() == nullptr) != (entry2->GetCodeMeaning() == nullptr))
+  {
+    // Only one of them is nullptr
+    return false;
+  }
+  if (entry2->GetCodeMeaning() && entry1->GetCodeMeaning() && strcmp(entry2->GetCodeMeaning(), entry1->GetCodeMeaning()) != 0)
+  {
+    return false;
+  }
+  return true;
+}
+
+//----------------------------------------------------------------------------
+bool vtkCodedEntry::IsEmpty()
+{
+  if (this->CodeValue && strlen(this->CodeValue) > 0)
+  {
+    return false;
+  }
+  if (this->CodingSchemeDesignator && strlen(this->CodingSchemeDesignator) > 0)
+  {
+    return false;
+  }
+  if (this->CodeMeaning && strlen(this->CodeMeaning) > 0)
+  {
+    return false;
+  }
+  return true;
 }

@@ -45,7 +45,8 @@ public:
   qSlicerSegmentEditorScriptedPaintEffectPrivate();
   virtual ~qSlicerSegmentEditorScriptedPaintEffectPrivate();
 
-  enum {
+  enum
+  {
     IconMethod = 0,
     HelpTextMethod,
     CloneMethod,
@@ -98,7 +99,7 @@ qSlicerSegmentEditorScriptedPaintEffectPrivate::~qSlicerSegmentEditorScriptedPai
 // qSlicerSegmentEditorScriptedPaintEffect methods
 
 //-----------------------------------------------------------------------------
-qSlicerSegmentEditorScriptedPaintEffect::qSlicerSegmentEditorScriptedPaintEffect(QObject *parent)
+qSlicerSegmentEditorScriptedPaintEffect::qSlicerSegmentEditorScriptedPaintEffect(QObject* parent)
   : Superclass(parent)
   , d_ptr(new qSlicerSegmentEditorScriptedPaintEffectPrivate)
 {
@@ -109,7 +110,7 @@ qSlicerSegmentEditorScriptedPaintEffect::qSlicerSegmentEditorScriptedPaintEffect
 qSlicerSegmentEditorScriptedPaintEffect::~qSlicerSegmentEditorScriptedPaintEffect() = default;
 
 //-----------------------------------------------------------------------------
-QString qSlicerSegmentEditorScriptedPaintEffect::pythonSource()const
+QString qSlicerSegmentEditorScriptedPaintEffect::pythonSource() const
 {
   Q_D(const qSlicerSegmentEditorScriptedPaintEffect);
   return d->PythonSourceFilePath;
@@ -141,15 +142,16 @@ bool qSlicerSegmentEditorScriptedPaintEffect::setPythonSource(const QString file
   }
 
   // Get a reference to the main module and global dictionary
-  PyObject * main_module = PyImport_AddModule("__main__");
-  PyObject * global_dict = PyModule_GetDict(main_module);
+  PyObject* main_module = PyImport_AddModule("__main__");
+  PyObject* global_dict = PyModule_GetDict(main_module);
 
-  // Get a reference (or create if needed) the <moduleName> python module
-  PyObject * module = PyImport_AddModule(moduleName.toUtf8());
+  // Get actual module from sys.modules
+  PyObject* sysModules = PyImport_GetModuleDict();
+  PyObject* module = PyDict_GetItemString(sysModules, moduleName.toUtf8());
 
   // Get a reference to the python module class to instantiate
   PythonQtObjectPtr classToInstantiate;
-  if (PyObject_HasAttrString(module, className.toUtf8()))
+  if (module && PyObject_HasAttrString(module, className.toUtf8()))
   {
     classToInstantiate.setNewRef(PyObject_GetAttrString(module, className.toUtf8()));
   }
@@ -161,6 +163,10 @@ bool qSlicerSegmentEditorScriptedPaintEffect::setPythonSource(const QString file
     {
       return false;
     }
+
+    // After loading, re-fetch actual module from sys.modules
+    module = PyDict_GetItemString(PyImport_GetModuleDict(), moduleName.toUtf8());
+
     if (PyObject_HasAttrString(module, className.toUtf8()))
     {
       classToInstantiate.setNewRef(PyObject_GetAttrString(module, className.toUtf8()));
@@ -173,7 +179,10 @@ bool qSlicerSegmentEditorScriptedPaintEffect::setPythonSource(const QString file
     PyErr_SetString(PyExc_RuntimeError,
                     QString("qSlicerSegmentEditorScriptedPaintEffect::setPythonSource - "
                             "Failed to load segment editor scripted effect: "
-                            "class %1 was not found in %2").arg(className).arg(filePath).toUtf8());
+                            "class %1 was not found in %2")
+                      .arg(className)
+                      .arg(filePath)
+                      .toUtf8());
     PythonQt::self()->handleError();
     return false;
   }
@@ -188,8 +197,7 @@ bool qSlicerSegmentEditorScriptedPaintEffect::setPythonSource(const QString file
 
   d->PythonSourceFilePath = filePath;
 
-  if (!qSlicerScriptedUtils::setModuleAttribute(
-        "slicer", className, self))
+  if (!qSlicerScriptedUtils::setModuleAttribute("slicer", className, self))
   {
     qCritical() << "Failed to set" << ("slicer." + className);
   }
@@ -231,7 +239,7 @@ QIcon qSlicerSegmentEditorScriptedPaintEffect::icon()
 }
 
 //-----------------------------------------------------------------------------
-const QString qSlicerSegmentEditorScriptedPaintEffect::helpText()const
+const QString qSlicerSegmentEditorScriptedPaintEffect::helpText() const
 {
   Q_D(const qSlicerSegmentEditorScriptedPaintEffect);
   PyObject* result = d->PythonCppAPI.callMethod(d->HelpTextMethod);
@@ -265,8 +273,7 @@ qSlicerSegmentEditorAbstractEffect* qSlicerSegmentEditorScriptedPaintEffect::clo
 
   // Parse result
   QVariant resultVariant = PythonQtConv::PyObjToQVariant(result);
-  qSlicerSegmentEditorAbstractEffect* clonedEffect = qobject_cast<qSlicerSegmentEditorAbstractEffect*>(
-    resultVariant.value<QObject*>() );
+  qSlicerSegmentEditorAbstractEffect* clonedEffect = qobject_cast<qSlicerSegmentEditorAbstractEffect*>(resultVariant.value<QObject*>());
   if (!clonedEffect)
   {
     qCritical() << d->PythonSourceFilePath << ": clone: Invalid cloned effect object returned from python!";

@@ -21,6 +21,7 @@
 #ifndef __qMRMLSegmentsTableViewPlugin_h
 #define __qMRMLSegmentsTableViewPlugin_h
 
+#include <QObject>
 #include "qSlicerSegmentationsModuleWidgetsAbstractPlugin.h"
 
 class Q_SLICER_MODULE_SEGMENTATIONS_WIDGETS_PLUGINS_EXPORT qMRMLSegmentsTableViewPlugin
@@ -32,12 +33,11 @@ class Q_SLICER_MODULE_SEGMENTATIONS_WIDGETS_PLUGINS_EXPORT qMRMLSegmentsTableVie
 public:
   qMRMLSegmentsTableViewPlugin(QObject* parent = nullptr);
 
-  QWidget *createWidget(QWidget* parent) override;
-  QString  domXml() const override;
-  QString  includeFile() const override;
-  bool     isContainer() const override;
-  QString  name() const override;
-
+  QWidget* createWidget(QWidget* parent) override;
+  QString domXml() const override;
+  QString includeFile() const override;
+  bool isContainer() const override;
+  QString name() const override;
 };
 
 #endif

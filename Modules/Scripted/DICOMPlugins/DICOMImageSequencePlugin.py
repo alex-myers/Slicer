@@ -154,7 +154,7 @@ class DICOMImageSequencePluginClass(DICOMPlugin):
                     # Read image spacing from SequenceOfUltrasoundRegions
                     loadable.spacingMmPerPixel = None
                     if modality == "US":
-                        ds = dicom.read_file(filePath, stop_before_pixels=True)
+                        ds = dicom.dcmread(filePath, stop_before_pixels=True)
                         if hasattr(ds, "SequenceOfUltrasoundRegions"):
                             if len(ds.SequenceOfUltrasoundRegions) == 1:
                                 region = ds.SequenceOfUltrasoundRegions[0]
@@ -189,7 +189,7 @@ class DICOMImageSequencePluginClass(DICOMPlugin):
 
         if canBeCineMri and len(cineMriInstanceNumberToFilenameIndex) > 1:
             # Get description from first
-            ds = dicom.read_file(cineMriInstanceNumberToFilenameIndex[next(iter(cineMriInstanceNumberToFilenameIndex))], stop_before_pixels=True)
+            ds = dicom.dcmread(cineMriInstanceNumberToFilenameIndex[next(iter(cineMriInstanceNumberToFilenameIndex))], stop_before_pixels=True)
             name = ""
             if hasattr(ds, "SeriesNumber") and ds.SeriesNumber:
                 name = f"{ds.SeriesNumber}:"
@@ -280,7 +280,7 @@ class DICOMImageSequencePluginClass(DICOMPlugin):
                 selNode = appLogic.GetSelectionNode()
                 selNode.SetReferenceActiveVolumeID(proxyVolumeNode.GetID())
                 appLogic.PropagateVolumeSelection()
-                appLogic.FitSliceToAll()
+                appLogic.FitSliceToBackground()
                 slicer.modules.sequences.setToolBarActiveBrowserNode(outputSequenceBrowserNode)
 
         # Show sequence browser toolbar
@@ -309,7 +309,7 @@ class DICOMImageSequencePluginClass(DICOMPlugin):
         if singleFileInLoadable:
             outputSequenceNode.SetName(name)
         else:
-            ds = dicom.read_file(filePath, stop_before_pixels=True)
+            ds = dicom.dcmread(filePath, stop_before_pixels=True)
             if hasattr(ds, "PositionerPrimaryAngle") and hasattr(ds, "PositionerSecondaryAngle"):
                 outputSequenceNode.SetName(f"{name} ({ds.PositionerPrimaryAngle}/{ds.PositionerSecondaryAngle})")
             else:

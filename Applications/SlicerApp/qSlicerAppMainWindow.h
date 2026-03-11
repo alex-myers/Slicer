@@ -33,7 +33,7 @@ class Q_SLICER_APP_EXPORT qSlicerAppMainWindow : public qSlicerMainWindow
 public:
   typedef qSlicerMainWindow Superclass;
 
-  qSlicerAppMainWindow(QWidget *parent=nullptr);
+  qSlicerAppMainWindow(QWidget* parent = nullptr);
   ~qSlicerAppMainWindow() override;
 
 public slots:
@@ -44,7 +44,7 @@ public slots:
   void on_HelpGetHelpAction_triggered();
   void on_HelpUserInterfaceAction_triggered();
   void on_HelpVisitSlicerForumAction_triggered();
-  void on_HelpJoinUsOnTwitterAction_triggered();
+  void on_HelpJoinUsOnLinkedInAction_triggered();
   void on_HelpSearchFeatureRequestsAction_triggered();
   void on_HelpViewLicenseAction_triggered();
   void on_HelpHowToCiteAction_triggered();

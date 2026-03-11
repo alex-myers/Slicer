@@ -18,6 +18,9 @@
 
 #include <vtksys/SystemTools.hxx>
 
+// STD includes
+#include <iostream>
+
 int main(int argc, char* argv[])
 {
   PARSE_ARGS;
@@ -30,7 +33,7 @@ int main(int argc, char* argv[])
   readerVol->Update();
   vtkImageData* volume = readerVol->GetOutput();
   int* extent = volume->GetExtent();
-  if (extent[0]>extent[1] || extent[2] > extent[3] || extent[4] > extent[5])
+  if (extent[0] > extent[1] || extent[2] > extent[3] || extent[4] > extent[5])
   {
     std::cerr << "Input image file is empty: " << InputVolume << std::endl;
     return EXIT_FAILURE;

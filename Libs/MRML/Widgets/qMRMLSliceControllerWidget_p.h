@@ -82,7 +82,6 @@ public:
 
   void setupLinkedOptionsMenu();
   void setupReformatOptionsMenu();
-  void setupLightboxMenu();
   void setupCompositingMenu();
   void setupSliceSpacingMenu();
   void setupSliceModelMenu();
@@ -105,8 +104,7 @@ public:
 
   /// Create a list of orientation containing the regular presets and also
   /// the "Reformat" string if sliceToRAS is different one of the preset.
-  static void updateSliceOrientationSelector(
-      vtkMRMLSliceNode* sliceNode, QComboBox *sliceOrientationSelector);
+  static void updateSliceOrientationSelector(vtkMRMLSliceNode* sliceNode, QComboBox* sliceOrientationSelector);
 
 public slots:
   /// Update widget state when the scene is modified
@@ -155,8 +153,6 @@ public slots:
   /// Called after the SliceLogic is modified
   void onSliceLogicModifiedEvent();
 
-  void applyCustomLightbox();
-
   void updateSliceOffsetSliderVisibility();
 
 protected:
@@ -165,60 +161,57 @@ protected:
   void setAndObserveSelectionNode();
 
 public:
-  vtkMRMLSliceCompositeNode*          MRMLSliceCompositeNode;
-  vtkMRMLSelectionNode*               SelectionNode{nullptr};
-  vtkSmartPointer<vtkMRMLSliceLogic>  SliceLogic;
-  vtkCollection*                      SliceLogics;
-  vtkWeakPointer<vtkAlgorithmOutput>  ImageDataConnection;
-  QButtonGroup*                       ControllerButtonGroup;
+  vtkMRMLSliceCompositeNode* MRMLSliceCompositeNode;
+  vtkMRMLSelectionNode* SelectionNode{ nullptr };
+  vtkSmartPointer<vtkMRMLSliceLogic> SliceLogic;
+  vtkCollection* SliceLogics;
+  vtkWeakPointer<vtkAlgorithmOutput> ImageDataConnection;
+  QButtonGroup* ControllerButtonGroup;
 
-  QToolButton*                        FitToWindowToolButton;
-  qMRMLSliderWidget*                  SliceOffsetSlider;
-  ctkDynamicSpacer*                   SliderSpacer;
+  QToolButton* FitToWindowToolButton;
+  qMRMLSliderWidget* SliceOffsetSlider;
+  ctkDynamicSpacer* SliderSpacer;
   /// Slicer offset resolution without applying display scaling.
-  double                              SliceOffsetResolution{1.0};
-  double                              LastLabelMapOpacity;
-  double                              LastForegroundOpacity;
-  double                              LastBackgroundOpacity;
+  double SliceOffsetResolution{ 1.0 };
+  double LastLabelMapOpacity;
+  double LastForegroundOpacity;
+  double LastBackgroundOpacity;
 
-  QMenu*                              LightboxMenu;
-  QMenu*                              CompositingMenu;
-  QMenu*                              SliceSpacingMenu;
-  QMenu*                              SliceModelMenu;
-  QMenu*                              SegmentationMenu;
-  QMenu*                              LabelMapMenu;
-  QMenu*                              OrientationMarkerMenu;
-  QMenu*                              RulerMenu;
-  QMenu*                              SlabReconstructionMenu;
+  QMenu* CompositingMenu;
+  QMenu* SliceSpacingMenu;
+  QMenu* SliceModelMenu;
+  QMenu* SegmentationMenu;
+  QMenu* LabelMapMenu;
+  QMenu* OrientationMarkerMenu;
+  QMenu* RulerMenu;
+  QMenu* SlabReconstructionMenu;
 
-  ctkDoubleSpinBox*                   SliceSpacingSpinBox;
-  ctkDoubleSpinBox*                   SliceFOVSpinBox;
-  QSpinBox*                           LightBoxRowsSpinBox;
-  QSpinBox*                           LightBoxColumnsSpinBox;
-  ctkDoubleSpinBox*                   SlabReconstructionThicknessSpinBox;
+  ctkDoubleSpinBox* SliceSpacingSpinBox;
+  ctkDoubleSpinBox* SliceFOVSpinBox;
+  ctkDoubleSpinBox* SlabReconstructionThicknessSpinBox;
 
-  ctkDoubleSpinBox*                   SliceModelFOVXSpinBox;
-  ctkDoubleSpinBox*                   SliceModelFOVYSpinBox;
+  ctkDoubleSpinBox* SliceModelFOVXSpinBox;
+  ctkDoubleSpinBox* SliceModelFOVYSpinBox;
 
-  ctkDoubleSpinBox*                   SliceModelOriginXSpinBox;
-  ctkDoubleSpinBox*                   SliceModelOriginYSpinBox;
+  ctkDoubleSpinBox* SliceModelOriginXSpinBox;
+  ctkDoubleSpinBox* SliceModelOriginYSpinBox;
 
-  QSpinBox*                           SliceModelDimensionXSpinBox;
-  QSpinBox*                           SliceModelDimensionYSpinBox;
+  QSpinBox* SliceModelDimensionXSpinBox;
+  QSpinBox* SliceModelDimensionYSpinBox;
 
-  QSize                               ViewSize;
+  QSize ViewSize;
 
-  ctkSignalMapper*                    OrientationMarkerTypesMapper;
-  ctkSignalMapper*                    OrientationMarkerSizesMapper;
+  ctkSignalMapper* OrientationMarkerTypesMapper;
+  ctkSignalMapper* OrientationMarkerSizesMapper;
 
-  ctkSignalMapper*                    RulerTypesMapper;
-  ctkSignalMapper*                    RulerColorMapper;
+  ctkSignalMapper* RulerTypesMapper;
+  ctkSignalMapper* RulerColorMapper;
 
-  ctkSignalMapper*                    SlabReconstructionTypesMapper;
-  QMenu*                              SlabReconstructionThicknessMenu{nullptr};
-  QActionGroup*                       SlabReconstructionTypesActions{nullptr};
+  ctkSignalMapper* SlabReconstructionTypesMapper;
+  QMenu* SlabReconstructionThicknessMenu{ nullptr };
+  QActionGroup* SlabReconstructionTypesActions{ nullptr };
 
-  bool                                ShowSliceOffsetSlider{true};
+  bool ShowSliceOffsetSlider{ true };
 };
 
 #endif

@@ -9,7 +9,7 @@ The Segmentations module manages segmentations. Each segmentation can contain mu
 - Create surface meshes from images for 3D printing
 - Editing of 3D closed surfaces
 
-Motivation, features, and details of the infrastructure are explained in paper *Cs. Pinter, A. Lasso, G. Fichtinger, "Polymorph segmentation representation for medical image computing", Computer Methods and Programs in Biomedicine, Volume 171, p19-26, 2019* ([pdf](http://perk.cs.queensu.ca/sites/perkd7.cs.queensu.ca/files/Pinter2019_Manuscript.pdf), [DOI](https://doi.org/10.1016/j.cmpb.2019.02.011)) and in presentation slides ([pdf](https://www.slicer.org/wiki/File:20160526_Segmentations.pdf), [pptx](https://www.slicer.org/wiki/File:20160526_Segmentations.pptx)).
+Motivation, features, and details of the infrastructure are explained in paper *Cs. Pinter, A. Lasso, G. Fichtinger, "Polymorph segmentation representation for medical image computing", Computer Methods and Programs in Biomedicine, Volume 171, p19-26, 2019* ([pdf](https://github.com/EBATINCA/EbatincaDoc/blob/477aae710a5f741b21edaca4838cf48fd4ea0220/Papers/Pinter2019_Manuscript.pdf), [DOI](https://doi.org/10.1016/j.cmpb.2019.02.011)) and in the related [PhD dissertation](https://qspace.library.queensu.ca/handle/1974/26422).
 
 ![](https://github.com/Slicer/Slicer/releases/download/docs-resources/image_segmentation_segmentations_module.png)
 
@@ -24,7 +24,7 @@ Segmentation can be edited using [Segment Editor](segmenteditor.md) module.
 3D volumes in NRRD (.nrrd or .nhdr) and Nifti (.nii or .nii.gz) file formats can be directly loaded as segmentation:
 - Drag-and-drop the volume file to the application window (or use menu: `File` / `Add Data`, then select the file)
 - In `Description` column choose `Segmentation`
-- Optional: if a color table (specifying name and color for each label value) is available then load that first into the application and then select it as `Color node` in the `Options` section. Specification of the color table file format is available [here](../../developer_guide/modules/colors.md#color-table-file-format-txt-ctbl).
+- Optional: if a color table (specifying name and color for each label value) is available then load that first into the application and then select it as `Color node` in the `Options` section. Specification of the color table file format is available [here](../../developer_guide/modules/colors.md#color-table-text-file-format-txt-ctbl).
 - Click `OK`
 
 :::{tip}
@@ -163,7 +163,7 @@ See Script repository's [Segmentations section](../../developer_guide/script_rep
     - Set visibility and per-segment display settings, opacity, color, segment name
 - Display
     - Segmentations-wide display settings (not per-segment!): visibility, opacity (will be multiplied with per-segment opacity for display)
-    - Views: Individual views to show the active segmentation in
+    - Views: Individual views to show the selected segmentation in
     - Slice intersection thickness
     - Representation in 3D/2D views: The representation to be shown in the 3D and 2D views. Useful if there are multiple representations available, for example if we want to show the closed surface in the 3D view but the labelmap in the slice views
 - Representations
@@ -173,7 +173,7 @@ See Script repository's [Segmentations section](../../developer_guide/script_rep
         - Advanced conversion is possible (to use the non-default path or conversion parameters) by long-pressing the Create or Update button
         - Existing representations can be made master by clicking Make source. The source representation is used as source for conversions, it is the one that can be edited, and saved to disk
 - Copy/move (import/export)
-    - Left panel lists the segments in the active segmentation
+    - Left panel lists the segments in the selected segmentation
     - Right panel shows the external data container
     - The arrow buttons van be used to copy (with plus sign) or move (no plus sign) segments between the segmentation and the external node
     - New labelmap or model can be created by clicking the appropriate button on the top of the right panel
@@ -190,7 +190,7 @@ See Script repository's [Segmentations section](../../developer_guide/script_rep
 
 ## Tutorials
 
-- [Segmentation tutorials](https://www.slicer.org/wiki/Documentation/Nightly/Training#Segmentation)
+- [Segmentation tutorials](https://training.slicer.org/#segmentation-tutorials)
 
 ## Limitations
 

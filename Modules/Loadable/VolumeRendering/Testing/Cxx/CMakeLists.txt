@@ -36,15 +36,12 @@ set(KIT_TEST_SRCS
   vtkMRMLShaderPropertyStorageNodeTest1.cxx
   vtkMRMLVolumePropertyNodeTest1.cxx
   vtkMRMLVolumePropertyStorageNodeTest1.cxx
+  vtkMRMLVolumePropertyJsonStorageNodeTest1.cxx
   vtkMRMLVolumeRenderingDisplayableManagerTest1.cxx
   vtkMRMLVolumeRenderingMultiVolumeTest.cxx
   )
 
 #-----------------------------------------------------------------------------
-set(KIT_TEST_GENERATE_MOC_SRCS
-  qSlicerPresetComboBoxTest.cxx
-  )
-QT5_GENERATE_MOCS(${KIT_TEST_GENERATE_MOC_SRCS})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 #-----------------------------------------------------------------------------
@@ -56,6 +53,11 @@ slicerMacroConfigureModuleCxxTestDriver(
   WITH_VTK_ERROR_OUTPUT_CHECK
   )
 
+# Configure CMake Qt automatic code generation
+set_target_properties(${KIT}CxxTests PROPERTIES
+  AUTOMOC ON
+  )
+
 #-----------------------------------------------------------------------------
 simple_test(qMRMLVolumePropertyNodeWidgetTest1)
 simple_test(qSlicerPresetComboBoxTest)
@@ -64,5 +66,6 @@ simple_test(qSlicer${MODULE_NAME}ModuleWidgetTest2 DATA{${MRML_CORE_INPUT}/fixed
 simple_test(vtkMRMLShaderPropertyStorageNodeTest1 ${TEMP})
 simple_test(vtkMRMLVolumePropertyNodeTest1 ${INPUT}/volRender.mrml)
 simple_test(vtkMRMLVolumePropertyStorageNodeTest1)
+simple_test(vtkMRMLVolumePropertyJsonStorageNodeTest1 ${TEMP})
 simple_test(vtkMRMLVolumeRenderingDisplayableManagerTest1 ${CMAKE_BINARY_DIR}/${Slicer_QTLOADABLEMODULES_SHARE_DIR}/VolumeRendering)
 simple_test(vtkMRMLVolumeRenderingMultiVolumeTest)

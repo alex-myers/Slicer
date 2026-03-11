@@ -1,7 +1,7 @@
 project(MRMLCore)
 
 #-----------------------------------------------------------------------------
-cmake_minimum_required(VERSION 3.16.3...3.19.7 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.20.6...3.22.6 FATAL_ERROR)
 #-----------------------------------------------------------------------------
 
 # --------------------------------------------------------------------------
@@ -92,6 +92,11 @@ if(NOT Slicer_BUILD_vtkAddon)
   find_package(vtkAddon REQUIRED)
 endif()
 
+#
+# RapidJSON
+#
+find_package(RapidJSON REQUIRED)
+
 # --------------------------------------------------------------------------
 # Include dirs
 # --------------------------------------------------------------------------
@@ -136,46 +141,96 @@ endif()
 set(MRMLCore_SRCS
   vtkArchive.cxx
   vtkArchive.h
+  vtkCacheManager.cxx
+  vtkCapPolyData.cxx
   vtkCodedEntry.cxx
-  vtkEventBroker.cxx
+  vtkCurveMeasurementsCalculator.cxx
+  vtkCurveMeasurementsCalculator.h
   vtkDataFileFormatHelper.cxx
-  vtkMRMLI18N.cxx
-  vtkMRMLI18N.h
-  vtkMRMLMeasurement.cxx
-  vtkMRMLStaticMeasurement.cxx
-  vtkMRMLLogic.cxx
+  vtkDataIOManager.cxx
+  vtkDataTransfer.cxx
+  vtkEventBroker.cxx
+  vtkImageMathematicsAddon.cxx
+  vtkImplicitInvertableBoolean.cxx
   vtkMRMLAbstractLayoutNode.cxx
   vtkMRMLAbstractViewNode.cxx
+  vtkMRMLBSplineTransformNode.cxx
   vtkMRMLCameraNode.cxx
   vtkMRMLClipModelsNode.cxx
+  vtkMRMLClipNode.cxx
   vtkMRMLColorNode.cxx
-  vtkMRMLColors.cxx
   vtkMRMLColorTableNode.cxx
   vtkMRMLColorTableStorageNode.cxx
+  vtkMRMLColors.cxx
   vtkMRMLCoreTestingUtilities.cxx
   vtkMRMLCrosshairNode.cxx
   vtkMRMLDiffusionTensorDisplayPropertiesNode.cxx
   vtkMRMLDiffusionWeightedVolumeDisplayNode.cxx
   vtkMRMLDiffusionWeightedVolumeNode.cxx
   vtkMRMLDisplayNode.cxx
+  vtkMRMLDisplayableHierarchyNode.cxx
   vtkMRMLDisplayableNode.cxx
   vtkMRMLFolderDisplayNode.cxx
+  vtkMRMLGlyphableVolumeDisplayNode.cxx
+  vtkMRMLGlyphableVolumeSliceDisplayNode.cxx
+  vtkMRMLGridTransformNode.cxx
   vtkMRMLHierarchyNode.cxx
   vtkMRMLHierarchyStorageNode.cxx
-  vtkMRMLDisplayableHierarchyNode.cxx
+  vtkMRMLI18N.cxx
+  vtkMRMLI18N.h
+  vtkMRMLInteractionEventData.cxx
+  vtkMRMLInteractionEventData.h
   vtkMRMLInteractionNode.cxx
+  vtkMRMLJsonElement.cxx
   vtkMRMLLabelMapVolumeDisplayNode.cxx
   vtkMRMLLabelMapVolumeNode.cxx
+  vtkMRMLLayoutNode.cxx
   vtkMRMLLinearTransformNode.cxx
   vtkMRMLLinearTransformSequenceStorageNode.cxx
   vtkMRMLLinearTransformSequenceStorageNode.h
+  vtkMRMLMarkupsAngleNode.cxx
+  vtkMRMLMarkupsAngleNode.h
+  vtkMRMLMarkupsClosedCurveNode.cxx
+  vtkMRMLMarkupsClosedCurveNode.h
+  vtkMRMLMarkupsCurveNode.cxx
+  vtkMRMLMarkupsCurveNode.h
+  vtkMRMLMarkupsDisplayNode.cxx
+  vtkMRMLMarkupsDisplayNode.h
+  vtkMRMLMarkupsFiducialDisplayNode.cxx
+  vtkMRMLMarkupsFiducialDisplayNode.h
+  vtkMRMLMarkupsFiducialNode.cxx
+  vtkMRMLMarkupsFiducialNode.h
+  vtkMRMLMarkupsFiducialStorageNode.cxx
+  vtkMRMLMarkupsFiducialStorageNode.h
+  vtkMRMLMarkupsLineNode.cxx
+  vtkMRMLMarkupsLineNode.h
+  vtkMRMLMarkupsNode.cxx
+  vtkMRMLMarkupsNode.h
+  vtkMRMLMarkupsPlaneDisplayNode.cxx
+  vtkMRMLMarkupsPlaneDisplayNode.h
+  vtkMRMLMarkupsPlaneNode.cxx
+  vtkMRMLMarkupsPlaneNode.h
+  vtkMRMLMarkupsROIDisplayNode.cxx
+  vtkMRMLMarkupsROIDisplayNode.h
+  vtkMRMLMarkupsROINode.cxx
+  vtkMRMLMarkupsROINode.h
   vtkMRMLMarkupsStorageNode.cxx
+  vtkMRMLMeasurement.cxx
+  vtkMRMLMeasurementAngle.cxx
+  vtkMRMLMeasurementAngle.h
+  vtkMRMLMeasurementArea.cxx
+  vtkMRMLMeasurementArea.h
+  vtkMRMLMeasurementLength.cxx
+  vtkMRMLMeasurementLength.h
+  vtkMRMLMeasurementVolume.cxx
+  vtkMRMLMeasurementVolume.h
   vtkMRMLMessageCollection.cxx
   vtkMRMLModelDisplayNode.cxx
   vtkMRMLModelHierarchyNode.cxx
   vtkMRMLModelNode.cxx
   vtkMRMLModelStorageNode.cxx
   vtkMRMLNode.cxx
+  vtkMRMLPETProceduralColorNode.cxx
   vtkMRMLParser.cxx
   vtkMRMLPlotChartNode.cxx
   vtkMRMLPlotSeriesNode.cxx
@@ -191,37 +246,40 @@ set(MRMLCore_SRCS
   vtkMRMLSceneViewStorageNode.cxx
   vtkMRMLScriptedModuleNode.cxx
   vtkMRMLScriptedModuleNode.h
-  vtkMRMLSegmentationNode.cxx
-  vtkMRMLSegmentationNode.h
   vtkMRMLSegmentationDisplayNode.cxx
   vtkMRMLSegmentationDisplayNode.h
+  vtkMRMLSegmentationNode.cxx
+  vtkMRMLSegmentationNode.h
   vtkMRMLSegmentationStorageNode.cxx
   vtkMRMLSegmentationStorageNode.h
+  vtkMRMLSelectionNode.cxx
   vtkMRMLSequenceNode.cxx
   vtkMRMLSequenceNode.h
   vtkMRMLSequenceStorageNode.cxx
   vtkMRMLSequenceStorageNode.h
-  vtkMRMLSelectionNode.cxx
   vtkMRMLSliceCompositeNode.cxx
   vtkMRMLSliceDisplayNode.cxx
   vtkMRMLSliceNode.cxx
   vtkMRMLSnapshotClipNode.cxx
+  vtkMRMLStaticMeasurement.cxx
   vtkMRMLStorableNode.cxx
   vtkMRMLStorageNode.cxx
   vtkMRMLSubjectHierarchyConstants.h
-  vtkMRMLSubjectHierarchyNode.cxx
-  vtkMRMLSubjectHierarchyNode.h
   vtkMRMLSubjectHierarchyLegacyNode.cxx
   vtkMRMLSubjectHierarchyLegacyNode.h
+  vtkMRMLSubjectHierarchyNode.cxx
+  vtkMRMLSubjectHierarchyNode.h
   vtkMRMLTableNode.cxx
-  vtkMRMLTableStorageNode.cxx
   vtkMRMLTableSQLiteStorageNode.cxx
+  vtkMRMLTableStorageNode.cxx
   vtkMRMLTableViewNode.cxx
   vtkMRMLTextNode.cxx
   vtkMRMLTextStorageNode.cxx
-  vtkMRMLTransformNode.cxx
-  vtkMRMLTransformStorageNode.cxx
   vtkMRMLTransformDisplayNode.cxx
+  vtkMRMLTransformNode.cxx
+  vtkMRMLTransformSequenceStorageNode.cxx
+  vtkMRMLTransformSequenceStorageNode.h
+  vtkMRMLTransformStorageNode.cxx
   vtkMRMLTransformableNode.cxx
   vtkMRMLTranslator.h
   vtkMRMLUnitNode.cxx
@@ -229,27 +287,19 @@ set(MRMLCore_SRCS
   vtkMRMLViewNode.cxx
   vtkMRMLVolumeArchetypeStorageNode.cxx
   vtkMRMLVolumeDisplayNode.cxx
-  vtkMRMLGlyphableVolumeDisplayNode.cxx
-  vtkMRMLGlyphableVolumeSliceDisplayNode.cxx
   vtkMRMLVolumeHeaderlessStorageNode.cxx
   vtkMRMLVolumeNode.cxx
   vtkMRMLVolumeSequenceStorageNode.cxx
   vtkMRMLVolumeSequenceStorageNode.h
+  vtkMRMLdGEMRICProceduralColorNode.cxx
   vtkObservation.cxx
   vtkObserverManager.cxx
-  vtkMRMLLayoutNode.cxx
-  # Classes for remote data handling:
-  vtkCacheManager.cxx
-  vtkDataIOManager.cxx
-  vtkDataTransfer.cxx
-  vtkMRMLBSplineTransformNode.cxx
-  vtkMRMLGridTransformNode.cxx
   vtkPermissionPrompter.cxx
-  vtkURIHandler.cxx
-  vtkTagTableCollection.cxx
+  vtkProjectMarkupsCurvePointsFilter.cxx
+  vtkProjectMarkupsCurvePointsFilter.h
   vtkTagTable.cxx
-  vtkMRMLdGEMRICProceduralColorNode.cxx
-  vtkMRMLPETProceduralColorNode.cxx
+  vtkTagTableCollection.cxx
+  vtkURIHandler.cxx
   # Note: when you add new node types, add
   # register code to the vtkMRMLScene constructor
   )
@@ -262,9 +312,9 @@ if(MRML_USE_vtkTeem)
     vtkMRMLDiffusionTensorVolumeNode.cxx
     vtkMRMLDiffusionTensorVolumeSliceDisplayNode.cxx
     vtkMRMLNRRDStorageNode.cxx
+    vtkMRMLStreamingVolumeNode.cxx
     vtkMRMLTensorVolumeNode.cxx
     vtkMRMLVectorVolumeNode.cxx
-    vtkMRMLStreamingVolumeNode.cxx
     )
 endif()
 
@@ -276,12 +326,12 @@ set_source_files_properties(
 # Abstract/pure virtual classes
 
 set_source_files_properties(
-  vtkMRMLNode.cxx
-  vtkMRMLVolumeNode.cxx
-  vtkMRMLTransformNode.cxx
   vtkMRMLDisplayNode.cxx
   vtkMRMLDisplayableNode.cxx
+  vtkMRMLNode.cxx
+  vtkMRMLTransformNode.cxx
   vtkMRMLVolumeDisplayNode.cxx
+  vtkMRMLVolumeNode.cxx
   ABSTRACT
   )
 
@@ -308,6 +358,7 @@ set(libs
   ${VTK_LIBRARIES}
   VTK::IOInfovis
   ${LibArchive_LIBRARY}
+  RapidJSON
   )
 if(MRML_USE_vtkTeem)
   list(APPEND libs vtkTeem)
@@ -318,6 +369,17 @@ target_link_libraries(${lib_name} ${libs})
 if(Slicer_LIBRARY_PROPERTIES)
   set_target_properties(${lib_name} PROPERTIES ${Slicer_LIBRARY_PROPERTIES})
 endif()
+
+# --------------------------------------------------------------------------
+# Generate export header
+# --------------------------------------------------------------------------
+include(GenerateExportHeader)
+set(configure_include "#include <vtkMRMLConfigure.h>\n")
+generate_export_header(${lib_name}
+  EXPORT_FILE_NAME ${CMAKE_CURRENT_BINARY_DIR}/vtkMRMLExport.h
+  EXPORT_MACRO_NAME VTK_MRML_EXPORT
+  CUSTOM_CONTENT_FROM_VARIABLE configure_include
+)
 
 # --------------------------------------------------------------------------
 # Folder

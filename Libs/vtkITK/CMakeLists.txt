@@ -1,7 +1,7 @@
 project(vtkITK)
 
 #-----------------------------------------------------------------------------
-cmake_minimum_required(VERSION 3.16.3...3.19.7 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.20.6...3.22.6 FATAL_ERROR)
 #-----------------------------------------------------------------------------
 
 # --------------------------------------------------------------------------
@@ -46,11 +46,6 @@ set(${PROJECT_NAME}_ITK_COMPONENTS
   ITKRegionGrowing
   ITKThresholding
   ITKVTK
-  # Needed for ITKv5 so that SimpleFastMutexLock is an alias to std::mutex in ITKv5
-  # once ITKv4 is not supported, then we can simply replace SimpleFastMutexLock with std::mutex
-  # the use the DeprecatedLib allows building without many preprocessor conditionals
-  # for ITKv5/ITKv4 differences.
-  ITKDeprecated
   )
 find_package(ITK 5.0 COMPONENTS ${${PROJECT_NAME}_ITK_COMPONENTS} REQUIRED)
 if(ITK_VERSION VERSION_GREATER_EQUAL "5.3")
@@ -97,7 +92,7 @@ if(NOT DEFINED ${PROJECT_NAME}_INSTALL_NO_DEVELOPMENT)
   set(${PROJECT_NAME}_INSTALL_NO_DEVELOPMENT ON)
 endif()
 if(NOT ${PROJECT_NAME}_INSTALL_NO_DEVELOPMENT)
-  file(GLOB headers "${CMAKE_CURRENT_SOURCE_DIR}/*.(h|txx)")
+  file(GLOB headers "${CMAKE_CURRENT_SOURCE_DIR}/*.(h|hxx)")
   install(
     FILES ${headers} ${CMAKE_CURRENT_BINARY_DIR}/${configure_header_file}
     DESTINATION include/${PROJECT_NAME} COMPONENT Development)
@@ -126,6 +121,8 @@ set(vtkITK_SRCS
   vtkITKIslandMath.cxx
   vtkITKImageMargin.cxx
   vtkITKMorphologicalContourInterpolator.cxx
+  vtkITKImageSequenceReader.cxx
+  vtkITKImageSequenceWriter.cxx
   )
 
 # these types are never instantiated, so they don't
@@ -172,6 +169,17 @@ target_link_libraries(${lib_name} ${libs})
 if(Slicer_LIBRARY_PROPERTIES)
   set_target_properties(${lib_name} PROPERTIES ${Slicer_LIBRARY_PROPERTIES})
 endif()
+
+# --------------------------------------------------------------------------
+# Generate export header
+# --------------------------------------------------------------------------
+include(GenerateExportHeader)
+set(configure_include "#include <vtkITKConfigure.h>\n")
+generate_export_header(${lib_name}
+  EXPORT_FILE_NAME ${CMAKE_CURRENT_BINARY_DIR}/vtkITKExport.h
+  EXPORT_MACRO_NAME VTK_ITK_EXPORT
+  CUSTOM_CONTENT_FROM_VARIABLE configure_include
+)
 
 # --------------------------------------------------------------------------
 # Folder

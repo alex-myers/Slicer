@@ -36,7 +36,7 @@ Not supported (anti-patterns):
 
 More information:
 * [Developing and contributing extensions for 3D Slicer](/developer_guide/extensions.md#extensions)
-* [Tutorials for software developers](https://www.slicer.org/wiki/Documentation/Nightly/Training#Tutorials_for_software_developers)
+* [Tutorials for software developers](https://training.slicer.org/#developer-tutorials)
 * [Slicer execution model](https://www.slicer.org/wiki/Documentation/Nightly/Developers/SlicerExecutionModel): Describe the mechanism for incorporating command line programs as Slicer modules.
 * Learn from existing Slicer [CLI modules](https://github.com/Slicer/Slicer/tree/main/Modules/CLI).
 
@@ -59,7 +59,7 @@ Specifications:
 
 More information:
 * [Developing and contributing extensions for 3D Slicer](/developer_guide/extensions.md#extensions)
-* [Tutorials for software developers](https://www.slicer.org/wiki/Documentation/Nightly/Training#Tutorials_for_software_developers)
+* [Tutorials for software developers](https://training.slicer.org/#developer-tutorials)
 * Learn from existing Slicer [loadable modules](https://github.com/Slicer/Slicer/tree/main/Modules/Loadable).
 
 ## Scripted Modules
@@ -73,7 +73,7 @@ Recommended for fast prototyping and custom workflow development.
 Specifications:
 * Written in Python.
 * Full [Slicer API](api.md#python) is accessible.
-* Full access to the API of [MRML](mrml.md), [VTK](http://www.vtk.org), [Qt](https://doc.qt.io/), [ITK](https://itkpythonpackage.readthedocs.io) and [SimpleITK](http://www.itk.org/SimpleITKDoxygen/html/classes.html) since are Python wrapped.
+* Full access to the API of [MRML](mrml.md), [VTK](https://docs.vtk.org), [Qt](https://doc.qt.io/), [ITK](https://docs.itk.org/) and [SimpleITK](https://simpleitk.readthedocs.io/) since those are Python wrapped.
 
 :::{admonition} Getting started
 Download Slicer and create an initial skeleton using the [Extension Wizard](/user_guide/modules/extensionwizard.md#extension-wizard) adding a module of type `scripted`.
@@ -81,7 +81,7 @@ Download Slicer and create an initial skeleton using the [Extension Wizard](/use
 
 More information:
 * [Developing and contributing extensions for 3D Slicer](/developer_guide/extensions.md#extensions)
-* [Tutorials for software developers](https://www.slicer.org/wiki/Documentation/Nightly/Training#Tutorials_for_software_developers)
+* [Tutorials for software developers](https://training.slicer.org/#developer-tutorials)
 * [Python FAQ](python_faq.md)
 * [Script repository](script_repository.md)
 * Learn from existing Slicer [scripted modules](https://github.com/Slicer/Slicer/tree/main/Modules/Scripted).

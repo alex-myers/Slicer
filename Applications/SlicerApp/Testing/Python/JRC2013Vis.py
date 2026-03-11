@@ -101,6 +101,7 @@ class JRC2013VisWidget(ScriptedLoadableModuleWidget):
 
                 SampleData.downloadFromURL(
                     fileNames="Dcmtk-db.zip",
+                    loadFileTypes="ZipFile",
                     uris=TESTING_DATA_URL + "MD5/6bfb01cf5ffb8e3af9b1c0c9556f0c6b45f0ec40305a9539ed7a9f0dcfe378e3",
                     checksums="SHA256:6bfb01cf5ffb8e3af9b1c0c9556f0c6b45f0ec40305a9539ed7a9f0dcfe378e3")[0]
 
@@ -187,6 +188,7 @@ class JRC2013VisTest(ScriptedLoadableModuleTest):
 
         dicomFilesDirectory = SampleData.downloadFromURL(
             fileNames="Dcmtk-db.zip",
+            loadFileTypes="ZipFile",
             uris=TESTING_DATA_URL + "MD5/7a43d121a51a631ab0df02071e5ba6ed",
             checksums="MD5:7a43d121a51a631ab0df02071e5ba6ed")[0]
 
@@ -232,12 +234,12 @@ class JRC2013VisTest(ScriptedLoadableModuleTest):
             self.delayDisplay("Retrieve DICOM")
             slicer.util.selectModule("DICOM")
             dicomRetrieve = ctk.ctkDICOMRetrieve()
-            dicomRetrieve.setKeepAssociationOpen(True)
+            dicomRetrieve.keepAssociationOpen = True
             dicomRetrieve.setDatabase(slicer.dicomDatabase)
-            dicomRetrieve.setCallingAETitle("SlicerAE")
-            dicomRetrieve.setCalledAETitle("DCMTK")
-            dicomRetrieve.setPort(12345)
-            dicomRetrieve.setHost("localhost")
+            dicomRetrieve.callingAETitle = "SlicerAE"
+            dicomRetrieve.calledAETitle = "DCMTK"
+            dicomRetrieve.port = 12345
+            dicomRetrieve.host = "localhost"
             dicomRetrieve.getStudy("1.2.124.113932.1.170.223.162.178.20050502.160340.12640015")
             popen.kill()
 
@@ -333,7 +335,7 @@ class JRC2013VisTest(ScriptedLoadableModuleTest):
             threeDView = layoutManager.threeDWidget(0).threeDView()
             redWidget = layoutManager.sliceWidget("vtkMRMLSliceNode1")  # it would be 'Red' in a recent scene
             redController = redWidget.sliceController()
-            greenWidget = layoutManager.sliceWidget("vtkMRMLSliceNode2")  # it would be 'Green' in a recent scene
+            greenWidget = layoutManager.sliceWidget("vtkMRMLSliceNode3")  # it would be 'Green' in a recent scene
             greenController = greenWidget.sliceController()
 
             self.delayDisplay("Models and Slice Model")
@@ -358,7 +360,7 @@ class JRC2013VisTest(ScriptedLoadableModuleTest):
             greenWidget.sliceController().setSliceVisible(True)
             hemispheric_white_matter = slicer.util.getNode(pattern="hemispheric_white_matter.vtk")
             hemispheric_white_matter.GetDisplayNode().SetClipping(1)
-            clip = slicer.mrmlScene.GetFirstNodeByClass("vtkMRMLClipModelsNode")
+            clip = slicer.util.getNode("ClipModelsParameters1")
             clip.SetRedSliceClipState(0)
             clip.SetYellowSliceClipState(0)
             clip.SetGreenSliceClipState(2)

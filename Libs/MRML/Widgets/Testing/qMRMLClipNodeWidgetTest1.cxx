@@ -30,28 +30,45 @@
 
 // MRML includes
 #include <vtkMRMLClipModelsNode.h>
+#include <vtkMRMLScene.h>
+#include <vtkMRMLSliceNode.h>
 
 // VTK includes
 #include <vtkSmartPointer.h>
 #include "qMRMLWidget.h"
 
 // STD includes
+#include <iostream>
 
-int qMRMLClipNodeWidgetTest1(int argc, char * argv [] )
+int qMRMLClipNodeWidgetTest1(int argc, char* argv[])
 {
   qMRMLWidget::preInitializeApplication();
   QApplication app(argc, argv);
   qMRMLWidget::postInitializeApplication();
 
-  vtkSmartPointer< vtkMRMLClipModelsNode > clipNode =
-    vtkSmartPointer< vtkMRMLClipModelsNode >::New();
+  vtkNew<vtkMRMLScene> scene;
+
+  vtkSmartPointer<vtkMRMLClipModelsNode> clipNode = vtkSmartPointer<vtkMRMLClipModelsNode>::New();
+  scene->AddNode(clipNode);
+
+  vtkSmartPointer<vtkMRMLSliceNode> redSlice = vtkSmartPointer<vtkMRMLSliceNode>::New();
+  redSlice->SetSingletonTag("Red");
+  scene->AddNode(redSlice);
+
+  vtkSmartPointer<vtkMRMLSliceNode> yellowSlice = vtkSmartPointer<vtkMRMLSliceNode>::New();
+  yellowSlice->SetSingletonTag("Yellow");
+  scene->AddNode(yellowSlice);
+
+  vtkSmartPointer<vtkMRMLSliceNode> greenSlice = vtkSmartPointer<vtkMRMLSliceNode>::New();
+  greenSlice->SetSingletonTag("Green");
+  scene->AddNode(greenSlice);
 
   qMRMLClipNodeWidget clipNodeWidget;
+  clipNodeWidget.setMRMLScene(scene);
 
   if (clipNodeWidget.isEnabled())
   {
-    std::cerr << "No vtkMRLMClipModelsNode provided, should be disabled."
-              << std::endl;
+    std::cerr << "No vtkMRLMClipModelsNode provided, should be disabled." << std::endl;
     return EXIT_FAILURE;
   }
 
@@ -64,8 +81,7 @@ int qMRMLClipNodeWidgetTest1(int argc, char * argv [] )
 
   if (clipNodeWidget.mrmlClipNode() != clipNode.GetPointer())
   {
-    std::cerr << "qMRMLClipNodeWidget::setMRMLClipNode() failed."
-              << clipNodeWidget.mrmlClipNode() << std::endl;
+    std::cerr << "qMRMLClipNodeWidget::setMRMLClipNode() failed." << clipNodeWidget.mrmlClipNode() << std::endl;
     return EXIT_FAILURE;
   }
 
@@ -75,21 +91,21 @@ int qMRMLClipNodeWidgetTest1(int argc, char * argv [] )
     return EXIT_FAILURE;
   }
 
-  if (clipNodeWidget.redSliceClipState() != redSliceClipState)
+  if (clipNodeWidget.clipState(redSlice) != redSliceClipState)
   {
-    std::cerr << "Wrong red slice clip state: " << clipNodeWidget.redSliceClipState() << std::endl;
+    std::cerr << "Wrong red slice clip state: " << clipNodeWidget.clipState(redSlice) << std::endl;
     return EXIT_FAILURE;
   }
 
-  if (clipNodeWidget.yellowSliceClipState() != yellowSliceClipState)
+  if (clipNodeWidget.clipState(yellowSlice) != yellowSliceClipState)
   {
-    std::cerr << "Wrong yellow slice clip state: " << clipNodeWidget.yellowSliceClipState() << std::endl;
+    std::cerr << "Wrong yellow slice clip state: " << clipNodeWidget.clipState(yellowSlice) << std::endl;
     return EXIT_FAILURE;
   }
 
-  if (clipNodeWidget.greenSliceClipState() != greenSliceClipState)
+  if (clipNodeWidget.clipState(greenSlice) != greenSliceClipState)
   {
-    std::cerr << "Wrong green slice clip state: " << clipNodeWidget.greenSliceClipState() << std::endl;
+    std::cerr << "Wrong green slice clip state: " << clipNodeWidget.clipState(greenSlice) << std::endl;
     return EXIT_FAILURE;
   }
 
@@ -105,68 +121,64 @@ int qMRMLClipNodeWidgetTest1(int argc, char * argv [] )
 
   if (clipNode->GetClipType() != vtkMRMLClipModelsNode::ClipUnion)
   {
-    std::cerr << "qMRMLClipNodeWidget::setClipType() failed: "
-              << clipNode->GetClipType() << std::endl;
+    std::cerr << "qMRMLClipNodeWidget::setClipType() failed: " << clipNode->GetClipType() << std::endl;
     return EXIT_FAILURE;
   }
 
   // Red slice Clip state
   clipNode->SetRedSliceClipState(vtkMRMLClipModelsNode::ClipNegativeSpace);
 
-  if (clipNodeWidget.redSliceClipState() != vtkMRMLClipModelsNode::ClipNegativeSpace)
+  if (clipNodeWidget.clipState(redSlice) != vtkMRMLClipModelsNode::ClipNegativeSpace)
   {
-    std::cerr << "vtkMRMLClipModelsNode::SetRedSliceClipState() failed: " << clipNodeWidget.redSliceClipState() << std::endl;
+    std::cerr << "vtkMRMLClipModelsNode::SetRedSliceClipState() failed: " << clipNodeWidget.clipState(redSlice) << std::endl;
     return EXIT_FAILURE;
   }
 
-  clipNodeWidget.setRedSliceClipState(vtkMRMLClipModelsNode::ClipOff);
+  clipNodeWidget.setClipState(redSlice, vtkMRMLClipModelsNode::ClipOff);
 
   if (clipNode->GetRedSliceClipState() != vtkMRMLClipModelsNode::ClipOff)
   {
-    std::cerr << "qMRMLClipNodeWidget::setRedSliceClipState() failed: "
-              << clipNode->GetRedSliceClipState() << std::endl;
+    std::cerr << "qMRMLClipNodeWidget::setRedSliceClipState() failed: " << clipNode->GetRedSliceClipState() << std::endl;
     return EXIT_FAILURE;
   }
 
   // Yellow slice Clip state
   clipNode->SetYellowSliceClipState(vtkMRMLClipModelsNode::ClipOff);
 
-  if (clipNodeWidget.yellowSliceClipState() != vtkMRMLClipModelsNode::ClipOff)
+  if (clipNodeWidget.clipState(yellowSlice) != vtkMRMLClipModelsNode::ClipOff)
   {
-    std::cerr << "vtkMRMLClipModelsNode::SetYellowSliceClipState() failed: " << clipNodeWidget.yellowSliceClipState() << std::endl;
+    std::cerr << "vtkMRMLClipModelsNode::SetYellowSliceClipState() failed: " << clipNodeWidget.clipState(yellowSlice) << std::endl;
     return EXIT_FAILURE;
   }
 
-  clipNodeWidget.setYellowSliceClipState(vtkMRMLClipModelsNode::ClipPositiveSpace);
+  clipNodeWidget.setClipState(yellowSlice, vtkMRMLClipModelsNode::ClipPositiveSpace);
 
   if (clipNode->GetYellowSliceClipState() != vtkMRMLClipModelsNode::ClipPositiveSpace)
   {
-    std::cerr << "qMRMLClipNodeWidget::setYellowSliceClipState() failed: "
-              << clipNode->GetYellowSliceClipState() << std::endl;
+    std::cerr << "qMRMLClipNodeWidget::setYellowSliceClipState() failed: " << clipNode->GetYellowSliceClipState() << std::endl;
     return EXIT_FAILURE;
   }
 
   // Green slice Clip state
   clipNode->SetGreenSliceClipState(vtkMRMLClipModelsNode::ClipPositiveSpace);
 
-  if (clipNodeWidget.greenSliceClipState() != vtkMRMLClipModelsNode::ClipPositiveSpace)
+  if (clipNodeWidget.clipState(greenSlice) != vtkMRMLClipModelsNode::ClipPositiveSpace)
   {
-    std::cerr << "vtkMRMLClipModelsNode::SetGreenSliceClipState() failed: " << clipNodeWidget.greenSliceClipState() << std::endl;
+    std::cerr << "vtkMRMLClipModelsNode::SetGreenSliceClipState() failed: " << clipNodeWidget.clipState(greenSlice) << std::endl;
     return EXIT_FAILURE;
   }
 
-  clipNodeWidget.setGreenSliceClipState(vtkMRMLClipModelsNode::ClipNegativeSpace);
+  clipNodeWidget.setClipState(greenSlice, vtkMRMLClipModelsNode::ClipNegativeSpace);
 
   if (clipNode->GetGreenSliceClipState() != vtkMRMLClipModelsNode::ClipNegativeSpace)
   {
-    std::cerr << "qMRMLClipNodeWidget::setGreenSliceClipState() failed: "
-              << clipNode->GetGreenSliceClipState() << std::endl;
+    std::cerr << "qMRMLClipNodeWidget::setGreenSliceClipState() failed: " << clipNode->GetGreenSliceClipState() << std::endl;
     return EXIT_FAILURE;
   }
 
   clipNodeWidget.show();
 
-  if (argc < 2 || QString(argv[1]) != "-I" )
+  if (argc < 2 || QString(argv[1]) != "-I")
   {
     QTimer::singleShot(200, &app, SLOT(quit()));
   }

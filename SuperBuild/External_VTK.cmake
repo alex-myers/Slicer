@@ -75,16 +75,20 @@ if((NOT DEFINED VTK_DIR OR NOT DEFINED VTK_SOURCE_DIR) AND NOT Slicer_USE_SYSTEM
     )
 
   list(APPEND EXTERNAL_PROJECT_OPTIONAL_CMAKE_CACHE_ARGS
-    -DVTK_QT_VERSION:STRING=5
     -DVTK_Group_Qt:BOOL=ON
-    -DQt5_DIR:FILEPATH=${Qt5_DIR}
     )
-
-  if("${Slicer_VTK_RENDERING_BACKEND}" STREQUAL "OpenGL2")
-    list(APPEND EXTERNAL_PROJECT_OPTIONAL_VTK9_CMAKE_CACHE_ARGS
-      -DVTK_MODULE_ENABLE_VTK_GUISupportQtOpenGL:STRING=YES
+  if(Slicer_REQUIRED_QT_VERSION VERSION_GREATER_EQUAL "6")
+    list(APPEND EXTERNAL_PROJECT_OPTIONAL_CMAKE_CACHE_ARGS
+      -DVTK_QT_VERSION:STRING=6
+      -DQt6_DIR:FILEPATH=${Qt6_DIR}
+      )
+  else()
+    list(APPEND EXTERNAL_PROJECT_OPTIONAL_CMAKE_CACHE_ARGS
+      -DVTK_QT_VERSION:STRING=5
+      -DQt5_DIR:FILEPATH=${Qt5_DIR}
       )
   endif()
+
   if(Slicer_USE_TBB)
     list(APPEND EXTERNAL_PROJECT_OPTIONAL_VTK9_CMAKE_CACHE_ARGS
       -DTBB_DIR:PATH=${TBB_DIR}
@@ -137,11 +141,14 @@ if((NOT DEFINED VTK_DIR OR NOT DEFINED VTK_SOURCE_DIR) AND NOT Slicer_USE_SYSTEM
     )
 
   set(_git_tag)
-  if("${Slicer_VTK_VERSION_MAJOR}" STREQUAL "9")
-    set(_git_tag "1923c43205ef6041f21e112807874ec9ae045b52") # slicer-v9.2.20230607-1ff325c54-2
-    set(vtk_egg_info_version "9.2.20230607")
+  if("${Slicer_VTK_VERSION_MAJOR}.${Slicer_VTK_VERSION_MINOR}" STREQUAL "9.4")
+    set(_git_tag "454bb391dff78c6ff463298a5143ab5b4f0aa083") # slicer-v9.4.2-2025-03-26-13acb1a5d
+    set(vtk_dist_info_version "9.4.2")
+  elseif("${Slicer_VTK_VERSION_MAJOR}.${Slicer_VTK_VERSION_MINOR}" STREQUAL "9.5")
+    set(_git_tag "08210fbecda09bea2544dbb80777d634e1bfea25") # slicer-v9.5.2-2025-09-16-7c0494a68
+    set(vtk_dist_info_version "9.5.2")
   else()
-    message(FATAL_ERROR "error: Unsupported Slicer_VTK_VERSION_MAJOR: ${Slicer_VTK_VERSION_MAJOR}")
+    message(FATAL_ERROR "error: Unsupported Slicer_VTK_VERSION_MAJOR.Slicer_VTK_VERSION_MINOR: ${Slicer_VTK_VERSION_MAJOR}.${Slicer_VTK_VERSION_MINOR}")
   endif()
 
   ExternalProject_SetIfNotDefined(
@@ -180,8 +187,8 @@ if((NOT DEFINED VTK_DIR OR NOT DEFINED VTK_SOURCE_DIR) AND NOT Slicer_USE_SYSTEM
       -DZLIB_INCLUDE_DIR:PATH=${ZLIB_INCLUDE_DIR}
       -DZLIB_LIBRARY:FILEPATH=${ZLIB_LIBRARY}
       -DVTK_ENABLE_KITS:BOOL=ON
-      -DVTK_RENDERING_BACKEND:STRING=${Slicer_VTK_RENDERING_BACKEND}
       -DVTK_SMP_IMPLEMENTATION_TYPE:STRING=${Slicer_VTK_SMP_IMPLEMENTATION_TYPE}
+      -DVTK_MODULE_ENABLE_VTK_IOEnSight:STRING=NO
       ${EXTERNAL_PROJECT_OPTIONAL_CMAKE_CACHE_ARGS}
       ${EXTERNAL_PROJECT_OPTIONAL_VTK${Slicer_VTK_VERSION_MAJOR}_CMAKE_CACHE_ARGS}
     INSTALL_COMMAND ""
@@ -190,13 +197,29 @@ if((NOT DEFINED VTK_DIR OR NOT DEFINED VTK_SOURCE_DIR) AND NOT Slicer_USE_SYSTEM
     )
 
   if(Slicer_USE_PYTHONQT AND NOT Slicer_USE_SYSTEM_python)
-    # Create the vtk-*.egg-info directory to prevent pip from re-installing
+    # Create the vtk-*.dist-info directory to prevent pip from re-installing
     # vtk package as a wheel when listed as dependency in Slicer extension.
-    set(_vtk_egg_info_dir "${python_DIR}/${PYTHON_SITE_PACKAGES_SUBDIR}/vtk-${vtk_egg_info_version}-py${Slicer_REQUIRED_PYTHON_VERSION_DOT}.egg-info")
-    ExternalProject_Add_Step(${proj} create_egg_info
-      COMMAND ${CMAKE_COMMAND} -E make_directory ${_vtk_egg_info_dir}
-      COMMAND ${CMAKE_COMMAND} -E touch ${_vtk_egg_info_dir}/PKG-INFO
-      COMMENT "Creating '${_vtk_egg_info_dir}' directory"
+    # See https://packaging.python.org/en/latest/specifications/recording-installed-packages/
+    set(_vtk_dist_info_metadata "${CMAKE_BINARY_DIR}/${proj}-dist-info-METADATA")
+    file(CONFIGURE OUTPUT ${_vtk_dist_info_metadata}
+      CONTENT [==[
+Metadata-Version: 2.1
+Name: vtk
+Version: @vtk_dist_info_version@
+]==]
+      @ONLY
+      )
+    set(_vtk_dist_info_dir "${python_DIR}/${PYTHON_SITE_PACKAGES_SUBDIR}/vtk-${vtk_dist_info_version}.dist-info")
+    set(_vtk_egg_info_dir "${python_DIR}/${PYTHON_SITE_PACKAGES_SUBDIR}/vtk-${vtk_dist_info_version}-py${Slicer_REQUIRED_PYTHON_VERSION_DOT}.egg-info")
+    ExternalProject_Add_Step(${proj} create_dist_info
+      # If any, remove existing "vtk-.*.egg-info" directory.
+      # This will avoid issue when doing incremental build.
+      COMMAND ${CMAKE_COMMAND} -E rm -rf ${_vtk_egg_info_dir}
+      COMMAND ${CMAKE_COMMAND} -E make_directory ${_vtk_dist_info_dir}
+      COMMAND ${CMAKE_COMMAND} -E copy
+        ${_vtk_dist_info_metadata}
+        ${_vtk_dist_info_dir}/METADATA
+      COMMENT "Creating '${_vtk_dist_info_dir}' directory"
       DEPENDEES build
       )
   endif()
@@ -231,9 +254,15 @@ if((NOT DEFINED VTK_DIR OR NOT DEFINED VTK_SOURCE_DIR) AND NOT Slicer_USE_SYSTEM
         ${VTK_DIR}/${_library_output_subdir}/python${Slicer_REQUIRED_PYTHON_VERSION_DOT}/site-packages
         )
     else()
-      set(${proj}_PYTHONPATH_LAUNCHER_BUILD
-        ${VTK_DIR}/${_library_output_subdir}/Lib/site-packages
-        )
+      if(${vtk_dist_info_version} VERSION_GREATER_EQUAL 9.4)
+        set(${proj}_PYTHONPATH_LAUNCHER_BUILD
+          ${VTK_DIR}/lib/site-packages # Location for VTK 9.4+
+          )
+      else()
+        set(${proj}_PYTHONPATH_LAUNCHER_BUILD
+          ${VTK_DIR}/${_library_output_subdir}/Lib/site-packages # Location for VTK 9.3 or older
+          )
+      endif()
     endif()
 
   mark_as_superbuild(
@@ -273,9 +302,15 @@ if((NOT DEFINED VTK_DIR OR NOT DEFINED VTK_SOURCE_DIR) AND NOT Slicer_USE_SYSTEM
         <APPLAUNCHER_SETTINGS_DIR>/../${_library_install_subdir}/python${Slicer_REQUIRED_PYTHON_VERSION_DOT}/site-packages
         )
     else()
-      set(${proj}_PYTHONPATH_LAUNCHER_INSTALLED
-        <APPLAUNCHER_SETTINGS_DIR>/../${_library_install_subdir}/Lib/site-packages
-        )
+      if(${vtk_dist_info_version} VERSION_GREATER_EQUAL 9.4)
+        set(${proj}_PYTHONPATH_LAUNCHER_INSTALLED
+          <APPLAUNCHER_SETTINGS_DIR>/../lib/site-packages # Location for VTK 9.4+
+          )
+      else()
+        set(${proj}_PYTHONPATH_LAUNCHER_INSTALLED
+          <APPLAUNCHER_SETTINGS_DIR>/../${_library_install_subdir}/Lib/site-packages # Location for VTK 9.3 or older
+          )
+      endif()
     endif()
     mark_as_superbuild(
       VARS ${proj}_PYTHONPATH_LAUNCHER_INSTALLED

@@ -47,8 +47,9 @@ int SlicerAppMain(int argc, char* argv[])
   QScopedPointer<SlicerMainWindowType> window;
   QScopedPointer<QSplashScreen> splashScreen;
 
-  int exitCode = qSlicerApplicationHelper::postInitializeApplication<SlicerMainWindowType>(
-        app, splashScreen, window);
+  app.setURIArgumentHandlingEnabled(true);
+
+  int exitCode = qSlicerApplicationHelper::postInitializeApplication<SlicerMainWindowType>(app, splashScreen, window);
   if (exitCode != 0)
   {
     return exitCode;

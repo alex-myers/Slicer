@@ -53,6 +53,22 @@ class AbstractScriptedSegmentEditorEffect:
         effectFactorySingleton = slicer.qSlicerSegmentEditorEffectFactory.instance()
         effectFactorySingleton.registerEffect(self.scriptedEffect)
 
+    def cleanup(self):
+        """
+        Clean up resources, event observers, and Qt signal/slot connections
+        to ensure proper object deletion.
+
+        Subclasses should override this method to disconnect any subclass-specific
+        signals and slots. This method should be called before the object is
+        garbage collected or explicitly deleted on the C++ side.
+
+        Failing to disconnect signals/slots may prevent the object from being
+        garbage collected, leading to memory leaks.
+
+        For more details, see: https://github.com/Slicer/Slicer/issues/7392
+        """
+        pass
+
     #
     # Utility functions for convenient coordinate transformations
     #
@@ -88,7 +104,7 @@ class AbstractScriptedSegmentEditorEffect:
         if not imageData:
             return
         import math
-        spinbox.unitAwareProperties &= ~(slicer.qMRMLSpinBox.MinimumValue | slicer.qMRMLSpinBox.MaximumValue | slicer.qMRMLSpinBox.Precision)
+        spinbox.unitAwareProperties = spinbox.unitAwareProperties & ~(slicer.qMRMLSpinBox.MinimumValue | slicer.qMRMLSpinBox.MaximumValue | slicer.qMRMLSpinBox.Precision)
         stepSize = 10 ** (math.floor(math.log10(min(imageData.GetSpacing()) / 10.0)))
         spinbox.minimum = stepSize
         spinbox.maximum = 10 ** (math.ceil(math.log10(max(imageData.GetSpacing()) * 100.0)))

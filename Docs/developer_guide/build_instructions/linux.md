@@ -47,7 +47,36 @@ sudo apt update && sudo apt install git build-essential cmake cmake-curses-gui c
 
 :::{note}
 The CMake version currently included in Debian 12 Bookworm (Stable) is not compatible with the current development version of Slicer.
-For more details, see the Slicer [CMakeLists.txt](https://github.com/Slicer/Slicer/blob/98c092edb8f5a274277d2e486a4f7e584f58605e/CMakeLists.txt#L3-L5) file. On Debian 12 Bookworm (Stable), you will need to upgrade CMake manually by downloading CMake 3.25.3 or higher from the [CMake website](https://cmake.org/download/) and following the CMake installation instructions.
+For more details, see the Slicer [CMakeLists.txt](https://github.com/Slicer/Slicer/blob/98c092edb8f5a274277d2e486a4f7e584f58605e/CMakeLists.txt#L3-L5) file. On Debian 12 Bookworm (Stable), you will need to upgrade CMake manually by downloading CMake version >= 3.25.3 from the [CMake website](https://cmake.org/download/) and following the CMake installation instructions.
+
+:::
+
+### Ubuntu 25.04 (Plucky Puffin)
+
+Install the development tools and the support libraries:
+
+```console
+sudo apt update && sudo apt install git git-lfs build-essential \
+  libqt5x11extras5-dev qtmultimedia5-dev libqt5svg5-dev qtwebengine5-dev libqt5xmlpatterns5-dev qttools5-dev qtbase5-private-dev \
+  libxt-dev
+```
+
+:::{note}
+The CMake version currently included in Ubuntu 25.04 is CMake 3.31.6 which is compatible with the current development version of Slicer. **Last time tested: 2025-08-08.**
+:::
+
+### Ubuntu 24.04 (Noble Numbat)
+
+Install the development tools and the support libraries:
+
+```console
+sudo apt update && sudo apt install git git-lfs build-essential \
+  libqt5x11extras5-dev qtmultimedia5-dev libqt5svg5-dev qtwebengine5-dev libqt5xmlpatterns5-dev qttools5-dev qtbase5-private-dev \
+  libxt-dev
+```
+
+:::{note}
+The CMake version currently included in Ubuntu 24.04 is CMake 3.28.3 which is compatible with the current development version of Slicer. **Last time tested: 2025-05-27.**
 :::
 
 ### Ubuntu 23.04 (Lunar Lobster)
@@ -60,7 +89,7 @@ sudo apt update && sudo apt install git git-lfs build-essential \
   libxt-dev
 ```
 
-Install CMake manually by downloading CMake 3.25.3 or higher from the [CMake website](https://cmake.org/download/)
+Install CMake manually by downloading CMake >=3.25.3 from the [CMake website](https://cmake.org/download/)
 and by following the CMake installation instructions.
 
 :::{note}
@@ -80,34 +109,6 @@ sudo apt update && sudo apt install git build-essential \
   qtbase5-dev qt5-qmake
 ```
 
-### Ubuntu 21.10 (Impish Indri)
-
-Install the development tools and the support libraries:
-
-```console
-sudo apt update && sudo apt install git build-essential \
-  cmake cmake-curses-gui cmake-qt-gui \
-  libqt5x11extras5-dev qtmultimedia5-dev libqt5svg5-dev qtwebengine5-dev libqt5xmlpatterns5-dev qttools5-dev qtbase5-private-dev \
-  libxt-dev libssl-dev
-```
-
-### Ubuntu 20.04 (Focal Fossa)
-
-:::{warning}
-Since the default Qt5 packages available on Ubuntu 20.04 correspond to version 5.12.8 and version 5.15.2 is used to build and test the packages available for download. Compiling Slicer against version 5.12.8 may not succeed, and if it does, the compiled Slicer application may behave differently.
-
-To use Qt 5.15.2, we recommend you download and install following [these instructions](./linux.md#any-distribution)
-:::
-
-Install the development tools and the support libraries:
-
-```console
-sudo apt update && sudo apt install git build-essential \
-  cmake cmake-curses-gui cmake-qt-gui \
-  libqt5x11extras5-dev qtmultimedia5-dev libqt5svg5-dev qtwebengine5-dev libqt5xmlpatterns5-dev qttools5-dev qtbase5-private-dev \
-  libxt-dev qt5-default
-```
-
 ### ArchLinux
 
 :::{warning}
@@ -115,26 +116,6 @@ ArchLinux uses a rolling-release package distribution approach. This means that 
 :::
 
 You could build Slicer using the `PKGBUILD` from AUR: [3dslicer](https://aur.archlinux.org/packages/3dslicer) and [3dslicer-git](https://aur.archlinux.org/packages/3dslicer-git).
-
-### CentOS 7
-:::{note}
-Slicer built on CentOS 7 will be available for many Linux distributions and releases
-:::
-
-Install Qt and CMake as described in [Any Distribution](./linux.md#any-distribution) section.
-
-Since by default CentOS 7 comes with `gcc 4.8.5` only having [experimental support for C++14](https://gcc.gnu.org/onlinedocs/gcc-4.8.5/gcc/C-Dialect-Options.html#C-Dialect-Options), the following allows to install and activate the `devtoolset-11` [providing](https://access.redhat.com/documentation/en-us/red_hat_developer_toolset/11/html/11.0_release_notes/dts11.0_release#Changes_in_DTS) `gcc 11.2.1` [supporting C++20](https://en.cppreference.com/w/cpp/compiler_support/20):
-
-```console
-sudo yum install centos-release-scl
-sudo yum install devtoolset-11-gcc*
-scl enable devtoolset-11 bash         # activation is needed for every terminal session
-```
-
-Install pre-requisites:
-```console
-sudo yum install patch mesa-libGL-devel libuuid-devel
-```
 
 ### Any Distribution
 
@@ -148,8 +129,8 @@ This process requires an account in [qt.io](https://qt.io)
 Download the Qt Linux online installer and make it executable:
 
 ```console
- curl -LO http://download.qt.io/official_releases/online_installers/qt-unified-linux-x64-online.run
- chmod +x qt-unified-linux-x64-online.run
+ curl -LO https://download.qt.io/official_releases/online_installers/qt-online-installer-linux-x64-online.run
+ chmod +x qt-online-installer-linux-x64-online.run
 ```
 You can run the installer and follow the instructions in the GUI. Keep in mind that the components needed by 3D Slicer are: `qt.qt5.5152.gcc_64`, `qt.qt5.5152.qtwebengine` and `qt.qt5.5152.qtwebengine.gcc_64`.
 
@@ -158,7 +139,7 @@ Alternatively, you can request the installation of the components with the follo
 ```console
 export QT_ACCOUNT_LOGIN=<set your qt.io account email here>
 export QT_ACCOUNT_PASSWORD=<set your password here>
-./qt-unified-linux-x64-online.run \
+./qt-online-installer-linux-x64-online.run \
   install \
     qt.qt5.5152.gcc_64 \
     qt.qt5.5152.qtwebengine \

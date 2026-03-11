@@ -29,12 +29,13 @@
 // qSlicerCommandOptions methods
 
 //-----------------------------------------------------------------------------
-qSlicerCommandOptions::qSlicerCommandOptions():Superclass()
+qSlicerCommandOptions::qSlicerCommandOptions()
+  : Superclass()
 {
 }
 
 //-----------------------------------------------------------------------------
-bool qSlicerCommandOptions::disableToolTips()const
+bool qSlicerCommandOptions::disableToolTips() const
 {
   return this->parsedArgs().value("disable-tooltips").toBool();
 }
@@ -58,8 +59,8 @@ bool qSlicerCommandOptions::showPythonConsole() const
   // Handle the deprecated argument name for a while, for backward compatibility:
   if (this->parsedArgs().value("show-python-interactor").toBool())
   {
-      qWarning() << "show-python-interactor command-line argument is deprecated, use show-python-console instead";
-      show = true;
+    qWarning() << "show-python-interactor command-line argument is deprecated, use show-python-console instead";
+    show = true;
   }
   return show;
 }
@@ -72,7 +73,7 @@ bool qSlicerCommandOptions::showPythonInteractor() const
 }
 
 //-----------------------------------------------------------------------------
-bool qSlicerCommandOptions::enableQtTesting()const
+bool qSlicerCommandOptions::enableQtTesting() const
 {
 #ifdef Slicer_USE_QtTesting
   return this->parsedArgs().value("qt-testing").toBool();
@@ -82,7 +83,7 @@ bool qSlicerCommandOptions::enableQtTesting()const
 }
 
 //-----------------------------------------------------------------------------
-bool qSlicerCommandOptions::exitAfterStartup()const
+bool qSlicerCommandOptions::exitAfterStartup() const
 {
   return this->parsedArgs().value("exit-after-startup").toBool();
 }
@@ -92,30 +93,72 @@ void qSlicerCommandOptions::addArguments()
 {
   this->Superclass::addArguments();
 
-  this->addArgument("disable-tooltips", "", QVariant::Bool,
+  this->addArgument("disable-tooltips",
+                    "",
+#if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
+                    QMetaType::Bool,
+#else
+                    QVariant::Bool,
+#endif
                     "Disable toolstips in the user interface.");
 
-  this->addArgument("no-splash", "", QVariant::Bool,
+  this->addArgument("no-splash",
+                    "",
+#if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
+                    QMetaType::Bool,
+#else
+                    QVariant::Bool,
+#endif
                     "Disable the startup splash screen.");
 
-  this->addArgument("no-main-window", "", QVariant::Bool,
+  this->addArgument("no-main-window",
+                    "",
+#if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
+                    QMetaType::Bool,
+#else
+                    QVariant::Bool,
+#endif
                     "Disable display of the main slicer window.  Use with --python-script for alternate interface");
 
 #ifdef Slicer_USE_PYTHONQT
   if (!qSlicerCoreApplication::testAttribute(qSlicerCoreApplication::AA_DisablePython))
   {
-    this->addArgument("show-python-console", "", QVariant::Bool,
+    this->addArgument("show-python-console",
+                      "",
+# if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
+                      QMetaType::Bool,
+# else
+                      QVariant::Bool,
+# endif
                       "Show Python console at startup.");
-    this->addArgument("show-python-interactor", "", QVariant::Bool,
+    this->addArgument("show-python-interactor",
+                      "",
+# if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
+                      QMetaType::Bool,
+# else
+                      QVariant::Bool,
+# endif
                       "Show Python console at startup (deprecated, use show-python-console instead).");
   }
 #endif
 
 #ifdef Slicer_USE_QtTesting
-  this->addArgument("qt-testing", "", QVariant::Bool,
+  this->addArgument("qt-testing",
+                    "",
+# if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
+                    QMetaType::Bool,
+# else
+                    QVariant::Bool,
+# endif
                     "Enable QtTesting in the user interface");
 #endif
 
-  this->addArgument("exit-after-startup", "", QVariant::Bool,
+  this->addArgument("exit-after-startup",
+                    "",
+#if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
+                    QMetaType::Bool,
+#else
+                    QVariant::Bool,
+#endif
                     "Exit after startup is complete. Useful for measuring startup time");
 }

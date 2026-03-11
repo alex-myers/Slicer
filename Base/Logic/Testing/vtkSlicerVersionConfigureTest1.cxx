@@ -24,7 +24,7 @@
 #include <vtkAddonTestingMacros.h>
 
 //-----------------------------------------------------------------------------
-int vtkSlicerVersionConfigureTest1(int /*argc*/, char * /*argv*/ [])
+int vtkSlicerVersionConfigureTest1(int /*argc*/, char* /*argv*/[])
 {
   // From vtkSlicerVersionConfigure
   CHECK_STRING_DIFFERENT(Slicer_VERSION, "");
@@ -40,6 +40,9 @@ int vtkSlicerVersionConfigureTest1(int /*argc*/, char * /*argv*/ [])
   CHECK_STRING(Slicer_OS_WIN_NAME, "win");
   CHECK_STRING_DIFFERENT(Slicer_ARCHITECTURE, "");
   CHECK_STRING_DIFFERENT(Slicer_OS, "");
+
+  CHECK_BOOL(Slicer_VERSION_NUMBER < Slicer_VERSION_NUMBER_COMPUTE(80, 0, 0), true);
+  CHECK_BOOL(Slicer_VERSION_NUMBER > Slicer_VERSION_NUMBER_COMPUTE(1, 15, 12), true);
 
   return EXIT_SUCCESS;
 }

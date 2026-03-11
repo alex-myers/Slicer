@@ -25,11 +25,14 @@
 
 #include <vtkNew.h>
 
+// STD includes
+#include <iostream>
+
 //---------------------------------------------------------------------------
 int TestReadWriteData(vtkMRMLScene* scene, const char* extension, std::string text, int encoding);
 
 //---------------------------------------------------------------------------
-int vtkMRMLTextStorageNodeTest1(int argc, char * argv[] )
+int vtkMRMLTextStorageNodeTest1(int argc, char* argv[])
 {
   if (argc != 2)
   {
@@ -45,7 +48,7 @@ int vtkMRMLTextStorageNodeTest1(int argc, char * argv[] )
   scene->SetRootDirectory(tempDir);
 
   CHECK_EXIT_SUCCESS(TestReadWriteData(scene.GetPointer(), ".txt", "Hello world!", VTK_ENCODING_US_ASCII));
-  CHECK_EXIT_SUCCESS(TestReadWriteData(scene.GetPointer(), "UTF8.txt", u8"Hell\u00F3 vil\u00E1g!", VTK_ENCODING_UTF_8));
+  CHECK_EXIT_SUCCESS(TestReadWriteData(scene.GetPointer(), "UTF8.txt", static_cast<const char*>(u8"Hell\u00F3 vil\u00E1g!"), VTK_ENCODING_UTF_8));
   CHECK_EXIT_SUCCESS(TestReadWriteData(scene.GetPointer(), ".xml", "<Hello World=True/>", VTK_ENCODING_US_ASCII));
   CHECK_EXIT_SUCCESS(TestReadWriteData(scene.GetPointer(), ".json", "{\"Hello\":\"World\"}", VTK_ENCODING_US_ASCII));
 
@@ -53,11 +56,9 @@ int vtkMRMLTextStorageNodeTest1(int argc, char * argv[] )
 }
 
 //---------------------------------------------------------------------------
-int TestReadWriteData(vtkMRMLScene* scene, const char *extension, std::string text, int encoding)
+int TestReadWriteData(vtkMRMLScene* scene, const char* extension, std::string text, int encoding)
 {
-  std::string fileName = std::string(scene->GetRootDirectory()) +
-                         std::string("/vtkMRMLTextNodeTest1") +
-                         std::string(extension);
+  std::string fileName = std::string(scene->GetRootDirectory()) + std::string("/vtkMRMLTextNodeTest1") + std::string(extension);
 
   // Add text node
   vtkNew<vtkMRMLTextNode> textNode;

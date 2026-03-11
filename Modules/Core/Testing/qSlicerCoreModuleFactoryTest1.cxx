@@ -24,10 +24,11 @@
 #include <qSlicerCoreModuleFactory.h>
 
 // STD includes
+#include <iostream>
 
 #include "vtkMRMLCoreTestingMacros.h"
 
-int qSlicerCoreModuleFactoryTest1(int, char * [] )
+int qSlicerCoreModuleFactoryTest1(int, char*[])
 {
   QString className = "qSlicerEventBrokerModule";
   QString expectedModuleName = "EventBroker";
@@ -36,8 +37,8 @@ int qSlicerCoreModuleFactoryTest1(int, char * [] )
   if (moduleName != expectedModuleName)
   {
     std::cerr << __LINE__ << " - Error in  extractModuleName()" << std::endl
-                          << "moduleName = " << qPrintable(moduleName) << std::endl
-                          << "expectedModuleName = " << qPrintable(expectedModuleName) << std::endl;
+              << "moduleName = " << qPrintable(moduleName) << std::endl
+              << "expectedModuleName = " << qPrintable(expectedModuleName) << std::endl;
     return EXIT_FAILURE;
   }
 

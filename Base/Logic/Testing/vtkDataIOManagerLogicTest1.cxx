@@ -14,7 +14,10 @@
 #include "vtkMRMLCoreTestingMacros.h"
 #include "vtkDataIOManagerLogic.h"
 
-int vtkDataIOManagerLogicTest1(int , char * [] )
+// STD includes
+#include <iostream>
+
+int vtkDataIOManagerLogicTest1(int, char*[])
 {
   vtkNew<vtkDataIOManagerLogic> logic;
   EXERCISE_BASIC_OBJECT_METHODS(logic.GetPointer());

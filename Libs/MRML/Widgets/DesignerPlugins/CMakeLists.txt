@@ -15,20 +15,16 @@ set(${KIT}_SRCS
   qMRMLWidgetsPlugin.cxx
   qMRMLWidgetsPlugin.h
 
-  qMRMLCaptureToolBarPlugin.h
-  qMRMLCaptureToolBarPlugin.cxx
   qMRMLCheckableNodeComboBoxPlugin.cxx
   qMRMLCheckableNodeComboBoxPlugin.h
+  qMRMLClipNodeDisplayWidgetPlugin.cxx
+  qMRMLClipNodeDisplayWidgetPlugin.h
   qMRMLClipNodeWidgetPlugin.cxx
   qMRMLClipNodeWidgetPlugin.h
   qMRMLCollapsibleButtonPlugin.cxx
   qMRMLCollapsibleButtonPlugin.h
-  qMRMLColorListViewPlugin.cxx
-  qMRMLColorListViewPlugin.h
   qMRMLColorTableComboBoxPlugin.cxx
   qMRMLColorTableComboBoxPlugin.h
-  qMRMLColorTableViewPlugin.cxx
-  qMRMLColorTableViewPlugin.h
   qMRMLCoordinatesWidgetPlugin.cxx
   qMRMLCoordinatesWidgetPlugin.h
   qMRMLDisplayNodeViewComboBoxPlugin.cxx
@@ -110,61 +106,6 @@ if(MRML_WIDGETS_HAVE_WEBENGINE_SUPPORT)
     )
 endif()
 
-# Headers that should run through moc
-set(${KIT}_MOC_SRCS
-  qMRMLWidgetsPlugin.h
-
-  qMRMLCaptureToolBarPlugin.h
-  qMRMLCheckableNodeComboBoxPlugin.h
-  qMRMLClipNodeWidgetPlugin.h
-  qMRMLCollapsibleButtonPlugin.h
-  qMRMLColorListViewPlugin.h
-  qMRMLColorTableComboBoxPlugin.h
-  qMRMLColorTableViewPlugin.h
-  qMRMLCoordinatesWidgetPlugin.h
-  qMRMLDisplayNodeViewComboBoxPlugin.h
-  qMRMLDisplayNodeWidgetPlugin.h
-  qMRMLEventBrokerWidgetPlugin.h
-  qMRMLLabelComboBoxPlugin.h
-  qMRMLLayoutWidgetPlugin.h
-  qMRMLLinearTransformSliderPlugin.h
-  qMRMLListWidgetPlugin.h
-  qMRMLMatrixWidgetPlugin.h
-  qMRMLModelInfoWidgetPlugin.h
-  qMRMLNavigationViewPlugin.h
-  qMRMLNodeAttributeTableViewPlugin.h
-  qMRMLNodeAttributeTableWidgetPlugin.h
-  qMRMLNodeComboBoxPlugin.h
-  qMRMLPlotViewControllerWidgetPlugin.h
-  qMRMLPlotWidgetPlugin.h
-  qMRMLRangeWidgetPlugin.h
-  qMRMLROIWidgetPlugin.h
-  qMRMLScalarInvariantComboBoxPlugin.h
-  qMRMLScalarsDisplayWidgetPlugin.h
-  qMRMLSceneFactoryWidgetPlugin.h
-  qMRMLSliceControllerWidgetPlugin.h
-  qMRMLSliceInformationWidgetPlugin.h
-  qMRMLSliceVerticalControllerWidgetPlugin.h
-  qMRMLSliceWidgetPlugin.h
-  qMRMLSliderWidgetPlugin.h
-  qMRMLSpinBoxPlugin.h
-  qMRMLTableViewPlugin.h
-  qMRMLThreeDViewInformationWidgetPlugin.h
-  qMRMLThreeDViewPlugin.h
-  qMRMLTransformSlidersPlugin.h
-  qMRMLTreeViewPlugin.h
-  qMRMLVolumeInfoWidgetPlugin.h
-  qMRMLVolumeThresholdWidgetPlugin.h
-  qMRMLWidgetPlugin.h
-  qMRMLWindowLevelWidgetPlugin.h
-  )
-
-if(MRML_WIDGETS_HAVE_WEBENGINE_SUPPORT)
-  list(APPEND ${KIT}_MOC_SRCS
-    qMRMLExpandingWebViewPlugin.h
-    )
-endif()
-
 set(${KIT}_TARGET_LIBRARIES
   qMRMLWidgets
   )
@@ -174,6 +115,5 @@ ctkMacroBuildQtDesignerPlugin(
   EXPORT_DIRECTIVE ${${KIT}_EXPORT}
   FOLDER "${${KIT}_FOLDER}"
   SRCS ${${KIT}_SRCS}
-  MOC_SRCS ${${KIT}_MOC_SRCS}
   TARGET_LIBRARIES ${${KIT}_TARGET_LIBRARIES}
   )

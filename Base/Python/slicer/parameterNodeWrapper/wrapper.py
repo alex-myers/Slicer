@@ -2,8 +2,8 @@
 
 import logging
 import typing
-from typing import Optional
 import weakref
+import types
 
 import qt
 
@@ -29,7 +29,7 @@ SlicerParameterNamePropertyName = "SlicerParameterName"
 
 
 class _Parameter:
-    def __init__(self, parameterInfo: ParameterInfo, prefix: Optional[str] = None):
+    def __init__(self, parameterInfo: ParameterInfo, prefix: str | None = None):
         self.name: str = f"{prefix or ''}{parameterInfo.basename}"
         self.serializer: Serializer = parameterInfo.serializer
         self.default = parameterInfo.default
@@ -127,10 +127,11 @@ def _makeProperty(name: str):
     )
 
 
-def _initMethod(self, parameterNode, prefix: Optional[str] = None):
+def _initMethod(self, parameterNode, prefix: str | None = None):
     self.parameterNode = parameterNode
     self._parameterGUIs = dict()
     self._nextParameterGUIsTag = 0
+    self._guiVtkObserverTags = dict()
     self._updatingGUIFromParameterNode = False
     for parameterInfo in self.allParameters.values():
         parameter = _Parameter(parameterInfo, prefix)
@@ -209,7 +210,8 @@ def _connectParametersToGui(self, mapping):
         connector.write(self.getValue(paramName))
         connector.onChanged(_makeGuiToParamCallback(self, paramName, connector))
 
-    self.AddObserver(vtk.vtkCommand.ModifiedEvent, lambda caller, event: _updateGUIFromParameterNode(self))
+    vtkObserverTag = self.AddObserver(vtk.vtkCommand.ModifiedEvent, lambda caller, event: _updateGUIFromParameterNode(self))
+    self._guiVtkObserverTags[tag] = vtkObserverTag
     return tag
 
 
@@ -250,7 +252,7 @@ def _connectGui(self, gui):
             if widget.property(SlicerParameterNamePropertyName):
                 paramNameToWidget[widget.property(SlicerParameterNamePropertyName)] = widget
 
-    _connectParametersToGui(self, paramNameToWidget)
+    return _connectParametersToGui(self, paramNameToWidget)
 
 
 def _disconnectGui(self, guiTag):
@@ -258,6 +260,9 @@ def _disconnectGui(self, guiTag):
         for _, connector in self._parameterGUIs[guiTag].items():
             connector.onChanged(None)  # remove callback
         del self._parameterGUIs[guiTag]
+    if guiTag in self._guiVtkObserverTags:
+        self.RemoveObserver(self._guiVtkObserverTags[guiTag])
+        del self._guiVtkObserverTags[guiTag]
 
 
 def _getValue(self, name):
@@ -303,6 +308,10 @@ def _processClass(classtype):
     allParameters: dict[str, ParameterInfo] = dict()
     for name, nametype in members.items():
         membertype, annotations = splitAnnotations(nametype)
+
+        if hasattr(types, "UnionType") and isinstance(membertype, types.UnionType):
+            # Convert types.UnionType to typing.Union for serializer compatibility
+            membertype = typing.Union[tuple(typing.get_args(membertype))]
 
         try:
             serializer, annotations = createSerializer(membertype, annotations)

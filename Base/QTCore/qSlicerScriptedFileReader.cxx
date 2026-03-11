@@ -41,7 +41,8 @@ public:
   qSlicerScriptedFileReaderPrivate();
   virtual ~qSlicerScriptedFileReaderPrivate();
 
-  enum {
+  enum
+  {
     DescriptionMethod = 0,
     FileTypeMethod,
     ExtensionsMethod,
@@ -52,8 +53,8 @@ public:
 
   mutable qSlicerPythonCppAPI PythonCppAPI;
 
-  QString    PythonSource;
-  QString    PythonClassName;
+  QString PythonSource;
+  QString PythonClassName;
 };
 
 //-----------------------------------------------------------------------------
@@ -87,7 +88,7 @@ qSlicerScriptedFileReader::qSlicerScriptedFileReader(QObject* parent)
 qSlicerScriptedFileReader::~qSlicerScriptedFileReader() = default;
 
 //-----------------------------------------------------------------------------
-QString qSlicerScriptedFileReader::pythonSource()const
+QString qSlicerScriptedFileReader::pythonSource() const
 {
   Q_D(const qSlicerScriptedFileReader);
   return d->PythonSource;
@@ -103,7 +104,7 @@ bool qSlicerScriptedFileReader::setPythonSource(const QString& filePath, const Q
     return false;
   }
 
-  if(!filePath.endsWith(".py") && !filePath.endsWith(".pyc"))
+  if (!filePath.endsWith(".py") && !filePath.endsWith(".pyc"))
   {
     return false;
   }
@@ -124,12 +125,13 @@ bool qSlicerScriptedFileReader::setPythonSource(const QString& filePath, const Q
 
   d->PythonCppAPI.setObjectName(className);
 
-  // Get a reference (or create if needed) the <moduleName> python module
-  PyObject * module = PyImport_AddModule(moduleName.toUtf8());
+  // Get actual module from sys.modules
+  PyObject* sysModules = PyImport_GetModuleDict();
+  PyObject* module = PyDict_GetItemString(sysModules, moduleName.toUtf8());
 
   // Get a reference to the python module class to instantiate
   PythonQtObjectPtr classToInstantiate;
-  if (PyObject_HasAttrString(module, className.toUtf8()))
+  if (module && PyObject_HasAttrString(module, className.toUtf8()))
   {
     classToInstantiate.setNewRef(PyObject_GetAttrString(module, className.toUtf8()));
   }
@@ -144,7 +146,10 @@ bool qSlicerScriptedFileReader::setPythonSource(const QString& filePath, const Q
     PyErr_SetString(PyExc_RuntimeError,
                     QString("qSlicerScriptedFileReader::setPythonSource - "
                             "Failed to load scripted file Reader: "
-                            "class %1 was not found in file %2").arg(className).arg(filePath).toUtf8());
+                            "class %1 was not found in file %2")
+                      .arg(className)
+                      .arg(filePath)
+                      .toUtf8());
     return false;
   }
 
@@ -167,19 +172,18 @@ PyObject* qSlicerScriptedFileReader::self() const
 }
 
 //-----------------------------------------------------------------------------
-QString qSlicerScriptedFileReader::description()const
+QString qSlicerScriptedFileReader::description() const
 {
   Q_D(const qSlicerScriptedFileReader);
 
-  PyObject * result = d->PythonCppAPI.callMethod(d->DescriptionMethod);
+  PyObject* result = d->PythonCppAPI.callMethod(d->DescriptionMethod);
   if (!result)
   {
     return QString();
   }
   if (!PyUnicode_Check(result))
   {
-    qWarning() << d->PythonSource
-               << " - In" << d->PythonClassName << "class, function 'description' "
+    qWarning() << d->PythonSource << " - In" << d->PythonClassName << "class, function 'description' "
                << "is expected to return a string !";
     return QString();
   }
@@ -188,19 +192,18 @@ QString qSlicerScriptedFileReader::description()const
 }
 
 //-----------------------------------------------------------------------------
-qSlicerIO::IOFileType qSlicerScriptedFileReader::fileType()const
+qSlicerIO::IOFileType qSlicerScriptedFileReader::fileType() const
 {
   Q_D(const qSlicerScriptedFileReader);
 
-  PyObject * result = d->PythonCppAPI.callMethod(d->FileTypeMethod);
+  PyObject* result = d->PythonCppAPI.callMethod(d->FileTypeMethod);
   if (!result)
   {
     return IOFileType();
   }
   if (!PyUnicode_Check(result))
   {
-    qWarning() << d->PythonSource
-               << " - In" << d->PythonClassName << "class, function 'fileType' "
+    qWarning() << d->PythonSource << " - In" << d->PythonClassName << "class, function 'fileType' "
                << "is expected to return a string !";
     return IOFileType();
   }
@@ -208,18 +211,17 @@ qSlicerIO::IOFileType qSlicerScriptedFileReader::fileType()const
 }
 
 //-----------------------------------------------------------------------------
-QStringList qSlicerScriptedFileReader::extensions()const
+QStringList qSlicerScriptedFileReader::extensions() const
 {
   Q_D(const qSlicerScriptedFileReader);
-  PyObject * result = d->PythonCppAPI.callMethod(d->ExtensionsMethod);
+  PyObject* result = d->PythonCppAPI.callMethod(d->ExtensionsMethod);
   if (!result)
   {
     return QStringList();
   }
   if (!PyList_Check(result))
   {
-    qWarning() << d->PythonSource
-               << " - In" << d->PythonClassName << "class, function 'extensions' "
+    qWarning() << d->PythonSource << " - In" << d->PythonClassName << "class, function 'extensions' "
                << "is expected to return a string list !";
     return QStringList();
   }
@@ -230,8 +232,7 @@ QStringList qSlicerScriptedFileReader::extensions()const
   {
     if (!PyUnicode_Check(PyTuple_GetItem(resultAsTuple, i)))
     {
-      qWarning() << d->PythonSource
-                 << " - In" << d->PythonClassName << "class, function 'extensions' "
+      qWarning() << d->PythonSource << " - In" << d->PythonClassName << "class, function 'extensions' "
                  << "is expected to return a string list !";
       break;
     }
@@ -242,7 +243,7 @@ QStringList qSlicerScriptedFileReader::extensions()const
 }
 
 //-----------------------------------------------------------------------------
-bool qSlicerScriptedFileReader::canLoadFile(const QString& file)const
+bool qSlicerScriptedFileReader::canLoadFile(const QString& file) const
 {
   Q_D(const qSlicerScriptedFileReader);
   PyObject* arguments = PyTuple_New(1);
@@ -256,8 +257,7 @@ bool qSlicerScriptedFileReader::canLoadFile(const QString& file)const
   }
   if (!PyBool_Check(result))
   {
-    qWarning() << d->PythonSource
-               << " - In" << d->PythonClassName << "class, function 'canLoadFile' "
+    qWarning() << d->PythonSource << " - In" << d->PythonClassName << "class, function 'canLoadFile' "
                << "is expected to return a boolean!";
     return false;
   }
@@ -265,7 +265,7 @@ bool qSlicerScriptedFileReader::canLoadFile(const QString& file)const
 }
 
 //-----------------------------------------------------------------------------
-double qSlicerScriptedFileReader::canLoadFileConfidence(const QString& file)const
+double qSlicerScriptedFileReader::canLoadFileConfidence(const QString& file) const
 {
   Q_D(const qSlicerScriptedFileReader);
   PyObject* arguments = PyTuple_New(1);
@@ -280,8 +280,7 @@ double qSlicerScriptedFileReader::canLoadFileConfidence(const QString& file)cons
 
   if (!PyFloat_Check(result))
   {
-    qWarning() << d->PythonSource
-               << " - In" << d->PythonClassName << "class, function 'canLoadFileConfidence' "
+    qWarning() << d->PythonSource << " - In" << d->PythonClassName << "class, function 'canLoadFileConfidence' "
                << "is expected to return a float!";
     return 0.0;
   }
@@ -292,9 +291,9 @@ double qSlicerScriptedFileReader::canLoadFileConfidence(const QString& file)cons
 bool qSlicerScriptedFileReader::load(const qSlicerIO::IOProperties& properties)
 {
   Q_D(qSlicerScriptedFileReader);
-  PyObject * arguments = PyTuple_New(1);
+  PyObject* arguments = PyTuple_New(1);
   PyTuple_SET_ITEM(arguments, 0, PythonQtConv::QVariantMapToPyObject(properties));
-  PyObject * result = d->PythonCppAPI.callMethod(d->LoadMethod, arguments);
+  PyObject* result = d->PythonCppAPI.callMethod(d->LoadMethod, arguments);
   Py_DECREF(arguments);
   if (!result)
   {
@@ -302,8 +301,7 @@ bool qSlicerScriptedFileReader::load(const qSlicerIO::IOProperties& properties)
   }
   if (!PyBool_Check(result))
   {
-    qWarning() << d->PythonSource
-               << " - In" << d->PythonClassName << "class, function 'write' "
+    qWarning() << d->PythonSource << " - In" << d->PythonClassName << "class, function 'write' "
                << "is expected to return a string boolean !";
     return false;
   }

@@ -189,10 +189,9 @@ def importModuleObjects(from_module_name, dest_module_name, type_info):
         return
 
     # Obtain a reference to the module identified by 'from_module_name'
-    import imp
+    import importlib
 
-    fp, pathname, description = imp.find_module(from_module_name)
-    module = imp.load_module(from_module_name, fp, pathname, description)
+    module = importlib.import_module(from_module_name)
 
     # Loop over content of the python module associated with the given python library
     for item_name in dir(module):
@@ -295,9 +294,9 @@ def findChildren(widget=None, name="", text="", title="", className=""):
     parents = [widget]
     kwargs = {"name": name, "text": text, "title": title, "className": className}
     expected_matches = []
-    for kwarg in kwargs.keys():
-        if kwargs[kwarg]:
-            expected_matches.append(kwarg)
+    for kwarg_key, kwarg_value in kwargs.items():
+        if kwarg_value:
+            expected_matches.append(kwarg_key)
     while parents:
         p = parents.pop()
         # sometimes, p is null, f.e. when using --python-script or --python-code
@@ -392,7 +391,7 @@ def childWidgetVariables(widget):
     ui = type("", (), {})()  # empty object
     childWidgets = findChildren(widget)
     for childWidget in childWidgets:
-        if hasattr(childWidget, "name"):
+        if hasattr(childWidget, "name") and childWidget.name:
             setattr(ui, childWidget.name, childWidget)
     return ui
 
@@ -581,7 +580,7 @@ def setSliceViewerLayers(background="keep-current", foreground="keep-current", l
             for i in range(sliceLogics.GetNumberOfItems()):
                 sliceLogic = sliceLogics.GetItemAsObject(i)
                 if sliceLogic:
-                    sliceLogic.FitSliceToAll()
+                    sliceLogic.FitSliceToBackground()
 
 
 def setToolbarsVisible(visible, ignore=None):
@@ -1401,8 +1400,7 @@ def reloadScriptedModule(moduleName):
 
     The function performs the following:
 
-    * Ensure ``sys.path`` includes the module path and use ``imp.load_module``
-      to load the associated script.
+    * Ensure ``sys.path`` includes the module path and use ``importlib`` to load the associated script.
     * For the current module widget representation:
 
       * Hide all children widgets
@@ -1413,7 +1411,8 @@ def reloadScriptedModule(moduleName):
     * Call ``setup()`` function
     * Update ``slicer.modules.<moduleName>Widget`` attribute
     """
-    import imp, sys, os
+    import importlib.util
+    import sys, os
     import slicer
 
     widgetName = moduleName + "Widget"
@@ -1425,9 +1424,11 @@ def reloadScriptedModule(moduleName):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-    with open(filePath, encoding="utf8") as fp:
-        reloaded_module = imp.load_module(
-            moduleName, fp, filePath, (".py", "r", imp.PY_SOURCE))
+    # Use importlib to load the module from file path
+    spec = importlib.util.spec_from_file_location(moduleName, filePath)
+    reloaded_module = importlib.util.module_from_spec(spec)
+    sys.modules[moduleName] = reloaded_module
+    spec.loader.exec_module(reloaded_module)
 
     # find and hide the existing widget
     parent = eval("slicer.modules.%s.widgetRepresentation()" % moduleName.lower())
@@ -1597,6 +1598,14 @@ def getNode(pattern="*", index=0, scene=None):
 
     By default, ``pattern`` is a wildcard and it returns the first node
     associated with ``slicer.mrmlScene``.
+
+    This function is only intended for quick access to nodes for testing and troubleshooting, due to two important limitations.
+    1. Due to the filename pattern matching uses some special characters (`*?[]`) it may be difficult to use it for nodes
+      that have these characters in their names.
+    2. In a scene often several nodes have the same name and this function only returns the first one.
+
+    If a node name uses special characters, or if there are multiple nodes with the same name, then you can use the node ID as input
+    or use :py:meth:`getFirstNodeByClassByName` to get the first node of a specific class.
 
     :raises MRMLNodeNotFoundException: if no node is found
      that matches the specified pattern.
@@ -2489,17 +2498,75 @@ def arrayFromTableColumnModified(tableNode, columnName):
     tableNode.GetTable().Modified()
 
 
-def updateTableFromArray(tableNode, narrays, columnNames=None):
-    """Set values in a table node from a numpy array.
+def _vtkArrayFromNumpyArray(narray, deep=False, arrayType=None):
+    """
+    Convert a NumPy array into a VTK-compatible array, with special handling for ``VTK_BIT`` arrays.
 
-    :param columnNames: may contain a string or list of strings that will be used as column name(s).
-    :raises ValueError: in case of failure
+    When ``arrayType`` is set to ``vtk.VTK_BIT``, this function works around an existing issue in
+    the built-in VTK helper ``vtk.util.numpy_support.numpy_to_vtk.numpy_to_vtk`` by manually packing
+    the bits. See https://gitlab.kitware.com/vtk/vtk/-/issues/19610
+    """
+    import numpy as np
+    import vtk.util.numpy_support
 
-    Values are copied, therefore if the numpy array  is modified after calling this method,
-    values in the table node will not change.
-    All previous content of the table is deleted.
+    if arrayType == vtk.VTK_BIT:
+        # Workaround issue with built-in VTK function numpy_to_vtk.
+        # See https://gitlab.kitware.com/vtk/vtk/-/issues/19610
+        packedBits = np.packbits(narray)
+        resultArray = vtk.util.numpy_support.create_vtk_array(arrayType)
+        resultArray.SetNumberOfComponents(1)
+        shape = narray.shape
+        resultArray.SetNumberOfTuples(shape[0])
+        resultArray.SetVoidArray(packedBits, shape[0], 1)
+        # Since packedBits is a standalone object with no references from the caller.
+        # As such, it will drop out of this scope and cause memory issues if we
+        # do not deep copy its data.
+        copy = resultArray.NewInstance()
+        copy.DeepCopy(resultArray)
+        resultArray = copy
+        return resultArray
 
-    Example::
+    return vtk.util.numpy_support.numpy_to_vtk(narray, deep=deep, array_type=arrayType)
+
+
+def updateTableFromArray(tableNode, narrays, columnNames=None, setBoolAsUchar=False):
+    """Set values in a table node from a NumPy array or an array-like object (list/tuple of NumPy arrays).
+
+    This function can handle:
+
+      - **Structured (record) array** with named fields. Each field becomes a separate column.
+        If ``columnNames`` is not provided, the field names in the dtype are used.
+      - **1D NumPy array**, which is added as a single column.
+      - **2D NumPy array**, where each column in the array is added as a separate column in the
+        table node (note that the array is transposed).
+      - **List/tuple** of 1D NumPy arrays, which are each added as separate columns.
+
+    :param tableNode: The table node to be updated. If ``None``, a new ``vtkMRMLTableNode`` is
+      created and added to the scene.
+    :type tableNode: vtkMRMLTableNode or None
+    :param narrays: NumPy array or array-like object (structured array, 1D/2D array, or list/tuple of 1D arrays).
+    :type narrays: np.ndarray, tuple, or list
+    :param columnNames: Optional string or list of strings specifying names for the columns. If fewer
+      names are provided than columns, only the specified columns are named;
+      otherwise columns get default names. If ``None`` is passed, no column names are set.
+    :type columnNames: str, list of str, or None
+    :param setBoolAsUchar: If ``True``, boolean arrays are converted to ``uint8`` for plotting compatibility.
+      This leverages the :func:`_vtkArrayFromNumpyArray` function's handling of ``VTK_BIT`` arrays.
+      Default is ``False``.
+    :type setBoolAsUchar: bool
+    :return: Updated ``vtkMRMLTableNode``.
+    :raises ValueError: If the input ``narrays`` is not a recognized format.
+
+    This function automatically detects the data type of each input array using
+    ``vtk.util.numpy_support.get_vtk_array_type`` and maps it to the corresponding VTK array type. As a
+    result, a broader range of numeric and complex data (e.g., int, float, and complex) is supported
+    without requiring manual conversions. All existing columns in the target table node are removed
+    before adding new columns.
+
+    .. warning:: Data in the table node is stored by value (deep copy). Modifying the NumPy array after calling
+        this function does not update the table node's data.
+
+    .. code-block:: python
 
       import numpy as np
       histogram = np.histogram(arrayFromVolume(getNode('MRHead')))
@@ -2512,22 +2579,52 @@ def updateTableFromArray(tableNode, narrays, columnNames=None):
 
     if tableNode is None:
         tableNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLTableNode")
-    if isinstance(narrays, np.ndarray) and len(narrays.shape) == 1:
+
+    if isinstance(narrays, np.ndarray) and narrays.dtype.names:
+        # Structured array with named fields
+        fieldNames = narrays.dtype.names
+        if columnNames is None:
+            columnNames = list(fieldNames)
+        ncolumns = [narrays[fieldName] for fieldName in fieldNames]
+    elif isinstance(narrays, np.ndarray) and len(narrays.shape) == 1:
+        # Single 1D array
         ncolumns = [narrays]
     elif isinstance(narrays, np.ndarray) and len(narrays.shape) == 2:
+        # 2D array -> transpose so columns become separate arrays
         ncolumns = narrays.T
     elif isinstance(narrays, tuple) or isinstance(narrays, list):
+        # List or tuple of 1D arrays
         ncolumns = narrays
     else:
-        raise ValueError("Expected narrays is a numpy ndarray, or tuple or list of numpy ndarrays, got %s instead." % (str(type(narrays))))
+        # Unrecognized format
+        msg = (
+            "Expected a structured NumPy array (with named fields), "
+            "a 1D/2D NumPy array, or a list/tuple of 1D arrays; "
+            "got {object_type} instead.".format(object_type=type(narrays))
+        )
+        raise ValueError(msg)
+
     tableNode.RemoveAllColumns()
     # Convert single string to a single-element string list
     if columnNames is None:
         columnNames = []
     if isinstance(columnNames, str):
         columnNames = [columnNames]
+
+    # For each extracted column, convert to a VTK array and add to the table.
     for columnIndex, ncolumn in enumerate(ncolumns):
-        vcolumn = vtk.util.numpy_support.numpy_to_vtk(num_array=ncolumn.ravel(), deep=True, array_type=vtk.VTK_FLOAT)
+        vtype = None
+        if ncolumn.dtype == np.bool_:
+            if setBoolAsUchar:
+                # Convert boolean arrays to uint to ensure compatibility with VTK plotting infrastructure:
+                # vtkContext2D does not support vtkBitArray, and plotting calls that rely on
+                # vtkArrayDownCast<vtkFloatArray>() would fail with a bit array.
+                ncolumn = ncolumn.astype("uint8")
+            else:
+                vtype = vtk.VTK_BIT
+        if vtype is None:
+            vtype = vtk.util.numpy_support.get_vtk_array_type(ncolumn.dtype)
+        vcolumn = _vtkArrayFromNumpyArray(ncolumn.ravel(), deep=True, arrayType=vtype)
         if (columnNames is not None) and (columnIndex < len(columnNames)):
             vcolumn.SetName(columnNames[columnIndex])
         tableNode.AddColumn(vcolumn)
@@ -2754,8 +2851,8 @@ def updateVolumeFromITKImage(volumeNode, itkImage, deepCopy=True):
 
     # Reset direction/origin/spacing of the VTK output image.
     # See https://github.com/Slicer/Slicer/issues/6911
-    identidyMatrix = vtk.vtkMatrix3x3()
-    vtkImage.SetDirectionMatrix(identidyMatrix)
+    identityMatrix = vtk.vtkMatrix3x3()
+    vtkImage.SetDirectionMatrix(identityMatrix)
     vtkImage.SetOrigin((0, 0, 0))
     vtkImage.SetSpacing((1.0, 1.0, 1.0))
 
@@ -2798,7 +2895,7 @@ class VTKObservationMixin:
             for obj, events in self.__observations.items():
                 for e, methods in events.items():
                     if method in methods:
-                        g, t, p = methods.pop(method)
+                        _g, t, _p = methods.pop(method)
                         obj.RemoveObserver(t)
 
     def addObserver(self, obj, event, method, group="none", priority=0.0):
@@ -2820,7 +2917,7 @@ class VTKObservationMixin:
         try:
             events = self.__observations[obj]
             methods = events[event]
-            group, tag, priority = methods.pop(method)
+            _group, tag, _priority = methods.pop(method)
             obj.RemoveObserver(tag)
         except KeyError:
             warn("does not have observer")
@@ -3127,9 +3224,9 @@ def createProgressDialog(parent=None, value=0, maximum=100, labelText="", window
     progressIndicator.value = value
     progressIndicator.windowTitle = windowTitle
     progressIndicator.labelText = labelText
-    for key, value in kwargs.items():
+    for key, argument in kwargs.items():
         if hasattr(progressIndicator, key):
-            setattr(progressIndicator, key, value)
+            setattr(progressIndicator, key, argument)
     return progressIndicator
 
 
@@ -3273,7 +3370,7 @@ def tryWithErrorDisplay(message=None, show=True, waitCursor=False):
 
     :param message: Text shown in the message box.
     :param show: If show is False, the context manager has no effect.
-    :param waitCursor: If waitCrusor is set to True then mouse cursor is changed to
+    :param waitCursor: If waitCursor is set to True then mouse cursor is changed to
        wait cursor while the context manager is being run.
 
     .. code-block:: python
@@ -3483,7 +3580,7 @@ def extractArchive(archiveFilePath, outputDir, expectedNumberOfExtractedFiles=No
     if not os.path.exists(archiveFilePath):
         logging.error("Specified file %s does not exist" % (archiveFilePath))
         return False
-    fileName, fileExtension = os.path.splitext(archiveFilePath)
+    _fileName, fileExtension = os.path.splitext(archiveFilePath)
     if fileExtension.lower() != ".zip":
         # TODO: Support other archive types
         logging.error("Only zip archives are supported now, got " + fileExtension)
@@ -3631,7 +3728,7 @@ class chdir:
         os.chdir(self._old_cwd.pop())
 
 
-def plot(narray, xColumnIndex=-1, columnNames=None, title=None, show=True, nodes=None):
+def plot(narray, xColumnIndex=-1, columnNames=None, title=None, show=True, nodes=None, plotBoolAsUchar=False):
     """Create a plot from a numpy array that contains two or more columns.
 
     :param narray: input numpy array containing data series in columns.
@@ -3644,6 +3741,9 @@ def plot(narray, xColumnIndex=-1, columnNames=None, title=None, show=True, nodes
       Specified in a dictionary, with keys: 'chart', 'table', 'series'.
       Series contains a list of plot series nodes (one for each table column).
       The parameter is used both as an input and output.
+    :param plotBoolAsUchar: If ``True``, any boolean columns in the input array are automatically
+      converted to unsigned integer arrays. This avoids issues with plotting bit arrays (``vtkBitArray``),
+      which are not fully supported by VTK plotting. Defaults to ``False``.
     :return: plot chart node. Plot chart node provides access to chart properties and plot series nodes.
 
     Example 1: simple plot
@@ -3704,7 +3804,7 @@ def plot(narray, xColumnIndex=-1, columnNames=None, title=None, show=True, nodes
 
     if title is not None:
         tableNode.SetName(title + " table")
-    updateTableFromArray(tableNode, narray)
+    updateTableFromArray(tableNode, narray, setBoolAsUchar=plotBoolAsUchar)
     # Update column names
     numberOfColumns = tableNode.GetTable().GetNumberOfColumns()
     yColumnIndex = 0
@@ -3892,25 +3992,32 @@ def pip_install(requirements):
     """Install python packages.
 
     Currently, the method simply calls ``python -m pip install`` but in the future further checks, optimizations,
-    user confirmation may be implemented, therefore it is recommended to use this method call instead of a plain
-    pip install.
+    user confirmation may be implemented, therefore it is recommended to use this method call instead of calling
+    pip install directly.
 
     :param requirements: requirement specifier in the same format as used by pip (https://docs.python.org/3/installing/index.html).
-      It can be either a single string or a list of command-line arguments. It may be simpler to pass command-line arguments as a list
-      if the arguments may contain spaces (because no escaping of the strings with quotes is necessary).
+      It can be either a single string or a list of command-line arguments. In general, passing all arguments as a single string is
+      the simplest. The only case when using a list may be easier is when there are arguments that may contain spaces, because
+      each list item is automatically quoted (it is not necessary to put quotes around each string argument that may contain spaces).
 
     Example: calling from Slicer GUI
 
     .. code-block:: python
 
-      pip_install("tensorflow keras scikit-learn ipywidgets")
+      pip_install("pandas scipy scikit-learn")
 
     Example: calling from PythonSlicer console
 
     .. code-block:: python
 
       from slicer.util import pip_install
-      pip_install("tensorflow")
+      pip_install("pandas>2")
+
+    Example: upgrading to latest version of a package
+
+    .. code-block:: python
+
+      pip_install("--upgrade pandas")
 
     """
 

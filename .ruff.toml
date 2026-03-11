@@ -1,5 +1,10 @@
-target-version = "py39"
-line-length = 550
+target-version = "py312"
+line-length = 320
+
+extend-exclude = [
+  "Base/QTGUI/Testing/Data/Input/qSlicerScriptedLoadableModuleSyntaxErrorTest.py",
+  "Base/QTGUI/Testing/Data/Input/qSlicerScriptedLoadableModuleSyntaxErrorTestWidget.py",
+]
 
 [lint]
 select = [
@@ -41,6 +46,7 @@ extend-ignore = [
   "B028",    # No explicit `stacklevel` keyword argument found
   "B904",    # Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None`
              # to distinguish them from errors in exception handling
+
   "C413",    # Unnecessary `reversed` call around `sorted()`
   "C408",    # Unnecessary `dict` call (rewrite as a literal)
   "C418",    # Unnecessary `dict` literal passed to `dict()` (remove the outer call to `dict()`)
@@ -72,11 +78,12 @@ extend-ignore = [
   "ISC002",  # Implicitly concatenated string literals over multiple lines
   "ISC003",  # Explicitly concatenated string should be implicitly concatenated
 
+  "PLC0415", # import outside top level
+
   "PLR0912", # Too many branche
   "PLR0913", # Too many arguments in function definition
   "PLR0911", # Too many return statements
   "PLR0915", # Too many statements
-  "PLR1701", # Merge `isinstance` calls
   "PLR1711", # Useless `return` statement at end of function
   "PLR1714", # Consider merging multiple comparisons
   "PLR1722", # Use `sys.exit()` instead of `exit`
@@ -87,6 +94,7 @@ extend-ignore = [
   "PLW0127", # self-assigning-variable 	Self-assignment of variable {name}
   "PLW0602", # Using global for `{name}` but no assignment is done
   "PLW0603", # Using the global statement to update {name} is discouraged
+  "PLW1641", # `__eq__` without `__hash__`
   "PLW2901", # Outer {outer_kind} variable {name} overwritten by inner {inner_kind} target
 
   "Q003",    # Change outer quotes to avoid escaping inner quotes
@@ -103,11 +111,14 @@ extend-ignore = [
   "RUF010",  # Use explicit conversion flag
   "RUF012",  # Mutable class attributes should be annotated with typing.ClassVar
   "RUF013",  # PEP 484 prohibits implicit `Optional`
+  "RUF022",  # Unsorted under __all__
   "RUF100",  # Unused `noqa` directive (non-enabled: `F401`)
 
   "SIM108",  # Use ternary operator
+  "SIM101",  # Duplicate isinstance call
   "SIM115",  # Use context handler for opening files
 
+  "UP007",   # non-pep604 annotation union
   "UP018",   # Unnecessary `int` call (rewrite as a literal)
   "UP030",   # Use implicit references for positional format fields
   "UP031",   # Use format specifiers instead of percent format

@@ -25,6 +25,8 @@
 // Qt includes
 #include <QDebug>
 #include <QFileInfo>
+#include <QRegularExpression>
+#include <QTextStream>
 
 // Slicer includes
 #include "qSlicerVolumesIOOptionsWidget.h"
@@ -50,7 +52,7 @@
 //-----------------------------------------------------------------------------
 class qSlicerVolumesReaderPrivate
 {
-  public:
+public:
   vtkSmartPointer<vtkSlicerVolumesLogic> Logic;
 };
 
@@ -80,37 +82,84 @@ void qSlicerVolumesReader::setLogic(vtkSlicerVolumesLogic* logic)
 }
 
 //-----------------------------------------------------------------------------
-vtkSlicerVolumesLogic* qSlicerVolumesReader::logic()const
+vtkSlicerVolumesLogic* qSlicerVolumesReader::logic() const
 {
   Q_D(const qSlicerVolumesReader);
   return d->Logic.GetPointer();
 }
 
 //-----------------------------------------------------------------------------
-QString qSlicerVolumesReader::description()const
+QString qSlicerVolumesReader::description() const
 {
   return tr("Volume");
 }
 
 //-----------------------------------------------------------------------------
-qSlicerIO::IOFileType qSlicerVolumesReader::fileType()const
+qSlicerIO::IOFileType qSlicerVolumesReader::fileType() const
 {
   return QString("VolumeFile");
 }
 
 //-----------------------------------------------------------------------------
-QStringList qSlicerVolumesReader::extensions()const
+QStringList qSlicerVolumesReader::extensions() const
 {
   // pic files are bio-rad images (see itkBioRadImageIO)
-  return QStringList()
-    << tr("Volume") + " (*.hdr *.nhdr *.nrrd *.mhd *.mha *.mnc *.nii *.nii.gz *.mgh *.mgz *.mgh.gz *.img *.img.gz *.pic)"
-    << tr("Dicom") + " (*.dcm *.ima)"
-    << tr("Image") + " (*.png *.tif *.tiff *.jpg *.jpeg)"
-    << tr("All Files") + " (*)";
+  return QStringList() //
+         << tr("Volume") + " (*.hdr *.nhdr *.nrrd *.mhd *.mha *.mnc *.nii *.nii.gz *.mgh *.mgz *.mgh.gz *.img *.img.gz *.pic)" << tr("Dicom") + " (*.dcm *.ima)"
+         << tr("Image") + " (*.png *.tif *.tiff *.jpg *.jpeg)" << tr("All Files") + " (*)";
+}
+
+//----------------------------------------------------------------------------
+double qSlicerVolumesReader::canLoadFileConfidence(const QString& fileName) const
+{
+  double confidence = Superclass::canLoadFileConfidence(fileName);
+  // Confidence for .nrrd and .nhdr file is 0.55 (5 characters in the file extension matched)
+  if (confidence > 0)
+  {
+    // Inspect the content to recognize DWI volumes.
+    QString upperCaseFileName = fileName.toUpper();
+    if (upperCaseFileName.endsWith("NRRD") || upperCaseFileName.endsWith("NHDR"))
+    {
+      QFile file(fileName);
+      if (file.open(QIODevice::ReadOnly | QIODevice::Text))
+      {
+        QTextStream in(&file);
+        QString line = in.readLine();
+        if (line.startsWith("NRRD"))
+        {
+          // The nrrd header is separated by the data by a blank line, so read everything up to there
+          // since diffusion scans can have a long list of gradients and modality can be
+          // near the end of the header
+          QRegularExpression modalityRe("modality:([^\\n]+)");
+          while (!in.atEnd())
+          {
+            line = in.readLine();
+            if (line.trimmed() == "")
+            {
+              break;
+            }
+            QRegularExpressionMatch modalityMatch = modalityRe.match(line);
+            if (modalityMatch.hasMatch())
+            {
+              QString modalityStr = modalityMatch.captured(1);
+              if (modalityStr.contains("dwmri", Qt::CaseInsensitive))
+              {
+                // This is a DWMRI image, we are confident that it is not just a general image sequence.
+                // Therefore we set higher confidence than the generic sequence reader's confidence of 0.6.
+                confidence = 0.7;
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  return confidence;
 }
 
 //-----------------------------------------------------------------------------
-qSlicerIOOptions* qSlicerVolumesReader::options()const
+qSlicerIOOptions* qSlicerVolumesReader::options() const
 {
   // set the mrml scene on the options widget to allow selecting a color node
   qSlicerIOOptionsWidget* options = new qSlicerVolumesIOOptionsWidget;
@@ -145,7 +194,7 @@ bool qSlicerVolumesReader::load(const IOProperties& properties)
   }
   if (properties.contains("autoWindowLevel"))
   {
-    options |= properties["autoWindowLevel"].toBool() ? 0x8: 0x0;
+    options |= properties["autoWindowLevel"].toBool() ? 0x8 : 0x0;
   }
   if (properties.contains("discardOrientation"))
   {
@@ -160,7 +209,7 @@ bool qSlicerVolumesReader::load(const IOProperties& properties)
   if (properties.contains("fileNames"))
   {
     fileList = vtkSmartPointer<vtkStringArray>::New();
-    foreach(QString file, properties["fileNames"].toStringList())
+    for (const QString& file : properties["fileNames"].toStringList())
     {
       fileList->InsertNextValue(file.toUtf8());
     }
@@ -168,11 +217,7 @@ bool qSlicerVolumesReader::load(const IOProperties& properties)
   Q_ASSERT(d->Logic);
   // Weak pointer is used because the node may be deleted if the scene is closed
   // right after reading.
-  vtkWeakPointer<vtkMRMLVolumeNode> node = d->Logic->AddArchetypeVolume(
-    fileName.toUtf8(),
-    name.toUtf8(),
-    options,
-    fileList.GetPointer());
+  vtkWeakPointer<vtkMRMLVolumeNode> node = d->Logic->AddArchetypeVolume(fileName.toUtf8(), name.toUtf8(), options, fileList.GetPointer());
   if (node)
   {
     QString colorNodeID = properties.value("colorNodeID", QString()).toString();
@@ -186,10 +231,8 @@ bool qSlicerVolumesReader::load(const IOProperties& properties)
     }
     if (propagateVolumeSelection)
     {
-      vtkSlicerApplicationLogic* appLogic =
-        d->Logic->GetApplicationLogic();
-      vtkMRMLSelectionNode* selectionNode =
-        appLogic ? appLogic->GetSelectionNode() : nullptr;
+      vtkSlicerApplicationLogic* appLogic = d->Logic->GetApplicationLogic();
+      vtkMRMLSelectionNode* selectionNode = appLogic ? appLogic->GetSelectionNode() : nullptr;
       if (selectionNode)
       {
         if (vtkMRMLLabelMapVolumeNode::SafeDownCast(node))
@@ -202,7 +245,7 @@ bool qSlicerVolumesReader::load(const IOProperties& properties)
         }
         if (appLogic)
         {
-          appLogic->PropagateVolumeSelection(); // includes FitSliceToAll by default
+          appLogic->PropagateVolumeSelection(); // includes FitSliceToBackground by default
         }
       }
     }
@@ -216,14 +259,14 @@ bool qSlicerVolumesReader::load(const IOProperties& properties)
 }
 
 //-----------------------------------------------------------------------------
-bool qSlicerVolumesReader::examineFileInfoList(QFileInfoList &fileInfoList, QFileInfo &archetypeFileInfo, qSlicerIO::IOProperties &ioProperties)const
+bool qSlicerVolumesReader::examineFileInfoList(QFileInfoList& fileInfoList, QFileInfo& archetypeFileInfo, qSlicerIO::IOProperties& ioProperties) const
 {
 
   //
   // Check each file to see if it's recognized as part of a series.  If so,
   // keep it as the archetype and remove all the others from the list
   //
-  foreach(QFileInfo fileInfo, fileInfoList)
+  for (const QFileInfo& fileInfo : fileInfoList)
   {
     itk::ArchetypeSeriesFileNames::Pointer seriesNames = itk::ArchetypeSeriesFileNames::New();
     std::vector<std::string> candidateFiles;
@@ -235,7 +278,7 @@ bool qSlicerVolumesReader::examineFileInfoList(QFileInfoList &fileInfoList, QFil
       QMutableListIterator<QFileInfo> fileInfoIterator(fileInfoList);
       while (fileInfoIterator.hasNext())
       {
-        const QString &path = fileInfoIterator.next().absoluteFilePath();
+        const QString& path = fileInfoIterator.next().absoluteFilePath();
         if (path == archetypeFileInfo.absoluteFilePath())
         {
           continue;

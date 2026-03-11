@@ -30,6 +30,11 @@
 #include <vtkMRMLMessageCollection.h>
 #include <vtkMRMLTransformNode.h>
 
+// ITK includes
+#include "itkMetaDataObject.h"
+#include "itkNiftiImageIO.h"
+#include "itkNrrdImageIO.h"
+
 // VTK includes
 #include <vtkSmartPointer.h>
 
@@ -41,14 +46,12 @@ public:
 };
 
 //-----------------------------------------------------------------------------
-qSlicerTransformsReader::qSlicerTransformsReader(
-  vtkSlicerTransformLogic* _transformLogic, QObject* _parent)
+qSlicerTransformsReader::qSlicerTransformsReader(vtkSlicerTransformLogic* _transformLogic, QObject* _parent)
   : Superclass(_parent)
   , d_ptr(new qSlicerTransformsReaderPrivate)
 {
   this->setTransformLogic(_transformLogic);
 }
-
 
 //-----------------------------------------------------------------------------
 qSlicerTransformsReader::~qSlicerTransformsReader() = default;
@@ -61,26 +64,26 @@ void qSlicerTransformsReader::setTransformLogic(vtkSlicerTransformLogic* newTran
 }
 
 //-----------------------------------------------------------------------------
-vtkSlicerTransformLogic* qSlicerTransformsReader::transformLogic()const
+vtkSlicerTransformLogic* qSlicerTransformsReader::transformLogic() const
 {
   Q_D(const qSlicerTransformsReader);
   return d->TransformLogic;
 }
 
 //-----------------------------------------------------------------------------
-QString qSlicerTransformsReader::description()const
+QString qSlicerTransformsReader::description() const
 {
   return "Transform";
 }
 
 //-----------------------------------------------------------------------------
-qSlicerIO::IOFileType qSlicerTransformsReader::fileType()const
+qSlicerIO::IOFileType qSlicerTransformsReader::fileType() const
 {
   return QString("TransformFile");
 }
 
 //-----------------------------------------------------------------------------
-QStringList qSlicerTransformsReader::extensions()const
+QStringList qSlicerTransformsReader::extensions() const
 {
   return QStringList() << "Transform (*.h5 *.tfm *.mat *.nrrd *.nhdr *.mha *.mhd *.nii *.nii.gz *.txt *.hdf5 *.he5)";
 }
@@ -98,8 +101,7 @@ bool qSlicerTransformsReader::load(const IOProperties& properties)
   }
 
   this->userMessages()->ClearMessages();
-  vtkMRMLTransformNode* node = d->TransformLogic->AddTransform(
-    fileName.toUtf8(), this->mrmlScene(), this->userMessages());
+  vtkMRMLTransformNode* node = d->TransformLogic->AddTransform(fileName.toUtf8(), this->mrmlScene(), this->userMessages());
   if (node)
   {
     this->setLoadedNodes(QStringList(QString(node->GetID())));
@@ -109,4 +111,59 @@ bool qSlicerTransformsReader::load(const IOProperties& properties)
     this->setLoadedNodes(QStringList());
   }
   return node != nullptr;
+}
+
+//----------------------------------------------------------------------------
+double qSlicerTransformsReader::canLoadFileConfidence(const QString& fileName) const
+{
+  double confidence = Superclass::canLoadFileConfidence(fileName);
+  if (confidence > 0)
+  {
+    // Set higher confidence for NIFTI or NRRD files containing displacement field.
+    // In canLoadFileConfidence we often just peek into the text header, but since NIFTI
+    // does not use a text header, we must parse.
+    QString upperCaseFileName = fileName.toUpper();
+    itk::ImageIOBase::Pointer imageIO;
+    if (upperCaseFileName.endsWith(".NII") || upperCaseFileName.endsWith(".NII.GZ"))
+    {
+      using ImageIOType = itk::NiftiImageIO;
+      imageIO = ImageIOType::New();
+    }
+    else if (upperCaseFileName.endsWith(".NRRD") || upperCaseFileName.endsWith(".NHDR"))
+    {
+      using ImageIOType = itk::NrrdImageIO;
+      imageIO = ImageIOType::New();
+    }
+    if (imageIO)
+    {
+      // Use lower than default confidence value unless it turns out that this file contains a displacement field.
+      confidence = 0.4;
+      imageIO->SetFileName(fileName.toStdString());
+      try
+      {
+        imageIO->ReadImageInformation();
+        const itk::MetaDataDictionary& metadata = imageIO->GetMetaDataDictionary();
+        if (imageIO->GetNumberOfDimensions() == 3 && imageIO->GetNumberOfComponents() > 1) // vector voxels in 3D array
+        {
+          // NIFTI "intent_code" field is used in both NIFTI and NRRD files
+          std::string niftiIntentCode;
+          if (itk::ExposeMetaData<std::string>(metadata, "intent_code", niftiIntentCode))
+          {
+            // This is a NIFTI file. Verify that it contains a displacement vector image
+            // by checking that the "intent code" metadata field equals 1006 (NIFTI_INTENT_DISPVECT).
+            if (niftiIntentCode == "1006")
+            {
+              confidence = 0.6;
+            }
+          }
+        }
+      }
+      catch (...)
+      {
+        // Something went wrong, we do not need to know the details, it is enough to know that
+        // this does not look like a valid NIFTI file.
+      }
+    }
+  }
+  return confidence;
 }

@@ -29,19 +29,16 @@ set(CMAKE_TESTDRIVER_AFTER_TESTMAIN  "
   DEBUG_LEAKS_ENABLE_EXIT_ERROR();
   ")
 
+set(EXTRA_INCLUDE "vtkMRMLDebugLeaksMacro.h\"\n\#include <itkConfigure.h>\n\#include <itkFactoryRegistration.h>\n\#include <iostream>\n\#include \"vtkTestingOutputWindow.h")
+
 set(TEST_SOURCES
   qMRMLCheckableNodeComboBoxTest.cxx
   qMRMLCheckableNodeComboBoxTest1.cxx
   qMRMLClipNodeWidgetTest1.cxx
   qMRMLCollapsibleButtonTest.cxx
-  qMRMLColorListViewTest1.cxx
   qMRMLColorModelTest.cxx
   qMRMLColorModelTest1.cxx
-  qMRMLColorPickerWidgetTest1.cxx
-  qMRMLColorPickerWidgetTest2.cxx
-  qMRMLColorPickerWidgetTest3.cxx
   qMRMLColorTableComboBoxTest1.cxx
-  qMRMLColorTableViewTest1.cxx
   qMRMLDisplayNodeViewComboBoxTest.cxx
   qMRMLDisplayNodeWidgetTest1.cxx
   qMRMLLayoutManagerTest1.cxx
@@ -107,10 +104,7 @@ if(Slicer_USE_QtTesting)
     qMRMLCheckableNodeComboBoxEventTranslatorPlayerTest1.cxx
     qMRMLClipNodeWidgetEventTranslatorPlayerTest1.cxx
     qMRMLCollapsibleButtonEventTranslatorPlayerTest1.cxx
-    qMRMLColorListViewEventTranslatorPlayerTest1.cxx
-    qMRMLColorPickerWidgetEventTranslatorPlayerTest1.cxx
     qMRMLColorTableComboBoxEventTranslatorPlayerTest1.cxx
-    qMRMLColorTableViewEventTranslatorPlayerTest1.cxx
     qMRMLDisplayNodeWidgetEventTranslatorPlayerTest1.cxx
     qMRMLLabelComboBoxEventTranslatorPlayerTest1.cxx
     qMRMLLinearTransformSliderEventTranslatorPlayerTest1.cxx
@@ -135,37 +129,30 @@ endif()
 
 create_test_sourcelist(Tests ${KIT}CppTests.cxx
   ${TEST_SOURCES}
+  EXTRA_INCLUDE ${EXTRA_INCLUDE}
   )
 
-set(Tests_MOC_SRCS qMRMLNodeObject.h)
 set(Tests_UtilityFiles
   qMRMLNodeObject.cxx
   qMRMLNodeObject.h
   )
 
-set(KIT_TEST_GENERATE_MOC_SRCS
-  qMRMLCheckableNodeComboBoxTest.cxx
-  qMRMLCollapsibleButtonTest.cxx
-  qMRMLColorModelTest.cxx
-  qMRMLDisplayNodeViewComboBoxTest.cxx
-  qMRMLLabelComboBoxTest.cxx
-  qMRMLLayoutManagerWithCustomFactoryTest.cxx
-  qMRMLNodeAttributeTableViewTest.cxx
-  qMRMLNodeAttributeTableWidgetTest.cxx
-  qMRMLSceneModelTest.cxx
-  qMRMLSliceControllerWidgetTest.cxx
-  )
-  set(_moc_options OPTIONS -DMRML_WIDGETS_HAVE_QT5)
-  QT5_WRAP_CPP(Tests_MOC_CXX ${Tests_MOC_SRCS} ${_moc_options})
-  QT5_GENERATE_MOCS(${KIT_TEST_GENERATE_MOC_SRCS})
-
 include_directories( ${CMAKE_CURRENT_BINARY_DIR})
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR})
 
-ctk_add_executable_utf8(${KIT}CxxTests ${Tests} ${Tests_MOC_CXX} ${Tests_UtilityFiles})
+ctk_add_executable_utf8(${KIT}CxxTests ${Tests} ${Tests_UtilityFiles})
 target_link_libraries(${KIT}CxxTests ${KIT})
 
 set_target_properties(${KIT}CxxTests PROPERTIES FOLDER ${${PROJECT_NAME}_FOLDER})
+
+target_compile_definitions(${KIT}CxxTests PRIVATE
+  $<$<BOOL:${MRML_WIDGETS_HAVE_QT5}>:MRML_WIDGETS_HAVE_QT5>
+  )
+
+# Configure CMake Qt automatic code generation
+set_target_properties(${KIT}CxxTests PROPERTIES
+  AUTOMOC ON
+  )
 
 #-----------------------------------------------------------------------------
 set(INPUT ${MRMLCore_SOURCE_DIR}/Testing/TestData)
@@ -198,14 +185,9 @@ simple_test( qMRMLCheckableNodeComboBoxTest )
 simple_test( qMRMLCheckableNodeComboBoxTest1 )
 simple_test( qMRMLClipNodeWidgetTest1 )
 simple_test( qMRMLCollapsibleButtonTest)
-simple_test( qMRMLColorListViewTest1 )
 simple_test( qMRMLColorModelTest )
 simple_test( qMRMLColorModelTest1 )
-simple_test( qMRMLColorPickerWidgetTest1 )
-simple_test( qMRMLColorPickerWidgetTest2 )
-simple_test( qMRMLColorPickerWidgetTest3 )
 simple_test( qMRMLColorTableComboBoxTest1 )
-simple_test( qMRMLColorTableViewTest1 )
 simple_test( qMRMLDisplayNodeViewComboBoxTest )
 simple_test( qMRMLDisplayNodeWidgetTest1 )
 simple_test( qMRMLLayoutManagerTest1 )
@@ -295,10 +277,7 @@ if(Slicer_USE_QtTesting)
   QtTesting_TEST(qMRMLCheckableNodeComboBoxEventTranslatorPlayerTest1)
   QtTesting_TEST(qMRMLClipNodeWidgetEventTranslatorPlayerTest1)
   QtTesting_TEST(qMRMLCollapsibleButtonEventTranslatorPlayerTest1)
-  QtTesting_TEST(qMRMLColorListViewEventTranslatorPlayerTest1)
-  QtTesting_TEST(qMRMLColorPickerWidgetEventTranslatorPlayerTest1)
   QtTesting_TEST(qMRMLColorTableComboBoxEventTranslatorPlayerTest1)
-  QtTesting_TEST(qMRMLColorTableViewEventTranslatorPlayerTest1)
   QtTesting_TEST(qMRMLDisplayNodeWidgetEventTranslatorPlayerTest1)
   QtTesting_TEST(qMRMLLabelComboBoxEventTranslatorPlayerTest1)
   QtTesting_TEST(qMRMLLinearTransformSliderEventTranslatorPlayerTest1)

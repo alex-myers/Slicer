@@ -25,7 +25,7 @@
 #include <vector>
 
 // Segmentation includes
-#include "vtkSegmentationCoreConfigure.h"
+#include "vtkSegmentationCoreExport.h"
 
 class vtkSegmentationConverterRule;
 
@@ -67,8 +67,7 @@ public:
   void Copy(vtkSegmentationConversionPath* source);
 
 protected:
-
-  std::vector< vtkSmartPointer<vtkSegmentationConverterRule> > Rules;
+  std::vector<vtkSmartPointer<vtkSegmentationConverterRule>> Rules;
 
 protected:
   vtkSegmentationConversionPath();
@@ -78,7 +77,6 @@ private:
   vtkSegmentationConversionPath(const vtkSegmentationConversionPath&) = delete;
   void operator=(const vtkSegmentationConversionPath&) = delete;
 };
-
 
 /// \brief Store multiple segmentation conversion paths.
 /// \details

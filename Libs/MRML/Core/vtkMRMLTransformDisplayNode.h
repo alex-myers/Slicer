@@ -20,11 +20,13 @@
 
 ==============================================================================*/
 
-
 #ifndef __vtkMRMLTransformDisplayNode_h
 #define __vtkMRMLTransformDisplayNode_h
 
 #include "vtkMRMLDisplayNode.h"
+
+// vtkAddon includes
+#include <vtkAddonSetGet.h>
 
 class vtkColorTransferFunction;
 class vtkPointSet;
@@ -33,16 +35,15 @@ class vtkMRMLProceduralColorNode;
 class vtkMRMLTransformNode;
 class vtkMRMLVolumeNode;
 
-
 /// \brief MRML node to represent display properties for transforms visualization in the slice and 3D viewers.
 ///
 /// vtkMRMLTransformDisplayNode nodes store display properties of transforms.
 class VTK_MRML_EXPORT vtkMRMLTransformDisplayNode : public vtkMRMLDisplayNode
 {
- public:
-  static vtkMRMLTransformDisplayNode *New (  );
-  vtkTypeMacro ( vtkMRMLTransformDisplayNode,vtkMRMLDisplayNode );
-  void PrintSelf ( ostream& os, vtkIndent indent ) override;
+public:
+  static vtkMRMLTransformDisplayNode* New();
+  vtkTypeMacro(vtkMRMLTransformDisplayNode, vtkMRMLDisplayNode);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   enum VisualizationModes
   {
@@ -64,15 +65,15 @@ class VTK_MRML_EXPORT vtkMRMLTransformDisplayNode : public vtkMRMLDisplayNode
   /// MRMLNode methods
   //--------------------------------------------------------------------------
 
-  vtkMRMLNode* CreateNodeInstance () override;
+  vtkMRMLNode* CreateNodeInstance() override;
 
   ///
   /// Read node attributes from XML (MRML) file
-  void ReadXMLAttributes ( const char** atts ) override;
+  void ReadXMLAttributes(const char** atts) override;
 
   ///
   /// Write this node's information to a MRML file in XML format.
-  void WriteXML ( ostream& of, int indent ) override;
+  void WriteXML(ostream& of, int indent) override;
 
   /// Copy node content (excludes basic data, such as name and node references).
   /// \sa vtkMRMLNode::CopyContent
@@ -80,13 +81,11 @@ class VTK_MRML_EXPORT vtkMRMLTransformDisplayNode : public vtkMRMLDisplayNode
 
   ///
   /// Get node XML tag name (like Volume, UnstructuredGrid)
-  const char* GetNodeTagName ( ) override {return "TransformDisplayNode";}
+  const char* GetNodeTagName() override { return "TransformDisplayNode"; }
 
   ///
   /// alternative method to propagate events generated in Display nodes
-  void ProcessMRMLEvents ( vtkObject * /*caller*/,
-                                   unsigned long /*event*/,
-                                   void * /*callData*/ ) override;
+  void ProcessMRMLEvents(vtkObject* /*caller*/, unsigned long /*event*/, void* /*callData*/) override;
 
   //--------------------------------------------------------------------------
   /// Display options
@@ -137,6 +136,11 @@ class VTK_MRML_EXPORT vtkMRMLTransformDisplayNode : public vtkMRMLDisplayNode
   vtkGetMacro(GlyphShaftDiameterPercent, double);
   vtkSetMacro(GlyphResolution, int);
   vtkGetMacro(GlyphResolution, int);
+  // 2d parameters
+  vtkSetMacro(GlyphResolution2D, int);
+  vtkGetMacro(GlyphResolution2D, int);
+  vtkSetMacro(GlyphTipLengthPercent2D, double);
+  vtkGetMacro(GlyphTipLengthPercent2D, double);
 
   // Grid Parameters
   vtkSetMacro(GridScalePercent, double);
@@ -154,7 +158,7 @@ class VTK_MRML_EXPORT vtkMRMLTransformDisplayNode : public vtkMRMLDisplayNode
   unsigned int GetNumberOfContourLevels();
   void SetContourLevelsMm(double*, int size);
   double* GetContourLevelsMm();
-  void GetContourLevelsMm(std::vector<double> &levels);
+  void GetContourLevelsMm(std::vector<double>& levels);
   std::string GetContourLevelsMmAsString();
   void SetContourLevelsMmFromString(const char* str);
   static std::vector<double> ConvertContourLevelsFromString(const char* str);
@@ -251,7 +255,6 @@ class VTK_MRML_EXPORT vtkMRMLTransformDisplayNode : public vtkMRMLDisplayNode
   //@}
 
 protected:
-
   static std::vector<double> StringToDoubleVector(const char* sourceStr);
   static std::string DoubleVectorToString(const double* values, int numberOfValues);
 
@@ -268,6 +271,9 @@ protected:
   double GlyphDiameterMm;
   double GlyphShaftDiameterPercent;
   int GlyphResolution;
+  // 2d parameters
+  int GlyphResolution2D;
+  double GlyphTipLengthPercent2D;
 
   // Grid Parameters
   double GridScalePercent;
@@ -297,11 +303,11 @@ protected:
   bool EditorScalingEnabled;
   bool EditorScalingSliceEnabled;
 
-  int ActiveInteractionType{-1};
-  int ActiveInteractionIndex{-1};
-  bool InteractionSizeAbsolute{false};
-  double InteractionSizeMm{5.0};
-  double InteractionScalePercent{15.0};
+  int ActiveInteractionType{ -1 };
+  int ActiveInteractionIndex{ -1 };
+  bool InteractionSizeAbsolute{ false };
+  double InteractionSizeMm{ 5.0 };
+  double InteractionScalePercent{ 15.0 };
 
   bool RotationHandleComponentVisibility3D[4];
   bool ScaleHandleComponentVisibility3D[4];
@@ -311,12 +317,11 @@ protected:
   bool ScaleHandleComponentVisibilitySlice[4];
   bool TranslationHandleComponentVisibilitySlice[4];
 
- protected:
-  vtkMRMLTransformDisplayNode ( );
-  ~vtkMRMLTransformDisplayNode ( ) override;
-  vtkMRMLTransformDisplayNode ( const vtkMRMLTransformDisplayNode& );
-  void operator= ( const vtkMRMLTransformDisplayNode& );
-
+protected:
+  vtkMRMLTransformDisplayNode();
+  ~vtkMRMLTransformDisplayNode() override;
+  vtkMRMLTransformDisplayNode(const vtkMRMLTransformDisplayNode&);
+  void operator=(const vtkMRMLTransformDisplayNode&);
 };
 
 #endif

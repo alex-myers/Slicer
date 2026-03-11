@@ -21,6 +21,7 @@
 /// Qt includes
 #include <QButtonGroup>
 #include <QFileInfo>
+#include <QRegularExpression>
 
 // CTK includes
 #include <ctkFlowLayout.h>
@@ -37,7 +38,7 @@ class qSlicerAnnotationsIOOptionsWidgetPrivate
   , public Ui_qSlicerAnnotationModuleIOOptionsWidget
 {
 public:
-  //void init();
+  // void init();
 };
 
 //-----------------------------------------------------------------------------
@@ -53,13 +54,14 @@ qSlicerAnnotationsIOOptionsWidget::qSlicerAnnotationsIOOptionsWidget(QWidget* pa
   this->FileTypeButtonGroup->addButton(d->FiducialRadioButton);
   this->FileTypeButtonGroup->addButton(d->RulerRadioButton);
   this->FileTypeButtonGroup->addButton(d->ROIRadioButton);
-//  this->FileTypeButtonGroup->addButton(d->ListRadioButton);
-  this->connect(this->FileTypeButtonGroup, SIGNAL(buttonClicked(int)),
-                this, SLOT(updateProperties()));
+  //  this->FileTypeButtonGroup->addButton(d->ListRadioButton);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+  this->connect(this->FileTypeButtonGroup, &QButtonGroup::buttonClicked, this, &qSlicerAnnotationsIOOptionsWidget::updateProperties);
+#else
+  this->connect(this->FileTypeButtonGroup, SIGNAL(buttonClicked(int)), this, SLOT(updateProperties()));
+#endif
 
-
-  connect(d->NameLineEdit, SIGNAL(textChanged(QString)),
-          this, SLOT(updateProperties()));
+  connect(d->NameLineEdit, SIGNAL(textChanged(QString)), this, SLOT(updateProperties()));
   /*
   connect(d->FiducialRadioButton, SIGNAL(toggled(bool)),
           this, SLOT(updateProperties()));
@@ -97,7 +99,7 @@ void qSlicerAnnotationsIOOptionsWidget::updateProperties()
   d->Properties["fiducial"] = d->FiducialRadioButton->isChecked();
   d->Properties["ruler"] = d->RulerRadioButton->isChecked();
   d->Properties["roi"] = d->ROIRadioButton->isChecked();
-//  d->Properties["list"] = d->ListRadioButton->isChecked();
+  //  d->Properties["list"] = d->ListRadioButton->isChecked();
 }
 
 //-----------------------------------------------------------------------------
@@ -111,7 +113,7 @@ void qSlicerAnnotationsIOOptionsWidget::setFileNames(const QStringList& fileName
 {
   Q_D(qSlicerAnnotationsIOOptionsWidget);
   QStringList names;
-  foreach(const QString& fileName, fileNames)
+  for (const QString& fileName : fileNames)
   {
     QFileInfo fileInfo(fileName);
     if (fileInfo.isFile())
@@ -120,17 +122,17 @@ void qSlicerAnnotationsIOOptionsWidget::setFileNames(const QStringList& fileName
     }
     // Because '_' is considered as a word character (\w), \b
     // doesn't consider '_' as a word boundary.
-    QRegExp fiducialName("(\\b|_)(F)(\\b|_)");
-    QRegExp rulerName("(\\b|_)(M)(\\b|_)");
-    QRegExp roiName("(\\b|_)(R)(\\b|_)");
+    QRegularExpression fiducialName("(\\b|_)(F)(\\b|_)");
+    QRegularExpression rulerName("(\\b|_)(M)(\\b|_)");
+    QRegularExpression roiName("(\\b|_)(R)(\\b|_)");
     QAbstractButton* activeButton = nullptr;
-/*    QRegExp listName("(\\b|_)(List)(\\b|_)");
-    if (fileInfo.baseName().contains(listName))
-      {
-      d->ListRadioButton->setChecked(true);
-      }
-    else
-*/
+    /*    QRegExp listName("(\\b|_)(List)(\\b|_)");
+        if (fileInfo.baseName().contains(listName))
+          {
+          d->ListRadioButton->setChecked(true);
+          }
+        else
+    */
     if (fileInfo.baseName().contains(fiducialName))
     {
       activeButton = d->FiducialRadioButton;

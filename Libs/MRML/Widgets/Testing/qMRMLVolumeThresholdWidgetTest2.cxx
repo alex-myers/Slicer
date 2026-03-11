@@ -46,14 +46,15 @@
 #include "qMRMLWidget.h"
 
 // STD includes
+#include <iostream>
 
-int qMRMLVolumeThresholdWidgetTest2(int argc, char * argv [] )
+int qMRMLVolumeThresholdWidgetTest2(int argc, char* argv[])
 {
   qMRMLWidget::preInitializeApplication();
   QApplication app(argc, argv);
   qMRMLWidget::postInitializeApplication();
 
-  if( argc < 2 )
+  if (argc < 2)
   {
     std::cerr << "Error: missing arguments" << std::endl;
     std::cerr << "Usage: " << std::endl;
@@ -91,7 +92,7 @@ int qMRMLVolumeThresholdWidgetTest2(int argc, char * argv [] )
   for (unsigned int i = 0; i < sliceNodes.size(); ++i)
   {
     vtkMRMLSliceNode* sliceNode = vtkMRMLSliceNode::SafeDownCast(sliceNodes[i]);
-    if (!strcmp(sliceNode->GetLayoutName(), "Red") )
+    if (!strcmp(sliceNode->GetLayoutName(), "Red"))
     {
       redSliceNode = sliceNode;
       break;
@@ -116,7 +117,7 @@ int qMRMLVolumeThresholdWidgetTest2(int argc, char * argv [] )
   sliceWidget.setMRMLSliceNode(redSliceNode);
   topLevel.show();
 
-  if (argc < 3 || QString(argv[2]) != "-I" )
+  if (argc < 3 || QString(argv[2]) != "-I")
   {
     QTimer::singleShot(200, &app, SLOT(quit()));
   }

@@ -8,17 +8,21 @@ Slicer relies on a number of large third-party libraries (such VTK, ITK, DCMTK),
 
 ## Install prerequisites
 
-- [CMake](https://www.cmake.org/cmake/resources/software.html) version >= 3.16.3.
+- [CMake](https://www.cmake.org/cmake/resources/software.html) version >= 3.20.6.
   - Avoid versions with known Slicer build issues:
     - 3.21.0 (CMake issue [22476](https://gitlab.kitware.com/cmake/cmake/-/issues/22476))
     - 3.25.0 to 3.25.2 (CMake issues [24180](https://gitlab.kitware.com/cmake/cmake/-/issues/24180), [24567](https://gitlab.kitware.com/cmake/cmake/-/issues/24567))
 - [Git](https://git-scm.com/download/win) >= 1.7.10
   - Note: CMake must be able to find `git.exe` and `patch.exe`. If git is installed in the default location then they may be found there, but if they are not found then either add the folder that contains them to `PATH` environment variable; or set `GIT_EXECUTABLE` and `Patch_EXECUTABLE` as environment variables or as CMake variables at configure time.
-- [Visual Studio](https://visualstudio.microsoft.com/downloads/): any edition can be used (including the free Community edition), when configuring the installer:
+- Visual Studio:
+  - Download [free Community edition](https://aka.ms/vs/17/release/vs_community.exe) (recommended) or a [commercial edition](https://learn.microsoft.com/en-us/visualstudio/releases/2022/release-history#evergreen-bootstrappers) of Visual Studio 2022. Visual Studio 2026 with v143 toolset and latest CMake 4.x is usable for building Slicer core and some of its extensions, but it is not an officially supported build configuration yet.
   - Enable `Desktop development with C++` and in installation details
+  - Enable the `MSVC v145 - VS2026 C++ x64...` (Visual Studio 2026 v145 toolset with 64-bit support) component - in some distributions, this option is not enabled by default.
   - Enable the `MSVC v143 - VS2022 C++ x64...` (Visual Studio 2022 v143 toolset with 64-bit support) component - in some distributions, this option is not enabled by default.
   - Enable the latest Windows10 SDK component - without this CMake might not find a compiler during configuration step.
-- [Qt5](https://www.qt.io/download-open-source): Download Qt universal installer and install Qt 5.15.2. In the Select Components tab of the universal installer, Qt version and its components can be selected by expanding the `Qt` category. Components required: `MSVC2019 64-bit`, `Qt WebEngine`. Installing `Sources` and `Qt Debug Information Files` are recommended for debugging (they allow stepping into Qt files with the debugger in debug-mode builds).
+- [Qt](https://www.qt.io/download-open-source): Download the Qt universal installer and then set up either Qt5 or Qt6 as described below.
+  - Qt5 (current stable, officially supported version): Install Qt 5.15.2. In the Select Components tab of the universal installer, click Categories, select Archive, and click Filter to fetch older versions of Qt. Qt version 5.15.2 and its components can be selected by expanding the `Qt` category. Components required: `MSVC2019 64-bit`, `Qt WebEngine`. Installing `Sources` and `Qt Debug Information Files` are recommended for debugging (they allow stepping into Qt files with the debugger in debug-mode builds).
+  - Qt6 (experimental): Download the Qt universal installer and run the tool. On the "Customize" page of the Qt Maintenance Tool, expand the "Qt" tree. Then expand the tree matching the latest version of Qt 6 (minimum tested version is Qt-6.9.3, recommended version is the latest supported open-source version). Select `MSVC 2022 64-bit`. Selecting `Sources` and `Qt Debug Information Files` are recommended for debugging (they allow stepping into Qt files with the debugger in debug-mode builds). Expand the "Additional Libraries" tree and select `Qt 5 Compatibility module`, `Qt Multimedia`, `Qt Positioning`, `Qt Shader Tools`, `Qt State Machines`, `Qt WebChannel`. Collapse the "Qt" tree. Expand the "Extensions" tree, then expand "Qt WebEngine" and finally expand the corresponding tree matching the chosen Qt version (e.g. 6.9.3). Select `MSVC 2022 x64`.
   - Note: These are all free, open-source components with LGPL license which allow free usage for any purpose, for any individuals or companies.
 - [NSIS](https://nsis.sourceforge.io/Download) (optional): Needed if packaging Slicer. Make sure you install the language packs.
 
@@ -27,7 +31,6 @@ Slicer relies on a number of large third-party libraries (such VTK, ITK, DCMTK),
 **Other Visual Studio IDE and compiler toolset versions**
 
 - Visual Studio 2019 (v142) toolset is not tested anymore but probably still works.
-- Visual Studio 2017 (v141) toolset is not tested anymore but probably still works. Qt-5.15.2 requires v142 redistributables, so either these extra DLL files need to be added to the installation package or each user may need to install "Microsoft Visual C++ Redistributable" package.
 - Cygwin and Mingw: not tested and not recommended. Building with cygwin gcc not supported, but the cygwin shell environment can be used to run utilities such as git.
 
 :::

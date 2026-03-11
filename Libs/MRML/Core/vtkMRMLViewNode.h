@@ -21,12 +21,11 @@
 /// \brief MRML node to represent a 3D view.
 ///
 /// View node contains view parameters.
-class VTK_MRML_EXPORT vtkMRMLViewNode
-  : public vtkMRMLAbstractViewNode
+class VTK_MRML_EXPORT vtkMRMLViewNode : public vtkMRMLAbstractViewNode
 {
 public:
-  static vtkMRMLViewNode *New();
-  vtkTypeMacro(vtkMRMLViewNode,vtkMRMLAbstractViewNode);
+  static vtkMRMLViewNode* New();
+  vtkTypeMacro(vtkMRMLViewNode, vtkMRMLAbstractViewNode);
   void PrintSelf(ostream& os, vtkIndent indent) override;
 
   //--------------------------------------------------------------------------
@@ -36,7 +35,7 @@ public:
   vtkMRMLNode* CreateNodeInstance() override;
 
   /// Read node attributes from XML file
-  void ReadXMLAttributes( const char** atts) override;
+  void ReadXMLAttributes(const char** atts) override;
 
   /// Write this node's information to a MRML file in XML format.
   void WriteXML(ostream& of, int indent) override;
@@ -160,7 +159,6 @@ public:
   vtkBooleanMacro(AutoReleaseGraphicsResources, bool);
   ///@}
 
-
   /// Expected FPS
   vtkSetMacro(ExpectedFPS, double);
   vtkGetMacro(ExpectedFPS, double);
@@ -252,11 +250,11 @@ public:
   /// Ray casting technique for volume rendering
   enum
   {
-    Composite = 0, // Composite with directional lighting (default)
+    Composite = 0,         // Composite with directional lighting (default)
     CompositeEdgeColoring, // Composite with fake lighting (edge coloring, faster) - Not used
     MaximumIntensityProjection,
     MinimumIntensityProjection,
-    GradiantMagnitudeOpacityModulation, // Not used
+    GradiantMagnitudeOpacityModulation,       // Not used
     IllustrativeContextPreservingExploration, // Not used
     RaycastTechnique_Last
   };
@@ -290,7 +288,8 @@ public:
     RenderModeFlag,
     BoxVisibleFlag,
     BoxColorFlag,
-    BoxLabelVisibileFlag,
+    BoxLabelVisibleFlag,
+    BoxLabelVisibileFlag = BoxLabelVisibleFlag, ///< \deprecated Use BoxLabelVisibleFlag instead
     BackgroundColorFlag,
     StereoTypeFlag,
     OrientationMarkerTypeFlag,
@@ -308,8 +307,8 @@ public:
 
   ///
   /// toggle the view linking
-  vtkGetMacro (LinkedControl, int );
-  vtkSetMacro (LinkedControl, int );
+  vtkGetMacro(LinkedControl, int);
+  vtkSetMacro(LinkedControl, int);
   vtkBooleanMacro(LinkedControl, int);
 
   /// Get/Set a flag indicating what parameters are being manipulated
@@ -335,14 +334,12 @@ public:
   /// to object size of about 100 (in scene physical units).
   vtkGetMacro(AmbientShadowsSizeScale, double);
   vtkSetMacro(AmbientShadowsSizeScale, double);
-  vtkBooleanMacro(AmbientShadowsSizeScale, double);
   //@}
 
   //@{
   /// Volume rendering opacity above this value will cast shadows.
   vtkGetMacro(AmbientShadowsVolumeOpacityThreshold, double);
   vtkSetMacro(AmbientShadowsVolumeOpacityThreshold, double);
-  vtkBooleanMacro(AmbientShadowsVolumeOpacityThreshold, double);
   //@}
 
   //@{
@@ -443,16 +440,15 @@ protected:
   /// If \sa VolumeRenderingQuality is set to maximum quality, then a fix oversampling factor of 10 is used.
   double VolumeRenderingOversamplingFactor;
 
-  bool ShadowsVisibility{false};
-  double AmbientShadowsSizeScale{0.3};
-  double AmbientShadowsVolumeOpacityThreshold{0.25};
+  bool ShadowsVisibility{ false };
+  double AmbientShadowsSizeScale{ 0.3 };
+  double AmbientShadowsVolumeOpacityThreshold{ 0.25 };
   double AmbientShadowsIntensityScale{ 1.0 };
   double AmbientShadowsIntensityShift{ 0.0 };
 
   int LinkedControl;
   int Interacting;
   unsigned int InteractionFlags;
-
 };
 
 #endif

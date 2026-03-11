@@ -34,7 +34,7 @@ if(BUILD_TESTING)
     TESTING_OUTPUT_ASSERT_WARNINGS_ERRORS(0);
     ")
 
-  set(EXTRA_INCLUDE "vtkMRMLDebugLeaksMacro.h\"\n\#include <itkConfigure.h>\n\#include <itkFactoryRegistration.h>\n\#include \"vtkTestingOutputWindow.h")
+  set(EXTRA_INCLUDE "vtkMRMLDebugLeaksMacro.h\"\n\#include <itkConfigure.h>\n\#include <itkFactoryRegistration.h>\n\#include <iostream>\n\#include \"vtkTestingOutputWindow.h")
 
   include_directories(${CMAKE_CURRENT_BINARY_DIR})
   set(KIT_TEST_SRCS
@@ -67,26 +67,20 @@ if(BUILD_TESTING)
     EXTRA_INCLUDE ${EXTRA_INCLUDE}
     )
 
-  set(KIT_TEST_GENERATE_MOC_SRCS
+  list(APPEND Tests
+    Resources/${KIT}Testing.qrc
     )
-  if(Slicer_USE_PYTHONQT)
-    list(APPEND KIT_TEST_GENERATE_MOC_SRCS
-      qSlicerLoadableModuleWithPythonTest.cxx
-      qSlicerPythonManagerWithoutApplicationTest.cxx
-      qSlicerScriptedLoadableModuleTest.cxx
-      qSlicerScriptedLoadableModuleWidgetTest.cxx
-      )
-  endif()
-
-    if(KIT_TEST_GENERATE_MOC_SRCS)
-      QT5_GENERATE_MOCS(${KIT_TEST_GENERATE_MOC_SRCS})
-    endif()
-    QT5_ADD_RESOURCES(Tests Resources/${KIT}Testing.qrc)
 
   ctk_add_executable_utf8(${KIT}CxxTests ${Tests})
   target_link_libraries(${KIT}CxxTests ${KIT})
   set_target_properties(${KIT}CxxTests PROPERTIES LABELS ${KIT})
   set_target_properties(${KIT}CxxTests PROPERTIES FOLDER "Core-Base")
+
+  # Configure CMake Qt automatic code generation
+  set_target_properties(${KIT}CxxTests PROPERTIES
+    AUTOMOC ON
+    AUTORCC ON
+    )
 
   #
   # Add Tests

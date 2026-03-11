@@ -23,6 +23,10 @@
 // MRMLLogic includes
 #include "vtkMRMLAbstractLogic.h"
 
+// VTK includes
+#include <vtkObject.h>
+#include <vtkWeakPointer.h>
+
 // STD includes
 #include <vector>
 #include <deque>
@@ -56,8 +60,8 @@ class VTK_MRML_LOGIC_EXPORT vtkMRMLViewLogic : public vtkMRMLAbstractLogic
 {
 public:
   /// The Usual VTK class functions
-  static vtkMRMLViewLogic *New();
-  vtkTypeMacro(vtkMRMLViewLogic,vtkMRMLAbstractLogic);
+  static vtkMRMLViewLogic* New();
+  vtkTypeMacro(vtkMRMLViewLogic, vtkMRMLAbstractLogic);
   void PrintSelf(ostream& os, vtkIndent indent) override;
 
   /// Set/Get layout name. This is used for finding the camera and view node in the scene.
@@ -65,10 +69,10 @@ public:
   virtual const char* GetName() const;
 
   /// The MRML View node for this View logic
-  vtkGetObjectMacro (ViewNode, vtkMRMLViewNode);
+  vtkGetObjectMacro(ViewNode, vtkMRMLViewNode);
 
   /// The MRML camera node for this View logic
-  vtkGetObjectMacro (CameraNode, vtkMRMLCameraNode);
+  vtkGetObjectMacro(CameraNode, vtkMRMLCameraNode);
 
   /// Indicate an interaction with the camera node is beginning. The
   /// parameters of the camera node being manipulated are passed as a
@@ -91,13 +95,17 @@ public:
 
   /// Convenient method to get the view node from scene and name of the Logic.
   /// The name of the Logic is the same of the widget one to which it is associated
-  static vtkMRMLViewNode* GetViewNode(vtkMRMLScene* scene,
-                                      const char* layoutName);
+  static vtkMRMLViewNode* GetViewNode(vtkMRMLScene* scene, const char* layoutName);
 
   /// Convenient method to get the camera node from scene and name of the Logic.
   /// The name of the Logic is the same of the widget one to which it is associated
-  static vtkMRMLCameraNode* GetCameraNode(vtkMRMLScene* scene,
-                                          const char* layoutName);
+  static vtkMRMLCameraNode* GetCameraNode(vtkMRMLScene* scene, const char* layoutName);
+
+  /// @{
+  /// \brief Get/Set the displayable manager group associated with the logic.
+  vtkGetObjectMacro(DisplayableManagerGroup, vtkObject);
+  void SetDisplayableManagerGroup(vtkObject* obj);
+  /// @}
 
 protected:
   vtkMRMLViewLogic();
@@ -120,10 +128,25 @@ protected:
   vtkMRMLCameraNode* CameraNode;
   bool UpdatingMRMLNodes;
 
+  // Weak reference to the view's displayable manager group.
+  //
+  // Stored as vtkObject to keep MRMLLogic independent of
+  // MRMLDisplayableManager headers. The expected dynamic type is
+  // vtkMRMLDisplayableManagerGroup.
+  //
+  // Set by the layout factories when the view widget is created, and used by
+  // vtkSlicerApplicationLogic::GetViewDisplayableManagerByClassName() to
+  // resolve managers without Qt. This works because vtkSlicerApplicationLogic
+  // lives in SlicerBaseLogic, which can depend on MRMLDisplayableManager.
+  //
+  // Ownership: the group is owned by the view/widget; this logic holds only a
+  // weak pointer. May be nullptr (e.g., headless or before view creation).
+  // Type is validated in SetDisplayableManagerGroup().
+  vtkWeakPointer<vtkObject> DisplayableManagerGroup;
+
 private:
   vtkMRMLViewLogic(const vtkMRMLViewLogic&) = delete;
   void operator=(const vtkMRMLViewLogic&) = delete;
-
 };
 
 #endif

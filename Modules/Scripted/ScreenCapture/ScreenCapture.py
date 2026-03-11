@@ -1134,7 +1134,7 @@ class ScreenCaptureLogic(ScriptedLoadableModuleLogic):
             writer.Write()
 
     def createImageWriter(self, filename):
-        name, extension = os.path.splitext(filename)
+        _name, extension = os.path.splitext(filename)
         if extension.lower() == ".png":
             return vtk.vtkPNGWriter()
         elif extension.lower() == ".jpg" or extension.lower() == ".jpeg":
@@ -1143,7 +1143,7 @@ class ScreenCaptureLogic(ScriptedLoadableModuleLogic):
             raise ValueError(_("Unsupported image format based on file name {filename}").format(filename=filename))
 
     def createImageReader(self, filename):
-        name, extension = os.path.splitext(filename)
+        _name, extension = os.path.splitext(filename)
         if extension.lower() == ".png":
             return vtk.vtkPNGReader()
         elif extension.lower() == ".jpg" or extension.lower() == ".jpeg":
@@ -1379,7 +1379,7 @@ class ScreenCaptureLogic(ScriptedLoadableModuleLogic):
 
         import math
 
-        numberOfRows = int(math.ceil(numberOfImages / numberOfColumns))
+        numberOfRows = math.ceil(numberOfImages / numberOfColumns)
         imageMarginSizePixels = 5
         for row in range(numberOfRows):
             for column in range(numberOfColumns):
@@ -1417,7 +1417,7 @@ class ScreenCaptureLogic(ScriptedLoadableModuleLogic):
         writer.SetInputData(lightboxCanvas.GetOutput())
         writer.Write()
 
-        self.addLog(_("Lighbox image saved to file: {filename}").format(filename=outputLightboxImageFilePath))
+        self.addLog(_("Lightbox image saved to file: {filename}").format(filename=outputLightboxImageFilePath))
 
     def createVideo(self, frameRate, extraOptions, outputDir, imageFileNamePattern, videoFileName):
         self.addLog(_("Export to video..."))

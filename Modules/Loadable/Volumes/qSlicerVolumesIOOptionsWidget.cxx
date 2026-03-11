@@ -20,6 +20,7 @@
 
 /// Qt includes
 #include <QFileInfo>
+#include <QRegularExpression>
 
 // CTK includes
 #include <ctkFlowLayout.h>
@@ -57,24 +58,16 @@ qSlicerVolumesIOOptionsWidget::qSlicerVolumesIOOptionsWidget(QWidget* parentWidg
 
   ctkFlowLayout::replaceLayout(this);
 
-  connect(d->NameLineEdit, SIGNAL(textChanged(QString)),
-          this, SLOT(updateProperties()));
-  connect(d->LabelMapCheckBox, SIGNAL(toggled(bool)),
-          this, SLOT(updateProperties()));
-  connect(d->CenteredCheckBox, SIGNAL(toggled(bool)),
-          this, SLOT(updateProperties()));
-  connect(d->SingleFileCheckBox, SIGNAL(toggled(bool)),
-          this, SLOT(updateProperties()));
-  connect(d->OrientationCheckBox, SIGNAL(toggled(bool)),
-          this, SLOT(updateProperties()));
-  connect(d->ShowCheckBox, SIGNAL(toggled(bool)),
-          this, SLOT(updateProperties()));
-  connect(d->ColorTableComboBox, SIGNAL(currentNodeChanged(vtkMRMLNode*)),
-          this, SLOT(updateProperties()));
+  connect(d->NameLineEdit, SIGNAL(textChanged(QString)), this, SLOT(updateProperties()));
+  connect(d->LabelMapCheckBox, SIGNAL(toggled(bool)), this, SLOT(updateProperties()));
+  connect(d->CenteredCheckBox, SIGNAL(toggled(bool)), this, SLOT(updateProperties()));
+  connect(d->SingleFileCheckBox, SIGNAL(toggled(bool)), this, SLOT(updateProperties()));
+  connect(d->OrientationCheckBox, SIGNAL(toggled(bool)), this, SLOT(updateProperties()));
+  connect(d->ShowCheckBox, SIGNAL(toggled(bool)), this, SLOT(updateProperties()));
+  connect(d->ColorTableComboBox, SIGNAL(currentNodeChanged(vtkMRMLNode*)), this, SLOT(updateProperties()));
 
   // need to update the color selector when the label map check box is toggled
-  connect(d->LabelMapCheckBox, SIGNAL(toggled(bool)),
-          this, SLOT(updateColorSelector()));
+  connect(d->LabelMapCheckBox, SIGNAL(toggled(bool)), this, SLOT(updateColorSelector()));
 
   // Single file by default
   d->SingleFileCheckBox->setChecked(true);
@@ -129,16 +122,15 @@ void qSlicerVolumesIOOptionsWidget::setFileNames(const QStringList& fileNames)
     // storage node must be added to the scene to have access to supported file extensions
     // (known file extensions are used to determine node name accurately when there are
     // multiple '.' characters in the filename.
-    snode = vtkMRMLVolumeArchetypeStorageNode::SafeDownCast(
-      this->mrmlScene()->AddNewNodeByClass("vtkMRMLVolumeArchetypeStorageNode"));
+    snode = vtkMRMLVolumeArchetypeStorageNode::SafeDownCast(this->mrmlScene()->AddNewNodeByClass("vtkMRMLVolumeArchetypeStorageNode"));
   }
   if (snode.GetPointer() == nullptr)
   {
     qWarning("qSlicerVolumesIOOptionsWidget::setFileNames: mrmlScene is invalid, node name may not be determined accurately");
     snode = vtkSmartPointer<vtkMRMLVolumeArchetypeStorageNode>::New();
   }
- foreach(const QString& fileName, fileNames)
- {
+  for (const QString& fileName : fileNames)
+  {
     QFileInfo fileInfo(fileName);
     QString fileBaseName = fileInfo.baseName();
     if (fileInfo.isFile())
@@ -150,24 +142,24 @@ void qSlicerVolumesIOOptionsWidget::setFileNames(const QStringList& fileNames)
       // Single file
       // If the name (or the extension) is just a number, then it must be a 2D
       // slice from a 3D volume, so uncheck Single File.
-      onlyNumberInName = QRegExp("[0-9\\.\\-\\_\\@\\(\\)\\~]+").exactMatch(fileBaseName);
+      onlyNumberInName = QRegularExpression("^[0-9\\.\\-\\_\\@\\(\\)\\~]+$").match(fileBaseName).hasMatch();
       fileInfo.suffix().toInt(&onlyNumberInExtension);
     }
     // Because '_' is considered as a word character (\w), \b
     // doesn't consider '_' as a word boundary.
-    QRegExp labelMapName("(\\b|_)([Ll]abel(s)?)(\\b|_)");
-    QRegExp segName("(\\b|_)([Ss]eg)(\\b|_)");
-    if (fileBaseName.contains(labelMapName) ||
-      fileBaseName.contains(segName))
+    QRegularExpression labelMapName("(\\b|_)([Ll]abel(s)?)(\\b|_)");
+    QRegularExpression segName("(\\b|_)([Ss]eg)(\\b|_)");
+    if (fileBaseName.contains(labelMapName) || //
+        fileBaseName.contains(segName))
     {
       hasLabelMapName = true;
     }
- }
+  }
   if (snode->GetScene())
   {
     snode->GetScene()->RemoveNode(snode);
   }
-  d->NameLineEdit->setText( names.join("; ") );
+  d->NameLineEdit->setText(names.join("; "));
   d->SingleFileCheckBox->setChecked(!onlyNumberInName && !onlyNumberInExtension);
   d->LabelMapCheckBox->setChecked(hasLabelMapName);
   this->qSlicerIOOptionsWidget::setFileNames(fileNames);

@@ -25,9 +25,14 @@ class DICOMReaders(ScriptedLoadableModule):
         parent.helpText = """
     This module was developed to confirm that different DICOM reading approaches result in the same volumes loaded in Slicer (or that old readers fail but fixed readers succeed).
     """
-        parent.acknowledgementText = """This work is supported primarily by the National Institutes of Health, National Cancer Institute, Informatics Technology for Cancer Research (ITCR) program, grant Quantitative Image Informatics for Cancer Research (QIICR) (U24 CA180918, PIs Kikinis and Fedorov). We also acknowledge support of the following grants: Neuroimage Analysis Center (NAC) (P41 EB015902, PI Kikinis) and National Center for Image Guided Therapy (NCIGT) (P41 EB015898, PI Tempany).
-    This file was originally developed by Steve Pieper, Isomics, Inc.
-"""  # replace with organization, grant and thanks.
+        parent.acknowledgementText = (
+            "This work is supported primarily by the National Institutes of Health, National Cancer Institute, "
+            "Informatics Technology for Cancer Research (ITCR) program, grant Quantitative Image Informatics for "
+            "Cancer Research (QIICR) (U24 CA180918, PIs Kikinis and Fedorov). We also acknowledge support of the "
+            "following grants: Neuroimage Analysis Center (NAC) (P41 EB015902, PI Kikinis) and National Center for "
+            "Image Guided Therapy (NCIGT) (P41 EB015898, PI Tempany).\n"
+            "This file was originally developed by Steve Pieper, Isomics, Inc."
+        )  # replace with organization, grant and thanks.
 
 
 #
@@ -103,12 +108,13 @@ class DICOMReadersTest(ScriptedLoadableModuleTest):
         # first, get the data - a zip file of dicom data
         #
         self.delayDisplay("Downloading")
+        originalDatabaseDirectory = None
         for dataset in referenceData:
             try:
                 import SampleData
 
                 dicomFilesDirectory = SampleData.downloadFromURL(
-                    fileNames=dataset["fileName"], uris=dataset["url"], checksums=dataset["checksum"])[0]
+                    fileNames=dataset["fileName"], loadFileTypes="ZipFile", uris=dataset["url"], checksums=dataset["checksum"])[0]
                 self.delayDisplay("Finished with download")
 
                 #
@@ -196,7 +202,8 @@ class DICOMReadersTest(ScriptedLoadableModuleTest):
                 testPass = False
 
         self.delayDisplay("Restoring original database directory")
-        DICOMUtils.closeTemporaryDatabase(originalDatabaseDirectory)
+        if originalDatabaseDirectory:
+            DICOMUtils.closeTemporaryDatabase(originalDatabaseDirectory)
         slicer.util.selectModule("DICOMReaders")
 
         logging.info(loadingResult)
@@ -222,6 +229,7 @@ class DICOMReadersTest(ScriptedLoadableModuleTest):
 
         dicomFilesDirectory = SampleData.downloadFromURL(
             fileNames="deidentifiedMRHead-dcm-one-series.zip",
+            loadFileTypes="ZipFile",
             uris=TESTING_DATA_URL + "SHA256/899f3f8617ca53bad7dca0b2908478319e708b48ff41dfa64b6bac1d76529928",
             checksums="SHA256:899f3f8617ca53bad7dca0b2908478319e708b48ff41dfa64b6bac1d76529928")[0]
         self.delayDisplay("Finished with download\n")

@@ -51,7 +51,8 @@ public:
   qSlicerSegmentEditorScriptedEffectPrivate();
   virtual ~qSlicerSegmentEditorScriptedEffectPrivate();
 
-  enum {
+  enum
+  {
     IconMethod = 0,
     HelpTextMethod,
     CloneMethod,
@@ -69,6 +70,7 @@ public:
     InteractionNodeModifiedMethod,
     UpdateGUIFromMRMLMethod,
     UpdateMRMLFromGUIMethod,
+    CleanupMethod,
   };
 
   mutable qSlicerPythonCppAPI PythonCppAPI;
@@ -99,6 +101,7 @@ qSlicerSegmentEditorScriptedEffectPrivate::qSlicerSegmentEditorScriptedEffectPri
   this->PythonCppAPI.declareMethod(Self::InteractionNodeModifiedMethod, "interactionNodeModified");
   this->PythonCppAPI.declareMethod(Self::UpdateGUIFromMRMLMethod, "updateGUIFromMRML");
   this->PythonCppAPI.declareMethod(Self::UpdateMRMLFromGUIMethod, "updateMRMLFromGUI");
+  this->PythonCppAPI.declareMethod(Self::CleanupMethod, "cleanup");
 }
 
 //-----------------------------------------------------------------------------
@@ -108,7 +111,7 @@ qSlicerSegmentEditorScriptedEffectPrivate::~qSlicerSegmentEditorScriptedEffectPr
 // qSlicerSegmentEditorScriptedEffect methods
 
 //-----------------------------------------------------------------------------
-qSlicerSegmentEditorScriptedEffect::qSlicerSegmentEditorScriptedEffect(QObject *parent)
+qSlicerSegmentEditorScriptedEffect::qSlicerSegmentEditorScriptedEffect(QObject* parent)
   : Superclass(parent)
   , d_ptr(new qSlicerSegmentEditorScriptedEffectPrivate)
 {
@@ -119,7 +122,7 @@ qSlicerSegmentEditorScriptedEffect::qSlicerSegmentEditorScriptedEffect(QObject *
 qSlicerSegmentEditorScriptedEffect::~qSlicerSegmentEditorScriptedEffect() = default;
 
 //-----------------------------------------------------------------------------
-QString qSlicerSegmentEditorScriptedEffect::pythonSource()const
+QString qSlicerSegmentEditorScriptedEffect::pythonSource() const
 {
   Q_D(const qSlicerSegmentEditorScriptedEffect);
   return d->PythonSourceFilePath;
@@ -153,15 +156,16 @@ bool qSlicerSegmentEditorScriptedEffect::setPythonSource(const QString newPython
   }
 
   // Get a reference to the main module and global dictionary
-  PyObject * main_module = PyImport_AddModule("__main__");
-  PyObject * global_dict = PyModule_GetDict(main_module);
+  PyObject* main_module = PyImport_AddModule("__main__");
+  PyObject* global_dict = PyModule_GetDict(main_module);
 
-  // Get a reference (or create if needed) the <moduleName> python module
-  PyObject * module = PyImport_AddModule(moduleName.toUtf8());
+  // Get actual module from sys.modules
+  PyObject* sysModules = PyImport_GetModuleDict();
+  PyObject* module = PyDict_GetItemString(sysModules, moduleName.toUtf8());
 
   // Get a reference to the python module class to instantiate
   PythonQtObjectPtr classToInstantiate;
-  if (PyObject_HasAttrString(module, className.toUtf8()))
+  if (module && PyObject_HasAttrString(module, className.toUtf8()))
   {
     classToInstantiate.setNewRef(PyObject_GetAttrString(module, className.toUtf8()));
   }
@@ -173,6 +177,10 @@ bool qSlicerSegmentEditorScriptedEffect::setPythonSource(const QString newPython
     {
       return false;
     }
+
+    // After loading, re-fetch actual module from sys.modules
+    module = PyDict_GetItemString(PyImport_GetModuleDict(), moduleName.toUtf8());
+
     if (PyObject_HasAttrString(module, className.toUtf8()))
     {
       classToInstantiate.setNewRef(PyObject_GetAttrString(module, className.toUtf8()));
@@ -185,7 +193,10 @@ bool qSlicerSegmentEditorScriptedEffect::setPythonSource(const QString newPython
     PyErr_SetString(PyExc_RuntimeError,
                     QString("qSlicerSegmentEditorScriptedEffect::setPythonSource - "
                             "Failed to load segment editor scripted effect: "
-                            "class %1 was not found in %2").arg(className).arg(newPythonSource).toUtf8());
+                            "class %1 was not found in %2")
+                      .arg(className)
+                      .arg(newPythonSource)
+                      .toUtf8());
     PythonQt::self()->handleError();
     return false;
   }
@@ -200,8 +211,7 @@ bool qSlicerSegmentEditorScriptedEffect::setPythonSource(const QString newPython
 
   d->PythonSourceFilePath = newPythonSource;
 
-  if (!qSlicerScriptedUtils::setModuleAttribute(
-        "slicer", moduleName, self))
+  if (!qSlicerScriptedUtils::setModuleAttribute("slicer", moduleName, self))
   {
     qCritical() << "Failed to set" << ("slicer." + moduleName);
   }
@@ -255,7 +265,7 @@ QIcon qSlicerSegmentEditorScriptedEffect::icon()
 }
 
 //-----------------------------------------------------------------------------
-const QString qSlicerSegmentEditorScriptedEffect::helpText()const
+const QString qSlicerSegmentEditorScriptedEffect::helpText() const
 {
   Q_D(const qSlicerSegmentEditorScriptedEffect);
   PyObject* result = d->PythonCppAPI.callMethod(d->HelpTextMethod);
@@ -289,8 +299,7 @@ qSlicerSegmentEditorAbstractEffect* qSlicerSegmentEditorScriptedEffect::clone()
 
   // Parse result
   QVariant resultVariant = PythonQtConv::PyObjToQVariant(result);
-  qSlicerSegmentEditorAbstractEffect* clonedEffect = qobject_cast<qSlicerSegmentEditorAbstractEffect*>(
-    resultVariant.value<QObject*>() );
+  qSlicerSegmentEditorAbstractEffect* clonedEffect = qobject_cast<qSlicerSegmentEditorAbstractEffect*>(resultVariant.value<QObject*>());
   if (!clonedEffect)
   {
     qCritical() << d->PythonSourceFilePath << ": clone: Invalid cloned effect object returned from python!";
@@ -365,8 +374,7 @@ bool qSlicerSegmentEditorScriptedEffect::processInteractionEvents(vtkRenderWindo
   }
   if (!PyBool_Check(result))
   {
-    qWarning() << d->PythonSourceFilePath
-               << " - function 'processInteractionEvents' "
+    qWarning() << d->PythonSourceFilePath << " - function 'processInteractionEvents' "
                << "is expected to return a boolean";
     return false;
   }
@@ -397,7 +405,7 @@ void qSlicerSegmentEditorScriptedEffect::setMRMLDefaults()
   // Note: Left here as comment in case this class is used as template for adaptor
   //  classes of effect base classes that have default implementation of this method
   //  (such as LabelEffect, etc.)
-  //this->Superclass::setMRMLDefaults();
+  // this->Superclass::setMRMLDefaults();
 
   Q_D(const qSlicerSegmentEditorScriptedEffect);
   d->PythonCppAPI.callMethod(d->SetMRMLDefaultsMethod);
@@ -476,7 +484,7 @@ void qSlicerSegmentEditorScriptedEffect::updateGUIFromMRML()
   // Note: Left here as comment in case this class is used as template for adaptor
   //  classes of effect base classes that have default implementation of this method
   //  (such as LabelEffect, etc.)
-  //this->Superclass::updateGUIFromMRML();
+  // this->Superclass::updateGUIFromMRML();
 
   Q_D(const qSlicerSegmentEditorScriptedEffect);
   d->PythonCppAPI.callMethod(d->UpdateGUIFromMRMLMethod);
@@ -489,8 +497,21 @@ void qSlicerSegmentEditorScriptedEffect::updateMRMLFromGUI()
   // Note: Left here as comment in case this class is used as template for adaptor
   //  classes of effect base classes that have default implementation of this method
   //  (such as LabelEffect, etc.)
-  //this->Superclass::updateMRMLFromGUI();
+  // this->Superclass::updateMRMLFromGUI();
 
   Q_D(const qSlicerSegmentEditorScriptedEffect);
   d->PythonCppAPI.callMethod(d->UpdateMRMLFromGUIMethod);
+}
+
+//-----------------------------------------------------------------------------
+void qSlicerSegmentEditorScriptedEffect::cleanup()
+{
+  // Base class implementation needs to be called before the effect-specific one
+  // Note: Left here as comment in case this class is used as template for adaptor
+  //  classes of effect base classes that have default implementation of this method
+  //  (such as LabelEffect, etc.)
+  // this->Superclass::cleanup();
+
+  Q_D(const qSlicerSegmentEditorScriptedEffect);
+  d->PythonCppAPI.callMethod(d->CleanupMethod);
 }

@@ -38,7 +38,7 @@ class QMRML_WIDGETS_EXPORT qMRMLWidget : public QWidget
 
 public:
   typedef QWidget Superclass;
-  explicit qMRMLWidget(QWidget *parent = nullptr, Qt::WindowFlags f = Qt::WindowFlags());
+  explicit qMRMLWidget(QWidget* parent = nullptr, Qt::WindowFlags f = Qt::WindowFlags());
   ~qMRMLWidget() override;
 
   /// Return a pointer on the current MRML scene
@@ -54,6 +54,11 @@ public:
   // Get the pixmap from the icon that is the most suitable for current screen resolution.
   // Useful for cases when a widget cannot take a QIcon as input only as QPixmap.
   Q_INVOKABLE static QPixmap pixmapFromIcon(const QIcon& icon);
+
+  /// Safely convert a char pointer to QString.
+  /// It does the same as QString::fromUtf8 but it does not crash when the input is a null pointer.
+  /// If the input is a null pointer then an empty QString is returned.
+  static QString safeQStringFromUtf8Ptr(const char* cString);
 
 public slots:
   /// Set the MRML \a scene associated with the widget

@@ -2,7 +2,7 @@ project(qMRMLWidgets)
 
 
 #-----------------------------------------------------------------------------
-cmake_minimum_required(VERSION 3.16.3...3.19.7 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.20.6...3.22.6 FATAL_ERROR)
 #-----------------------------------------------------------------------------
 
 # --------------------------------------------------------------------------
@@ -61,26 +61,21 @@ configure_file(
 set(MRMLWidgets_SRCS
   qMRMLAbstractViewWidget.cxx
   qMRMLAbstractViewWidget.h
-  qMRMLCaptureToolBar.cxx
-  qMRMLCaptureToolBar.h
   qMRMLCheckableNodeComboBox.cxx
   qMRMLCheckableNodeComboBox.h
   qMRMLClipNodeWidget.cxx
   qMRMLClipNodeWidget.h
+  qMRMLClipNodeDisplayWidget.cxx
+  qMRMLClipNodeDisplayWidget.h
   qMRMLCollapsibleButton.cxx
   qMRMLCollapsibleButton.h
-  qMRMLColors.cxx
-  qMRMLColors.h
-  qMRMLColorListView.cxx
-  qMRMLColorListView.h
   qMRMLColorModel.cxx
   qMRMLColorModel.h
-  qMRMLColorPickerWidget.cxx
-  qMRMLColorPickerWidget.h
+  qMRMLColorModel_p.h
+  qMRMLColors.cxx
+  qMRMLColors.h
   qMRMLColorTableComboBox.cxx
   qMRMLColorTableComboBox.h
-  qMRMLColorTableView.cxx
-  qMRMLColorTableView.h
   qMRMLCoordinatesWidget.cxx
   qMRMLCoordinatesWidget.h
   qMRMLDisplayNodeWidget.cxx
@@ -153,9 +148,6 @@ set(MRMLWidgets_SRCS
   qMRMLSceneFactoryWidget.h
   qMRMLSceneModel.cxx
   qMRMLSceneModel.h
-  qMRMLSceneViewMenu.cxx
-  qMRMLSceneViewMenu.h
-  qMRMLSceneViewMenu_p.h
   qMRMLSceneTransformModel.cxx
   qMRMLSceneTransformModel.h
   qMRMLSceneHierarchyModel.cxx
@@ -182,6 +174,8 @@ set(MRMLWidgets_SRCS
   qMRMLSliceWidget_p.h
   qMRMLSliderWidget.cxx
   qMRMLSliderWidget.h
+  qMRMLSortFilterColorProxyModel.cxx
+  qMRMLSortFilterColorProxyModel.h
   qMRMLSortFilterHierarchyProxyModel.cxx
   qMRMLSortFilterHierarchyProxyModel.h
   qMRMLSortFilterProxyModel.cxx
@@ -239,111 +233,10 @@ if(MRML_WIDGETS_HAVE_WEBENGINE_SUPPORT)
     )
 endif()
 
-# Headers that should run through moc
-set(MRMLWidgets_MOC_SRCS
-  qMRMLAbstractViewWidget.h
-  qMRMLCaptureToolBar.h
-  qMRMLCheckableNodeComboBox.h
-  qMRMLClipNodeWidget.h
-  qMRMLCollapsibleButton.h
-  qMRMLColorListView.h
-  qMRMLColorPickerWidget.h
-  qMRMLColorTableComboBox.h
-  qMRMLColorTableView.h
-  qMRMLColorModel.h
-  qMRMLCoordinatesWidget.h
-  qMRMLDisplayNodeViewComboBox.h
-  qMRMLDisplayNodeWidget.h
-  qMRMLEventBrokerConnection.h
-  qMRMLEventBrokerWidget.h
-  qMRMLEventLogger.h
-  qMRMLEventLoggerWidget.h
-  qMRMLItemDelegate.h
-  qMRMLLabelComboBox.h
-  qMRMLLayoutManager.h
-  qMRMLLayoutManager_p.h
-  qMRMLLayoutViewFactory.h
-  qMRMLLayoutWidget.h
-  qMRMLLinearTransformSlider.h
-  qMRMLListWidget.h
-  qMRMLMatrixWidget.h
-  qMRMLModelInfoWidget.h
-  qMRMLNavigationView.h
-  qMRMLNodeAttributeTableView.h
-  qMRMLNodeAttributeTableWidget.h
-  qMRMLNodeComboBox.h
-  qMRMLNodeComboBoxDelegate.h
-  qMRMLNodeComboBoxMenuDelegate.h
-  qMRMLNodeFactory.h
-  qMRMLPlotWidget.h
-  qMRMLPlotViewControllerWidget.h
-  qMRMLPlotViewControllerWidget_p.h
-  qMRMLPlotView_p.h
-  qMRMLPlotView.h
-  qMRMLRangeWidget.h
-  qMRMLROIWidget.h
-  qMRMLScalarInvariantComboBox.h
-  qMRMLScalarsDisplayWidget.h
-  qMRMLSceneCategoryModel.h
-  qMRMLSceneColorTableModel.h
-  qMRMLSceneFactoryWidget.h
-  qMRMLSceneModel.h
-  qMRMLSceneViewMenu.h
-  qMRMLSceneViewMenu_p.h
-  qMRMLSceneTransformModel.h
-  qMRMLSceneHierarchyModel.h
-  qMRMLSceneDisplayableModel.h
-  qMRMLScreenShotDialog.h
-  qMRMLSegmentSelectorWidget.h
-  qMRMLSliceControllerWidget.h
-  qMRMLSliceControllerWidget_p.h
-  qMRMLSliceInformationWidget.h
-  qMRMLSliceInformationWidget_p.h
-  qMRMLSliceVerticalControllerWidget.h
-  qMRMLSliceView.h
-  qMRMLSliceView_p.h
-  qMRMLSliceWidget.h
-  qMRMLSliceWidget_p.h
-  qMRMLSliderWidget.h
-  qMRMLSortFilterHierarchyProxyModel.h
-  qMRMLSortFilterProxyModel.h
-  qMRMLSpinBox.h
-  qMRMLTableModel.h
-  qMRMLTableView.h
-  qMRMLTableView_p.h
-  qMRMLTableViewControllerWidget.h
-  qMRMLTableViewControllerWidget_p.h
-  qMRMLTableWidget.h
-  qMRMLThreeDView.h
-  qMRMLThreeDView_p.h
-  qMRMLThreeDViewControllerWidget.h
-  qMRMLThreeDViewInformationWidget.h
-  qMRMLThreeDViewInformationWidget_p.h
-  qMRMLThreeDWidget.h
-  qMRMLTransformSliders.h
-  qMRMLTreeView.h
-  qMRMLUtils.h
-  qMRMLViewControllerBar.h
-  qMRMLViewControllerBar_p.h
-  qMRMLVolumeInfoWidget.h
-  qMRMLVolumeThresholdWidget.h
-  qMRMLVolumeWidget.h
-  qMRMLVolumeWidget_p.h
-  qMRMLWidget.h
-  qMRMLWindowLevelWidget.h
-  )
-
-if(MRML_WIDGETS_HAVE_WEBENGINE_SUPPORT)
-  list(APPEND MRMLWidgets_MOC_SRCS
-    qMRMLExpandingWebView.h
-    qMRMLExpandingWebView_p.h
-    )
-endif()
-
 # UI files
 set(MRMLWidgets_UI_SRCS
   Resources/UI/qMRMLClipNodeWidget.ui
-  Resources/UI/qMRMLColorPickerWidget.ui
+  Resources/UI/qMRMLClipNodeDisplayWidget.ui
   Resources/UI/qMRMLDisplayNodeWidget.ui
   Resources/UI/qMRMLEventLoggerWidget.ui
   Resources/UI/qMRMLModelInfoWidget.ui
@@ -385,33 +278,11 @@ if(Slicer_USE_QtTesting)
     qMRMLTreeViewEventTranslator.cpp
     qMRMLTreeViewEventTranslator.h
     )
-
-  list(APPEND MRMLWidgets_MOC_SRCS
-    qMRMLCheckableNodeComboBoxEventPlayer.h
-    qMRMLNodeComboBoxEventPlayer.h
-    qMRMLNodeComboBoxEventTranslator.h
-    qMRMLTreeViewEventPlayer.h
-    qMRMLTreeViewEventTranslator.h
-    )
 endif()
-
-  set(_moc_options OPTIONS -DMRML_WIDGETS_HAVE_QT5)
-  if(MRML_WIDGETS_HAVE_WEBENGINE_SUPPORT)
-    list(APPEND _moc_options -DMRML_WIDGETS_HAVE_WEBENGINE_SUPPORT)
-  endif()
-  QT5_WRAP_CPP(MRMLWidgets_MOC_CXX ${MRMLWidgets_MOC_SRCS} ${_moc_options})
-  QT5_WRAP_UI(MRMLWidgets_UI_CXX ${MRMLWidgets_UI_SRCS})
-  QT5_ADD_RESOURCES(MRMLWidgets_QRC_CXX ${MRMLWidgets_QRC_SRCS})
 
 source_group("Resources" FILES
   ${MRMLWidgets_UI_SRCS}
   ${MRMLWidgets_QRC_SRCS}
-  )
-
-source_group("Generated" FILES
-  ${MRMLWidgets_MOC_CXX}
-  ${MRMLWidgets_UI_CXX}
-  ${MRMLWidgets_QRC_CXX}
   )
 
 # --------------------------------------------------------------------------
@@ -471,10 +342,22 @@ set(targets_to_export ${lib_name})
 
 add_library(${lib_name}
   ${MRMLWidgets_SRCS}
-  ${MRMLWidgets_MOC_CXX}
-  ${MRMLWidgets_UI_CXX}
-  ${MRMLWidgets_QRC_CXX}
+  ${MRMLWidgets_QRC_SRCS}
   ${QM_OUTPUT_FILES}
+  )
+
+target_compile_definitions(${lib_name} PRIVATE
+  $<$<BOOL:${MRML_WIDGETS_HAVE_QT5}>:MRML_WIDGETS_HAVE_QT5>
+  $<$<BOOL:${MRML_WIDGETS_HAVE_WEBENGINE_SUPPORT}>:MRML_WIDGETS_HAVE_WEBENGINE_SUPPORT>
+  )
+
+# Configure CMake Qt automatic code generation
+set(uic_search_paths "${CMAKE_CURRENT_SOURCE_DIR}/Resources/UI/")
+set_target_properties(${lib_name} PROPERTIES
+  AUTOMOC ON
+  AUTORCC ON
+  AUTOUIC ON
+  AUTOUIC_SEARCH_PATHS "${uic_search_paths}"
   )
 
 set(MRMLWidgets_LIBRARIES
@@ -560,5 +443,26 @@ endif()
 # --------------------------------------------------------------------------
 # Set INCLUDE_DIRS variable
 # --------------------------------------------------------------------------
-set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}
+get_property(_isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+
+set(${PROJECT_NAME}_INCLUDE_DIRS
+  ${CMAKE_CURRENT_SOURCE_DIR}
+  ${CMAKE_CURRENT_BINARY_DIR}
+  # Ensure generated AUTOUIC headers (ui_*.h) are discoverable.
+  #
+  # By default CMake writes them to:
+  #
+  #   - Single-config generators (Ninja/Makefiles):
+  #       <AUTOGEN_BUILD_DIR>/include
+  #
+  #   - Multi-config generators (VS, Xcode, Ninja Multi-Config):
+  #       <AUTOGEN_BUILD_DIR>/include_<CONFIG>
+  #
+  # where AUTOGEN_BUILD_DIR defaults to:
+  #   <target-binary-dir>/<target-name>_autogen
+  #
+  # References:
+  # - https://cmake.org/cmake/help/latest/manual/cmake-qt.7.html#autouic
+  # - https://cmake.org/cmake/help/latest/prop_tgt/AUTOGEN_BUILD_DIR.html
+  ${CMAKE_CURRENT_BINARY_DIR}/${lib_name}_autogen/include$<$<BOOL:${_isMultiConfig}>:_$<CONFIG>>
   CACHE INTERNAL "${PROJECT_NAME} include dirs" FORCE)

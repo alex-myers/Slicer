@@ -7,9 +7,7 @@ project(SlicerBaseLogic)
 #
 # ModuleDescriptionParser
 #
-if(Slicer_BUILD_CLI_SUPPORT)
-  find_package(SlicerExecutionModel REQUIRED ModuleDescriptionParser)
-endif()
+find_package(SlicerExecutionModel REQUIRED ModuleDescriptionParser)
 
 #
 # VTK
@@ -26,10 +24,8 @@ set(${PROJECT_NAME}_ITK_COMPONENTS
   ITKCommon
   ITKIOTransformBase
   ITKTransform
+  ${ModuleDescriptionParser_ITK_COMPONENTS}
   )
-if(Slicer_BUILD_CLI_SUPPORT)
-  list(APPEND ${PROJECT_NAME}_ITK_COMPONENTS ${ModuleDescriptionParser_ITK_COMPONENTS})
-endif()
 find_package(ITK 4.6 COMPONENTS ${${PROJECT_NAME}_ITK_COMPONENTS} REQUIRED)
 if(ITK_VERSION VERSION_GREATER_EQUAL "5.3")
   foreach(factory_uc IN ITEMS "IMAGEIO" "MESHIO" "TRANSFORMIO")
@@ -62,17 +58,13 @@ set(include_dirs
   ${CMAKE_CURRENT_BINARY_DIR}
   ${MRMLCore_INCLUDE_DIRS}
   ${MRMLLogic_INCLUDE_DIRS}
+  ${MRMLDisplayableManager_INCLUDE_DIRS}
   ${vtkTeem_INCLUDE_DIRS}
   ${RemoteIO_INCLUDE_DIRS}
   ${LibArchive_INCLUDE_DIR}
+  ${MRMLCLI_INCLUDE_DIRS}
+  ${ModuleDescriptionParser_INCLUDE_DIRS}
   )
-
-if(Slicer_BUILD_CLI_SUPPORT)
-  list(APPEND include_dirs
-    ${MRMLCLI_INCLUDE_DIRS}
-    ${ModuleDescriptionParser_INCLUDE_DIRS}
-    )
-endif()
 
 if(Slicer_USE_PYTHONQT)
   list(APPEND include_dirs
@@ -89,15 +81,6 @@ set(Slicer_Base_INCLUDE_DIRS ${Slicer_Base_INCLUDE_DIRS}
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_CURRENT_BINARY_DIR}
   CACHE INTERNAL "Slicer Base includes" FORCE)
-
-# --------------------------------------------------------------------------
-# Configure headers
-# --------------------------------------------------------------------------
-set(configure_header_file vtkSlicerBaseLogicConfigure.h)
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/${configure_header_file}.in
-  ${CMAKE_CURRENT_BINARY_DIR}/${configure_header_file}
-  )
 
 # --------------------------------------------------------------------------
 # Install headers
@@ -126,6 +109,7 @@ set(SlicerBaseLogic_SRCS
   vtkImageRectangularSource.cxx
   vtkSystemInformation.cxx
   vtkImageFillROI.cxx
+  vtkSlicerCLIModuleLogic.cxx
   )
 
 if(Slicer_USE_PYTHONQT)
@@ -146,19 +130,15 @@ add_library(${lib_name} ${srcs})
 
 set(libs
   MRMLLogic
+  MRMLDisplayableManager
   ${VTK_LIBRARIES}
   )
 
 # Archive support used by extensions and by slicer data bundle
 list(APPEND libs
   ${LibArchive_LIBRARY}
+  MRMLCLI
   )
-
-if(Slicer_BUILD_CLI_SUPPORT)
-  list(APPEND libs
-    MRMLCLI
-    )
-endif()
 
 if(Slicer_USE_PYTHONQT)
   set(VTK_COMMON_PYTHON_LIBRARY
@@ -178,6 +158,15 @@ set_target_properties(${lib_name} PROPERTIES FOLDER "Core-Base")
 if(Slicer_LIBRARY_PROPERTIES)
   set_target_properties(${lib_name} PROPERTIES ${Slicer_LIBRARY_PROPERTIES})
 endif()
+
+# --------------------------------------------------------------------------
+# Generate export header
+# --------------------------------------------------------------------------
+include(GenerateExportHeader)
+generate_export_header(${lib_name}
+  EXPORT_FILE_NAME ${CMAKE_CURRENT_BINARY_DIR}/vtkSlicerBaseLogicExport.h
+  EXPORT_MACRO_NAME VTK_SLICER_BASE_LOGIC_EXPORT
+)
 
 # --------------------------------------------------------------------------
 # Export target

@@ -1,7 +1,7 @@
 import enum
 import pathlib
 import unittest
-from typing import Annotated, Union
+from typing import Annotated
 
 import ctk
 import qt
@@ -9,6 +9,7 @@ import qt
 import slicer
 
 from slicer import (
+    qMRMLSubjectHierarchyComboBox,
     qMRMLSubjectHierarchyTreeView,
     vtkMRMLModelNode,
     vtkMRMLScalarVolumeNode,
@@ -37,18 +38,21 @@ class ParameterNodeWrapperGuiTest(unittest.TestCase):
             alpha: bool
             bravo: Annotated[bool, Default(True)]
 
+        mappingWidget = qt.QWidget()
+        mappingWidget.setLayout(qt.QVBoxLayout())
         widgetAlpha = widgettype()
+        widgetAlpha.setProperty(SlicerParameterNamePropertyName, "alpha")
         widgetAlpha.deleteLater()
         widgetBravo = widgettype()
+        widgetBravo.setProperty(SlicerParameterNamePropertyName, "bravo")
         widgetBravo.deleteLater()
+        mappingWidget.layout().addWidget(widgetAlpha)
+        mappingWidget.layout().addWidget(widgetBravo)
+        mappingWidget.deleteLater()
         param = ParameterNodeWrapper(newParameterNode())
 
         # Phase 0 - connect parameterNode to GUI
-        mapping = {
-            "alpha": widgetAlpha,
-            "bravo": widgetBravo,
-        }
-        tag = param.connectParametersToGui(mapping)
+        tag = param.connectGui(mappingWidget)
         self.assertFalse(param.alpha)
         self.assertFalse(widgetAlpha.checked)
         self.assertTrue(param.bravo)
@@ -83,7 +87,7 @@ class ParameterNodeWrapperGuiTest(unittest.TestCase):
         # Phase 4 - reconnect to GUI after changing parameterNode
         param.alpha = True
         widgetAlpha.checked = False
-        tag = param.connectParametersToGui(mapping)
+        tag = param.connectGui(mappingWidget)
         self.assertTrue(param.alpha)
         self.assertTrue(widgetAlpha.checked)
         self.assertTrue(param.bravo)
@@ -91,6 +95,9 @@ class ParameterNodeWrapperGuiTest(unittest.TestCase):
 
     def test_QCheckBoxToBool(self):
         self.impl_ButtonToBool(qt.QCheckBox)
+
+    def test_CtkCheckBoxToBool(self):
+        self.impl_ButtonToBool(ctk.ctkCheckBox)
 
     def test_QPushButtonToBool(self):
         self.impl_ButtonToBool(qt.QPushButton)
@@ -172,26 +179,18 @@ class ParameterNodeWrapperGuiTest(unittest.TestCase):
     def test_QSpinBoxToInt(self):
         self.impl_QSliderOrSpinBoxToIntConnector(qt.QSpinBox, qt.QSpinBox)
 
-    def impl_QDoubleSpinBoxCtkSliderWidgetToFloatConnector(self, unboundedWidgetType, boundedWidgetType):
+    def impl_CheckFloatWidgetToUnboundedFloatParam(self, unboundedWidgetType):
         @parameterNodeWrapper
         class ParameterNodeWrapper:
             alpha: float
-            bravo: Annotated[float, Default(4.2), Minimum(2.1), Maximum(5.8)]
-            charlie: Annotated[float, WithinRange(0.1, 9.5), Default(0.2), Decimals(2), SingleStep(0.1)]
 
         widgetAlpha = unboundedWidgetType()
         widgetAlpha.deleteLater()
-        widgetBravo = boundedWidgetType()
-        widgetBravo.deleteLater()
-        widgetCharlie = boundedWidgetType()
-        widgetCharlie.deleteLater()
         param = ParameterNodeWrapper(newParameterNode())
 
         # Phase 0 - connect parameterNode to GUI
         mapping = {
             "alpha": widgetAlpha,
-            "bravo": widgetBravo,
-            "charlie": widgetCharlie,
         }
         param.connectParametersToGui(mapping)
 
@@ -200,6 +199,40 @@ class ParameterNodeWrapperGuiTest(unittest.TestCase):
         self.assertEqual(widgetAlpha.value, 0.0)
         self.assertEqual(widgetAlpha.minimum, float("-inf"))
         self.assertEqual(widgetAlpha.maximum, float("inf"))
+
+        # Phase 1 - write to GUI
+        widgetAlpha.value = 2.3e565
+
+        # alpha
+        self.assertEqual(param.alpha, 2.3e565)
+        self.assertEqual(widgetAlpha.value, 2.3e565)
+
+        # Phase 2 - write to parameterNode
+        param.alpha = -4444.4
+
+        # alpha
+        self.assertEqual(param.alpha, -4444.4)
+        self.assertEqual(widgetAlpha.value, -4444.4)
+
+    def impl_CheckFloatWidgetToBoundedFloatParam(self, boundedWidgetType, skipDecimals=False):
+        @parameterNodeWrapper
+        class ParameterNodeWrapper:
+            bravo: Annotated[float, Default(4.2), Minimum(2.1), Maximum(5.8)]
+            charlie: Annotated[float, WithinRange(0.1, 9.5), Default(0.2), Decimals(2), SingleStep(0.1)]
+
+        widgetBravo = boundedWidgetType()
+        widgetBravo.deleteLater()
+        widgetCharlie = boundedWidgetType()
+        widgetCharlie.deleteLater()
+        param = ParameterNodeWrapper(newParameterNode())
+
+        # Phase 0 - connect parameterNode to GUI
+        mapping = {
+            "bravo": widgetBravo,
+            "charlie": widgetCharlie,
+        }
+        param.connectParametersToGui(mapping)
+
         # bravo
         self.assertEqual(param.bravo, 4.2)
         self.assertEqual(widgetBravo.value, 4.2)
@@ -210,16 +243,16 @@ class ParameterNodeWrapperGuiTest(unittest.TestCase):
         self.assertEqual(widgetCharlie.value, 0.2)
         self.assertEqual(widgetCharlie.minimum, 0.1)
         self.assertEqual(widgetCharlie.maximum, 9.5)
-        self.assertEqual(widgetCharlie.decimals, 2)
+
+        if not skipDecimals:
+            self.assertEqual(widgetCharlie.decimals, 2)
+
         self.assertEqual(widgetCharlie.singleStep, 0.1)
 
         # Phase 1 - write to GUI
-        widgetAlpha.value = 2.3e565
         widgetBravo.value = 4.4
         widgetCharlie.value = 9.5
-        # alpha
-        self.assertEqual(param.alpha, 2.3e565)
-        self.assertEqual(widgetAlpha.value, 2.3e565)
+
         # bravo
         self.assertEqual(param.bravo, 4.4)
         self.assertEqual(widgetBravo.value, 4.4)
@@ -228,12 +261,9 @@ class ParameterNodeWrapperGuiTest(unittest.TestCase):
         self.assertEqual(widgetCharlie.value, 9.5)
 
         # Phase 2 - write to parameterNode
-        param.alpha = -4444.4
         param.bravo = 2.1
         param.setValue("charlie", 0.1)
-        # alpha
-        self.assertEqual(param.alpha, -4444.4)
-        self.assertEqual(widgetAlpha.value, -4444.4)
+
         # bravo
         self.assertEqual(param.bravo, 2.1)
         self.assertEqual(widgetBravo.value, 2.1)
@@ -241,16 +271,73 @@ class ParameterNodeWrapperGuiTest(unittest.TestCase):
         self.assertEqual(param.charlie, 0.1)
         self.assertEqual(widgetCharlie.value, 0.1)
 
+    def test_ctkColorPickerButtonToQColor(self):
+
+        @parameterNodeWrapper
+        class ParameterNodeWrapper:
+            alpha: qt.QColor
+            bravo: Annotated[qt.QColor, Default(qt.QColor("red"))]
+
+        colorPickerAlpha = ctk.ctkColorPickerButton()
+        colorPickerAlpha.deleteLater()
+        colorPickerBravo = ctk.ctkColorPickerButton()
+        colorPickerBravo.deleteLater()
+        param = ParameterNodeWrapper(newParameterNode())
+
+        # Phase 0 - connect parameterNode to GUI
+        mapping = {
+            "alpha": colorPickerAlpha,
+            "bravo": colorPickerBravo,
+        }
+        param.connectParametersToGui(mapping)
+        self.assertEqual(param.alpha, qt.QColor("#000000"))
+        self.assertEqual(colorPickerAlpha.color, qt.QColor("#000000"))
+        self.assertEqual(param.bravo, qt.QColor("red"))
+        self.assertEqual(colorPickerBravo.color, qt.QColor("red"))
+
+        # Phase 1 - write to GUI
+        colorPickerAlpha.color = qt.QColor("green")
+        self.assertEqual(param.alpha, qt.QColor("green"))
+        self.assertEqual(colorPickerAlpha.color, qt.QColor("green"))
+        self.assertEqual(param.bravo, qt.QColor("red"))
+        self.assertEqual(colorPickerBravo.color, qt.QColor("red"))
+
+        # Phase 2 - write to parameterNode
+        param.bravo = qt.QColor("blue")
+        self.assertEqual(param.alpha, qt.QColor("green"))
+        self.assertEqual(colorPickerAlpha.color, qt.QColor("green"))
+        self.assertEqual(param.bravo, qt.QColor("blue"))
+        self.assertEqual(colorPickerBravo.color, qt.QColor("blue"))
+
     def test_QDoubleSpinBoxToFloat(self):
-        self.impl_QDoubleSpinBoxCtkSliderWidgetToFloatConnector(qt.QDoubleSpinBox, qt.QDoubleSpinBox)
+        self.impl_CheckFloatWidgetToUnboundedFloatParam(qt.QDoubleSpinBox)
+        self.impl_CheckFloatWidgetToBoundedFloatParam(qt.QDoubleSpinBox)
 
     def test_ctkSliderWidgetToFloat(self):
-        self.impl_QDoubleSpinBoxCtkSliderWidgetToFloatConnector(qt.QDoubleSpinBox, ctk.ctkSliderWidget)
+        self.impl_CheckFloatWidgetToBoundedFloatParam(ctk.ctkSliderWidget)
 
         with self.assertRaises(RuntimeError):
-            self.impl_QDoubleSpinBoxCtkSliderWidgetToFloatConnector(ctk.ctkSliderWidget, ctk.ctkSliderWidget)
+            self.impl_CheckFloatWidgetToUnboundedFloatParam(ctk.ctkSliderWidget)
 
-    def test_QComboBoxToStringable(self):
+    def test_qMRMLSliderWidgetToFloat(self):
+        self.impl_CheckFloatWidgetToBoundedFloatParam(slicer.qMRMLSliderWidget)
+
+        with self.assertRaises(RuntimeError):
+            self.impl_CheckFloatWidgetToUnboundedFloatParam(slicer.qMRMLSliderWidget)
+
+    def test_ctkDoubleSliderToFloat(self):
+        self.impl_CheckFloatWidgetToBoundedFloatParam(ctk.ctkDoubleSlider, skipDecimals=True)
+        self.impl_CheckFloatWidgetToUnboundedFloatParam(ctk.ctkDoubleSlider)
+
+    def test_ctkDoubleSpinBoxToFloat(self):
+        self.impl_CheckFloatWidgetToUnboundedFloatParam(ctk.ctkDoubleSpinBox)
+        self.impl_CheckFloatWidgetToBoundedFloatParam(ctk.ctkDoubleSpinBox)
+
+    def test_qMRMLSpinBoxToFloat(self):
+        self.impl_CheckFloatWidgetToUnboundedFloatParam(slicer.qMRMLSpinBox)
+        self.impl_CheckFloatWidgetToBoundedFloatParam(slicer.qMRMLSpinBox)
+
+    def impl_ComboBoxToStringable(self, widgettype):
         @parameterNodeWrapper
         class ParameterNodeWrapper:
             alpha: Annotated[int, Choice([1, 2, 3]), Default(1)]
@@ -258,13 +345,13 @@ class ParameterNodeWrapperGuiTest(unittest.TestCase):
             charlie: Annotated[str, Choice(["a", "b", "c", "d"]), Default("a")]
             delta: Annotated[bool, Choice([True, False]), Default(False)]
 
-        comboboxAlpha = qt.QComboBox()
+        comboboxAlpha = widgettype()
         comboboxAlpha.deleteLater()
-        comboboxBravo = qt.QComboBox()
+        comboboxBravo = widgettype()
         comboboxBravo.deleteLater()
-        comboboxCharlie = qt.QComboBox()
+        comboboxCharlie = widgettype()
         comboboxCharlie.deleteLater()
-        comboboxDelta = qt.QComboBox()
+        comboboxDelta = widgettype()
         comboboxDelta.deleteLater()
         param = ParameterNodeWrapper(newParameterNode())
 
@@ -353,7 +440,13 @@ class ParameterNodeWrapperGuiTest(unittest.TestCase):
         self.assertEqual(comboboxDelta.currentIndex, 1)
         self.assertEqual(comboboxDelta.currentText, "False")
 
-    def test_QComboBoxToEnum(self):
+    def test_QComboBoxToStringable(self):
+        self.impl_ComboBoxToStringable(qt.QComboBox)
+
+    def test_CtkComboBoxToStringable(self):
+        self.impl_ComboBoxToStringable(ctk.ctkComboBox)
+
+    def impl_ComboBoxToEnum(self, widgettype):
         class TestEnum(enum.Enum):
             A = "A"
             B = "B"
@@ -381,11 +474,11 @@ class ParameterNodeWrapperGuiTest(unittest.TestCase):
             integer: Annotated[TestIntEnum, Default(TestIntEnum.Z)]
             labeled: TestLabeledEnum
 
-        comboboxNormal = qt.QComboBox()
+        comboboxNormal = widgettype()
         comboboxNormal.deleteLater()
-        comboboxInt = qt.QComboBox()
+        comboboxInt = widgettype()
         comboboxInt.deleteLater()
-        comboboxLabeled = qt.QComboBox()
+        comboboxLabeled = widgettype()
         comboboxLabeled.deleteLater()
         param = ParameterNodeWrapper(newParameterNode())
 
@@ -455,6 +548,12 @@ class ParameterNodeWrapperGuiTest(unittest.TestCase):
         self.assertEqual(comboboxLabeled.currentIndex, 0)
         self.assertEqual(comboboxLabeled.currentText, "Top left")
 
+    def test_QComboBoxToEnum(self):
+        self.impl_ComboBoxToEnum(qt.QComboBox)
+
+    def test_CtkComboBoxToEnum(self):
+        self.impl_ComboBoxToEnum(ctk.ctkComboBox)
+
     def test_QLineEditToStr(self):
         @parameterNodeWrapper
         class ParameterNodeWrapper:
@@ -491,6 +590,39 @@ class ParameterNodeWrapperGuiTest(unittest.TestCase):
         self.assertEqual(lineEditAlpha.text, "goodbye")
         self.assertEqual(param.bravo, "someval")
         self.assertEqual(lineEditBravo.text, "someval")
+
+    def test_QLabelToStr(self):
+        @parameterNodeWrapper
+        class ParameterNodeWrapper:
+            alpha: str
+            bravo: Annotated[str, Default("someval")]
+
+        labelAlpha = qt.QLineEdit()
+        labelAlpha.deleteLater()
+        labelBravo = qt.QLineEdit()
+        labelBravo.deleteLater()
+        param = ParameterNodeWrapper(newParameterNode())
+
+        # Phase 0 - connect parameterNode to GUI
+        mapping = {
+            "alpha": labelAlpha,
+            "bravo": labelBravo,
+        }
+
+        param.connectParametersToGui(mapping)
+        self.assertEqual(param.alpha, "")
+        self.assertEqual(labelAlpha.text, "")
+        self.assertEqual(param.bravo, "someval")
+        self.assertEqual(labelBravo.text, "someval")
+
+        # GUI to parameterNode does not work, no test
+
+        # Phase 2 - write to parameterNode
+        param.alpha = "goodbye"
+        self.assertEqual(param.alpha, "goodbye")
+        self.assertEqual(labelAlpha.text, "goodbye")
+        self.assertEqual(param.bravo, "someval")
+        self.assertEqual(labelBravo.text, "someval")
 
     def test_QTextEditPlainTextToStr(self):
         @parameterNodeWrapper
@@ -535,15 +667,15 @@ class ParameterNodeWrapperGuiTest(unittest.TestCase):
         self.assertEqual(param.bravo, "someval\nsomeval2")
         self.assertEqual(lineEditBravo.toPlainText(), "someval\nsomeval2")
 
-    def test_ctkRangeWidgetToRange(self):
+    def impl_RangeWidgetToRange(self, widgettype):
         @parameterNodeWrapper
         class ParameterNodeWrapper:
-            alpha: Annotated[FloatRange, RangeBounds(-10, 10)]
+            alpha: Annotated[FloatRange, RangeBounds(0, 10), Default(FloatRange(0, 0))]
             bravo: Annotated[FloatRange, RangeBounds(0, 20), Default(FloatRange(5, 10.5))]
 
-        rangeWidgetAlpha = ctk.ctkRangeWidget()
+        rangeWidgetAlpha = widgettype()
         rangeWidgetAlpha.deleteLater()
-        rangeWidgetBravo = ctk.ctkRangeWidget()
+        rangeWidgetBravo = widgettype()
         rangeWidgetBravo.deleteLater()
         param = ParameterNodeWrapper(newParameterNode())
 
@@ -557,22 +689,64 @@ class ParameterNodeWrapperGuiTest(unittest.TestCase):
         self.assertEqual(param.bravo, FloatRange(5, 10.5))
 
         # Phase 1 - write to GUI
+        rangeWidgetAlpha.maximumValue = 2
+        self.assertEqual(rangeWidgetAlpha.maximumValue, 2.0)
+        self.assertEqual(param.alpha, FloatRange(0, 2))
+        rangeWidgetBravo.minimumValue = 3
+        self.assertEqual(rangeWidgetBravo.minimumValue, 3)
+        self.assertEqual(param.bravo, FloatRange(3, 10.5))
+
+        # Phase 2 - write to parameterNode
+        param.alpha = FloatRange(0, 9)
+        self.assertEqual(param.alpha, FloatRange(0, 9))
+        self.assertEqual(rangeWidgetAlpha.minimumValue, 0)
+        self.assertEqual(rangeWidgetAlpha.maximumValue, 9)
+        param.bravo.maximum = 6
+        self.assertEqual(param.bravo, FloatRange(3, 6))
+        self.assertEqual(rangeWidgetBravo.minimumValue, 3)
+        self.assertEqual(rangeWidgetBravo.maximumValue, 6)
+
+    def impl_RangeWidgetWithNegativeValues(self, widgettype):
+        @parameterNodeWrapper
+        class ParameterNodeWrapper:
+            alpha: Annotated[FloatRange, RangeBounds(-10, 10), Default(FloatRange(0, 0))]
+
+        rangeWidgetAlpha = widgettype()
+        rangeWidgetAlpha.deleteLater()
+        param = ParameterNodeWrapper(newParameterNode())
+
+        # Phase 0 - connect parameterNode to GUI
+        mapping = {
+            "alpha": rangeWidgetAlpha,
+        }
+        param.connectParametersToGui(mapping)
+        #self.assertEqual(param.alpha, FloatRange(0, 0))
+
+        # Phase 1 - write to GUI
         rangeWidgetAlpha.minimumValue = -1
-        self.assertEqual(rangeWidgetAlpha.minimumValue, -1)
+        self.assertEqual(rangeWidgetAlpha.minimumValue, -1.0)
         self.assertEqual(param.alpha, FloatRange(-1, 0))
-        rangeWidgetBravo.maximumValue = 19
-        self.assertEqual(rangeWidgetBravo.maximumValue, 19)
-        self.assertEqual(param.bravo, FloatRange(5, 19))
 
         # Phase 2 - write to parameterNode
         param.alpha = FloatRange(-9, 9)
         self.assertEqual(param.alpha, FloatRange(-9, 9))
         self.assertEqual(rangeWidgetAlpha.minimumValue, -9)
         self.assertEqual(rangeWidgetAlpha.maximumValue, 9)
-        param.bravo.maximum = 6
-        self.assertEqual(param.bravo, FloatRange(5, 6))
-        self.assertEqual(rangeWidgetBravo.minimumValue, 5)
-        self.assertEqual(rangeWidgetBravo.maximumValue, 6)
+
+    def test_CtkRangeWidgetToRange(self):
+        self.impl_RangeWidgetToRange(ctk.ctkRangeWidget)
+
+    def test_CtkDoubleRangeSliderToRange(self):
+        self.impl_RangeWidgetToRange(ctk.ctkDoubleRangeSlider)
+
+    def test_CtkRangeWidgetToNegativeRange(self):
+        self.impl_RangeWidgetWithNegativeValues(ctk.ctkRangeWidget)
+
+    def test_CtkDoubleRangeSliderToRange(self):
+        self.impl_RangeWidgetWithNegativeValues(ctk.ctkDoubleRangeSlider)
+
+    def test_qMRMLRangeSliderToRange(self):
+        self.impl_RangeWidgetWithNegativeValues(slicer.qMRMLRangeWidget)
 
     def test_ctkPathLineEditToPath(self):
         @parameterNodeWrapper
@@ -632,33 +806,33 @@ class ParameterNodeWrapperGuiTest(unittest.TestCase):
         self.assertEqual(param.alpha, pathlib.Path())
         self.assertEqual(pathlib.Path(directoryButtonAlpha.directory), pathlib.Path())
         self.assertEqual(param.bravo, pathlib.Path("some/path"))
-        self.assertEqual(pathlib.Path(directoryButtonBravo.directory), pathlib.Path("some/path"))
+        self.assertEqual(pathlib.Path(directoryButtonBravo.directory), pathlib.Path("some/path").resolve())
 
         # Phase 1 - write to GUI
         directoryButtonAlpha.directory = "pathy/path"
-        self.assertEqual(param.alpha, pathlib.Path("pathy/path"))
-        self.assertEqual(pathlib.Path(directoryButtonAlpha.directory), pathlib.Path("pathy/path"))
+        self.assertEqual(param.alpha, pathlib.Path("pathy/path").resolve())
+        self.assertEqual(pathlib.Path(directoryButtonAlpha.directory), pathlib.Path("pathy/path").resolve())
         self.assertEqual(param.bravo, pathlib.Path("some/path"))
-        self.assertEqual(pathlib.Path(directoryButtonBravo.directory), pathlib.Path("some/path"))
+        self.assertEqual(pathlib.Path(directoryButtonBravo.directory), pathlib.Path("some/path").resolve())
 
         # Phase 2 - write to parameterNode
         param.bravo = pathlib.Path("magnificent/path/bravo")
-        self.assertEqual(param.alpha, pathlib.Path("pathy/path"))
-        self.assertEqual(pathlib.Path(directoryButtonAlpha.directory), pathlib.Path("pathy/path"))
+        self.assertEqual(param.alpha, pathlib.Path("pathy/path").resolve())
+        self.assertEqual(pathlib.Path(directoryButtonAlpha.directory), pathlib.Path("pathy/path").resolve())
         self.assertEqual(param.bravo, pathlib.Path("magnificent/path/bravo"))
-        self.assertEqual(pathlib.Path(directoryButtonBravo.directory), pathlib.Path("magnificent/path/bravo"))
+        self.assertEqual(pathlib.Path(directoryButtonBravo.directory), pathlib.Path("magnificent/path/bravo").resolve())
 
-    def impl_qMRMLToNodeConnector(self, widgettype, currentNodeFunc, clearFunc):
+    def impl_qMRMLToNodeConnector(self, widgettype, clearFunc):
         """
-        The tests for the qMRMLNodeComboBox and the qMRMLSubjectHierarchyTreeView are nearly identical, but their
-        interfaces are just different enough (especially in Python) to make it difficult. In the places where
+        The tests for qMRMLNodeComboBox, qMRMLSubjectHierarchyTreeView, and qMRMLSubjectHierarchyComboBox are nearly identical,
+        but their interfaces are just different enough (especially in Python) to make it difficult. In the places where
         the interfaces differ, a function was added to abstract that away.
         """
 
         @parameterNodeWrapper
         class ParameterNodeWrapper:
             alpha: vtkMRMLModelNode
-            bravo: Union[vtkMRMLModelNode, vtkMRMLScalarVolumeNode, None]
+            bravo: vtkMRMLModelNode | vtkMRMLScalarVolumeNode | None
 
         param = ParameterNodeWrapper(newParameterNode())
 
@@ -678,11 +852,11 @@ class ParameterNodeWrapperGuiTest(unittest.TestCase):
 
         # alpha
         self.assertIsNone(param.alpha)
-        self.assertIsNone(currentNodeFunc(widgetAlpha))
+        self.assertIsNone(widgetAlpha.currentNode())
         self.assertEqual(widgetAlpha.nodeTypes, ("vtkMRMLModelNode",))
         # bravo
         self.assertIsNone(param.bravo)
-        self.assertIsNone(currentNodeFunc(widgetBravo))
+        self.assertIsNone(widgetBravo.currentNode())
         #    order is unimportant here
         self.assertEqual(sorted(widgetBravo.nodeTypes), sorted(["vtkMRMLModelNode", "vtkMRMLScalarVolumeNode"]))
 
@@ -693,65 +867,60 @@ class ParameterNodeWrapperGuiTest(unittest.TestCase):
 
         # should not auto add
         self.assertIsNone(param.alpha)
-        self.assertIsNone(currentNodeFunc(widgetAlpha))
+        self.assertIsNone(widgetAlpha.currentNode())
         self.assertIsNone(param.bravo)
-        self.assertIsNone(currentNodeFunc(widgetBravo))
+        self.assertIsNone(widgetBravo.currentNode())
 
         # Phase 1 - write to GUI
         widgetAlpha.setCurrentNode(model2)
         self.assertIs(param.alpha, model2)
-        self.assertIs(currentNodeFunc(widgetAlpha), model2)
+        self.assertIs(widgetAlpha.currentNode(), model2)
 
         clearFunc(widgetAlpha)
         self.assertIsNone(param.alpha)
-        self.assertIsNone(currentNodeFunc(widgetAlpha))
+        self.assertIsNone(widgetAlpha.currentNode())
 
         widgetBravo.setCurrentNode(model1)
         self.assertIs(param.bravo, model1)
-        self.assertIs(currentNodeFunc(widgetBravo), model1)
+        self.assertIs(widgetBravo.currentNode(), model1)
 
         widgetBravo.setCurrentNode(volume2)
-        self.assertIs(currentNodeFunc(widgetBravo), volume2)
+        self.assertIs(widgetBravo.currentNode(), volume2)
         self.assertIs(param.bravo, volume2)
 
         clearFunc(widgetBravo)
         self.assertIs(param.bravo, None)
-        self.assertIs(currentNodeFunc(widgetBravo), None)
+        self.assertIs(widgetBravo.currentNode(), None)
 
         # Phase 2 - write to parameterNode
         param.alpha = model1
         self.assertIs(param.alpha, model1)
-        self.assertIs(currentNodeFunc(widgetAlpha), model1)
+        self.assertIs(widgetAlpha.currentNode(), model1)
 
         param.alpha = None
         self.assertIsNone(param.alpha)
-        self.assertIsNone(currentNodeFunc(widgetAlpha))
+        self.assertIsNone(widgetAlpha.currentNode())
 
         param.bravo = volume1
         self.assertIs(param.bravo, volume1)
-        self.assertIs(currentNodeFunc(widgetBravo), volume1)
+        self.assertIs(widgetBravo.currentNode(), volume1)
 
         param.bravo = model2
         self.assertIs(param.bravo, model2)
-        self.assertIs(currentNodeFunc(widgetBravo), model2)
+        self.assertIs(widgetBravo.currentNode(), model2)
 
         param.bravo = None
         self.assertIs(param.bravo, None)
-        self.assertIs(currentNodeFunc(widgetBravo), None)
+        self.assertIs(widgetBravo.currentNode(), None)
 
     def test_qMRMLNodeComboBoxToNode(self):
-        self.impl_qMRMLToNodeConnector(slicer.qMRMLNodeComboBox, lambda box: box.currentNode(), lambda box: box.setCurrentNode(None))
+        self.impl_qMRMLToNodeConnector(slicer.qMRMLNodeComboBox, lambda box: box.setCurrentNode(None))
 
     def test_qMRMLSubjectHierarchyTreeViewToNode(self):
-        def getNodeFromSubjectTree(tree):
-            itemId = tree.currentItem()
-            shNode = tree.subjectHierarchyNode()
-            if itemId == shNode.GetInvalidItemID():
-                return None
-            else:
-                return shNode.GetItemDataNode(itemId)
+        self.impl_qMRMLToNodeConnector(qMRMLSubjectHierarchyTreeView, lambda shTreeView: shTreeView.clearSelection())
 
-        self.impl_qMRMLToNodeConnector(qMRMLSubjectHierarchyTreeView, getNodeFromSubjectTree, lambda tree: tree.clearSelection())
+    def test_qMRMLSubjectHierarchyComboBox(self):
+        self.impl_qMRMLToNodeConnector(qMRMLSubjectHierarchyComboBox, lambda shComboBox: shComboBox.clearSelection())
 
     def test_parameterPacks_through_dotted_name(self):
         @parameterPack
@@ -1002,3 +1171,32 @@ class ParameterNodeWrapperGuiTest(unittest.TestCase):
         param.connectParametersToGui(mapping)
 
         self.impl_parameterPacks_test_connected_parameter_node_wrapper(param, ui)
+
+    def test_disconnectGui_removes_vtk_observer(self):
+        """Verify that disconnectGui removes the ModifiedEvent VTK observer added by connectGui."""
+        @parameterNodeWrapper
+        class ParameterNodeWrapper:
+            alpha: bool
+
+        mappingWidget = qt.QWidget()
+        mappingWidget.setLayout(qt.QVBoxLayout())
+        widgetAlpha = qt.QCheckBox()
+        widgetAlpha.setProperty(SlicerParameterNamePropertyName, "alpha")
+        mappingWidget.layout().addWidget(widgetAlpha)
+        mappingWidget.deleteLater()
+
+        param = ParameterNodeWrapper(newParameterNode())
+
+        self.assertEqual(len(param._guiVtkObserverTags), 0)
+
+        tag = param.connectGui(mappingWidget)
+        self.assertEqual(len(param._guiVtkObserverTags), 1)
+
+        param.disconnectGui(tag)
+        self.assertEqual(len(param._guiVtkObserverTags), 0)
+
+        # Multiple cycles should not accumulate observers
+        for _ in range(10):
+            tag = param.connectGui(mappingWidget)
+            param.disconnectGui(tag)
+        self.assertEqual(len(param._guiVtkObserverTags), 0)

@@ -14,7 +14,7 @@
   <widget class="QStatusBar" name="StatusBar"/>
   <widget class="QDockWidget" name="PanelDockWidget">
    <property name="features">
-    <set>QDockWidget::DockWidgetClosable|QDockWidget::DockWidgetFloatable|QDockWidget::DockWidgetMovable</set>
+    <set>QDockWidget::AllDockWidgetFeatures</set>
    </property>
    <property name="allowedAreas">
     <set>Qt::LeftDockWidgetArea|Qt::RightDockWidgetArea</set>
@@ -132,20 +132,6 @@
     <bool>false</bool>
    </attribute>
   </widget>
-  <widget class="qMRMLCaptureToolBar" name="CaptureToolBar">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="windowTitle">
-    <string>Capture/Restore</string>
-   </property>
-   <attribute name="toolBarArea">
-    <enum>TopToolBarArea</enum>
-   </attribute>
-   <attribute name="toolBarBreak">
-    <bool>false</bool>
-   </attribute>
-  </widget>
   <widget class="qSlicerViewersToolBar" name="ViewersToolBar">
    <property name="windowTitle">
     <string>Crosshair Selection</string>
@@ -195,7 +181,6 @@
    <addaction name="ViewLayoutTabbed3DAction"/>
    <addaction name="ViewLayoutTabbedSliceAction"/>
    <addaction name="ViewLayoutCompareAction"/>
-   <addaction name="ViewLayoutCompareWidescreenAction"/>
    <addaction name="ViewLayoutCompareGridAction"/>
    <addaction name="ViewLayoutThreeOverThreeAction"/>
    <addaction name="ViewLayoutThreeOverThreePlotAction"/>
@@ -213,7 +198,7 @@
      <x>0</x>
      <y>0</y>
      <width>835</width>
-     <height>26</height>
+     <height>27</height>
     </rect>
    </property>
    <widget class="QMenu" name="FileMenu">
@@ -277,7 +262,6 @@
      <addaction name="ViewLayoutTabbed3DAction"/>
      <addaction name="ViewLayoutTabbedSliceAction"/>
      <addaction name="ViewLayoutCompareAction"/>
-     <addaction name="ViewLayoutCompareWidescreenAction"/>
      <addaction name="ViewLayoutCompareGridAction"/>
      <addaction name="ViewLayoutThreeOverThreeAction"/>
      <addaction name="ViewLayoutThreeOverThreePlotAction"/>
@@ -763,21 +747,6 @@
     <bool>true</bool>
    </property>
   </action>
-  <action name="ViewLayoutCompareWidescreenAction">
-   <property name="icon">
-    <iconset resource="../../../../Libs/MRML/Widgets/Resources/qMRMLWidgets.qrc">
-     <normaloff>:/Icons/LayoutSideBySideCompareView.png</normaloff>:/Icons/LayoutSideBySideCompareView.png</iconset>
-   </property>
-   <property name="text">
-    <string>Compare Widescreen</string>
-   </property>
-   <property name="toolTip">
-    <string>Compare Widescreen</string>
-   </property>
-   <property name="iconVisibleInMenu">
-    <bool>true</bool>
-   </property>
-  </action>
   <action name="ViewLayoutTwoOverTwoAction">
    <property name="icon">
     <iconset resource="../../../../Libs/MRML/Widgets/Resources/qMRMLWidgets.qrc">
@@ -905,69 +874,6 @@
    <property name="icon">
     <iconset resource="../../../../Libs/MRML/Widgets/Resources/qMRMLWidgets.qrc">
      <normaloff>:/Icons/LayoutCompareView.png</normaloff>:/Icons/LayoutCompareView.png</iconset>
-   </property>
-   <property name="text">
-    <string>8 viewers</string>
-   </property>
-  </action>
-  <action name="ViewLayoutCompareWidescreen_2_viewersAction">
-   <property name="icon">
-    <iconset resource="../../../../Libs/MRML/Widgets/Resources/qMRMLWidgets.qrc">
-     <normaloff>:/Icons/LayoutSideBySideCompareView.png</normaloff>:/Icons/LayoutSideBySideCompareView.png</iconset>
-   </property>
-   <property name="text">
-    <string>2 viewers</string>
-   </property>
-  </action>
-  <action name="ViewLayoutCompareWidescreen_3_viewersAction">
-   <property name="icon">
-    <iconset resource="../../../../Libs/MRML/Widgets/Resources/qMRMLWidgets.qrc">
-     <normaloff>:/Icons/LayoutSideBySideCompareView.png</normaloff>:/Icons/LayoutSideBySideCompareView.png</iconset>
-   </property>
-   <property name="text">
-    <string>3 viewers</string>
-   </property>
-  </action>
-  <action name="ViewLayoutCompareWidescreen_4_viewersAction">
-   <property name="icon">
-    <iconset resource="../../../../Libs/MRML/Widgets/Resources/qMRMLWidgets.qrc">
-     <normaloff>:/Icons/LayoutSideBySideCompareView.png</normaloff>:/Icons/LayoutSideBySideCompareView.png</iconset>
-   </property>
-   <property name="text">
-    <string>4 viewers</string>
-   </property>
-  </action>
-  <action name="ViewLayoutCompareWidescreen_5_viewersAction">
-   <property name="icon">
-    <iconset resource="../../../../Libs/MRML/Widgets/Resources/qMRMLWidgets.qrc">
-     <normaloff>:/Icons/LayoutSideBySideCompareView.png</normaloff>:/Icons/LayoutSideBySideCompareView.png</iconset>
-   </property>
-   <property name="text">
-    <string>5 viewers</string>
-   </property>
-  </action>
-  <action name="ViewLayoutCompareWidescreen_6_viewersAction">
-   <property name="icon">
-    <iconset resource="../../../../Libs/MRML/Widgets/Resources/qMRMLWidgets.qrc">
-     <normaloff>:/Icons/LayoutSideBySideCompareView.png</normaloff>:/Icons/LayoutSideBySideCompareView.png</iconset>
-   </property>
-   <property name="text">
-    <string>6 viewers</string>
-   </property>
-  </action>
-  <action name="ViewLayoutCompareWidescreen_7_viewersAction">
-   <property name="icon">
-    <iconset resource="../../../../Libs/MRML/Widgets/Resources/qMRMLWidgets.qrc">
-     <normaloff>:/Icons/LayoutSideBySideCompareView.png</normaloff>:/Icons/LayoutSideBySideCompareView.png</iconset>
-   </property>
-   <property name="text">
-    <string>7 viewers</string>
-   </property>
-  </action>
-  <action name="ViewLayoutCompareWidescreen_8_viewersAction">
-   <property name="icon">
-    <iconset resource="../../../../Libs/MRML/Widgets/Resources/qMRMLWidgets.qrc">
-     <normaloff>:/Icons/LayoutSideBySideCompareView.png</normaloff>:/Icons/LayoutSideBySideCompareView.png</iconset>
    </property>
    <property name="text">
     <string>8 viewers</string>
@@ -1217,11 +1123,6 @@
    <class>qSlicerViewersToolBar</class>
    <extends>QToolBar</extends>
    <header>qSlicerViewersToolBar.h</header>
-  </customwidget>
-  <customwidget>
-   <class>qMRMLCaptureToolBar</class>
-   <extends>QToolBar</extends>
-   <header>qMRMLCaptureToolBar.h</header>
   </customwidget>
  </customwidgets>
  <resources>

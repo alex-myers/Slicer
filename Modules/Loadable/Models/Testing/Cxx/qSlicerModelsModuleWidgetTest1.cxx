@@ -48,8 +48,11 @@
 #include <vtkNew.h>
 #include "qMRMLWidget.h"
 
+// STD includes
+#include <iostream>
+
 //-----------------------------------------------------------------------------
-int qSlicerModelsModuleWidgetTest1( int argc, char * argv[] )
+int qSlicerModelsModuleWidgetTest1(int argc, char* argv[])
 {
   qMRMLWidget::preInitializeApplication();
   qSlicerApplication app(argc, argv);
@@ -57,8 +60,7 @@ int qSlicerModelsModuleWidgetTest1( int argc, char * argv[] )
 
   if (argc < 2)
   {
-    std::cerr << "Usage: qSlicerModelsModuleWidgetTest1 sceneFilePath [-I]"
-              << std::endl;
+    std::cerr << "Usage: qSlicerModelsModuleWidgetTest1 sceneFilePath [-I]" << std::endl;
     return EXIT_FAILURE;
   }
 

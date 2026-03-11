@@ -43,7 +43,6 @@
 #include <vtkWeakPointer.h>
 
 class QAction;
-class qMRMLSceneViewMenu;
 class vtkMRMLTableViewNode;
 class vtkMRMLTableNode;
 class QString;
@@ -88,7 +87,6 @@ protected:
   void setupPopupUi() override;
 
 public:
-
 };
 
 #endif

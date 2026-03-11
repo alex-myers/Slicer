@@ -69,10 +69,29 @@ macro(SlicerMacroBuildModuleQtLibrary)
   # --------------------------------------------------------------------------
   # Set <MODULEQTLIBRARY_NAME>_INCLUDE_DIRS
   # --------------------------------------------------------------------------
+  get_property(_isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+
   set(_include_dirs
     ${${MODULEQTLIBRARY_NAME}_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}
+    # Ensure generated AUTOUIC headers (ui_*.h) are discoverable.
+    #
+    # By default CMake writes them to:
+    #
+    #   - Single-config generators (Ninja/Makefiles):
+    #       <AUTOGEN_BUILD_DIR>/include
+    #
+    #   - Multi-config generators (VS, Xcode, Ninja Multi-Config):
+    #       <AUTOGEN_BUILD_DIR>/include_<CONFIG>
+    #
+    # where AUTOGEN_BUILD_DIR defaults to:
+    #   <target-binary-dir>/<target-name>_autogen
+    #
+    # References:
+    # - https://cmake.org/cmake/help/latest/manual/cmake-qt.7.html#autouic
+    # - https://cmake.org/cmake/help/latest/prop_tgt/AUTOGEN_BUILD_DIR.html
+    ${CMAKE_CURRENT_BINARY_DIR}/${lib_name}_autogen/include$<$<BOOL:${_isMultiConfig}>:_$<CONFIG>>
     )
   # Since module developer may have already set the variable to some
   # specific values in the module CMakeLists.txt, we make sure to
@@ -112,27 +131,9 @@ macro(SlicerMacroBuildModuleQtLibrary)
   #-----------------------------------------------------------------------------
   # Sources
   #-----------------------------------------------------------------------------
-  set(MODULEQTLIBRARY_MOC_OUTPUT)
-  set(MODULEQTLIBRARY_UI_CXX)
-  set(MODULEQTLIBRARY_QRC_SRCS)
   if(NOT EXISTS ${Slicer_LOGOS_RESOURCE})
     message("Warning, Slicer_LOGOS_RESOURCE doesn't exist: ${Slicer_LOGOS_RESOURCE}")
   endif()
-
-    set(_moc_options OPTIONS -DSlicer_HAVE_QT5)
-    QT5_WRAP_CPP(MODULEQTLIBRARY_MOC_OUTPUT ${MODULEQTLIBRARY_MOC_SRCS} ${_moc_options})
-    QT5_WRAP_UI(MODULEQTLIBRARY_UI_CXX ${MODULEQTLIBRARY_UI_SRCS})
-    if(DEFINED MODULEQTLIBRARY_RESOURCES AND NOT MODULEQTLIBRARY_RESOURCES STREQUAL "")
-      QT5_ADD_RESOURCES(MODULEQTLIBRARY_QRC_SRCS ${MODULEQTLIBRARY_RESOURCES})
-    endif()
-    QT5_ADD_RESOURCES(MODULEQTLIBRARY_QRC_SRCS ${Slicer_LOGOS_RESOURCE})
-
-  set_source_files_properties(
-    ${MODULEQTLIBRARY_UI_CXX}
-    ${MODULEQTLIBRARY_MOC_OUTPUT}
-    ${MODULEQTLIBRARY_QRC_SRCS}
-    WRAP_EXCLUDE
-    )
 
   # --------------------------------------------------------------------------
   # Source groups
@@ -144,9 +145,6 @@ macro(SlicerMacroBuildModuleQtLibrary)
     )
 
   source_group("Generated" FILES
-    ${MODULEQTLIBRARY_UI_CXX}
-    ${MODULEQTLIBRARY_MOC_OUTPUT}
-    ${MODULEQTLIBRARY_QRC_SRCS}
     ${dynamicHeaders}
     )
 
@@ -155,9 +153,31 @@ macro(SlicerMacroBuildModuleQtLibrary)
   #-----------------------------------------------------------------------------
   add_library(${lib_name}
     ${MODULEQTLIBRARY_SRCS}
-    ${MODULEQTLIBRARY_MOC_OUTPUT}
-    ${MODULEQTLIBRARY_UI_CXX}
-    ${MODULEQTLIBRARY_QRC_SRCS}
+    ${MODULEQTLIBRARY_RESOURCES}
+    ${Slicer_LOGOS_RESOURCE}
+    )
+
+  target_compile_definitions(${lib_name} PRIVATE
+    $<$<BOOL:${Qt5_VERSION_MAJOR}>:Slicer_HAVE_QT5>
+    $<$<BOOL:${Qt6_VERSION_MAJOR}>:Slicer_HAVE_QT6>
+    )
+
+  # Configure CMake Qt automatic code generation
+  set(uic_search_paths)
+  foreach(ui_src IN LISTS MODULEQTLIBRARY_UI_SRCS)
+    if(NOT IS_ABSOLUTE ${ui_src})
+      set(ui_src "${CMAKE_CURRENT_SOURCE_DIR}/${ui_src}")
+    endif()
+    get_filename_component(ui_path ${ui_src} PATH)
+    list(APPEND uic_search_paths ${ui_path})
+  endforeach()
+  list(REMOVE_DUPLICATES uic_search_paths)
+
+  set_target_properties(${lib_name} PROPERTIES
+    AUTOMOC ON
+    AUTORCC ON
+    AUTOUIC ON
+    AUTOUIC_SEARCH_PATHS "${uic_search_paths}"
     )
 
   # Set qt loadable modules output path

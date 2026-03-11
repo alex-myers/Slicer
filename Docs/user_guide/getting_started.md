@@ -10,13 +10,13 @@ Slicer can also run on virtual machines and docker containers. For example, [3D 
 
 ### Operating system versions
 
-- Windows: Windows 10 or 11, with all recommended updates installed. Windows 10 Version 1903 (May 2019 Update) version or later is required for support of international characters (UTF-8) in filenames and text. Microsoft does not support Windows 8.1 and Windows 7 anymore and Slicer is not tested on these legacy operating system versions, but may still work.
-- macOS: macOS Big Sur (11) or later (both Intel and ARM based systems). Latest public release is recommended.
-- Linux: Ubuntu 20.04 or later<br>Debian 10 or later<br>Fedora 35 or later<br>CentOS 7 or later. Latest LTS (Long-term-support) version is recommended.
+- Windows: Windows 11 with all recommended updates installed. Microsoft does not support Windows 10 (or older versions) anymore and Slicer is not tested on these legacy operating system versions, but may still work.
+- macOS: macOS Sonoma (14) or later (both Intel and ARM based systems). Latest public release is recommended.
+- Linux: Ubuntu 22.04 or later<br>Debian 11 or later<br>Fedora 35 or later<br>AlmaLinux 8 or later. Latest LTS (Long-term-support) version is recommended.
 
 ### Recommended hardware configuration
 - Memory: more than 4GB (8 or more is recommended). As a general rule, have 10x more memory than the amount of data that you load.
-- Display: a minimum resolution of 1024 by 768 (1280 by 1024 or better is recommended).
+- Display: a minimum resolution of 1366 by 768 (1920 by 1080 or higher is recommended).
 - Graphics: Dedicated graphics hardware (discrete GPU) memory is recommended for fast volume rendering.
 GPU: Graphics must support minimum OpenGL 3.2. Integrated graphics card is sufficient for basic visualization. Discrete graphics card (such as NVidia GPU) is recommended for interactive 3D volume rendering and fast rendering of complex scenes. GPU texture memory (VRAM) should be larger than your largest dataset (e.g., working with 2GB data, get VRAM > 4GB) and check that your images fit in maximum texture dimensions of your GPU hardware. Except rendering, most calculations are performed on CPU, therefore having a faster GPU will generally not impact the overall speed of the application.
 - Some computations in 3D Slicer are multi-threaded and will benefit from multi core, multi CPU configurations.
@@ -90,7 +90,7 @@ brew uninstall slicer-preview       # to uninstall
 
     sudo apt-get install libglu1-mesa libpulse-mainloop-glib0 libnss3 libasound2t64 qt5dxcb-plugin
 
-#### Ubuntu 22.04 (Jammy Jellyfish), 20.04 (Focal Fossa), Debian 12 (bookworm), Debian 11 (bullseye), Debian 10 (buster)
+#### Ubuntu 22.04 (Jammy Jellyfish), Debian 12 (bookworm), Debian 11 (bullseye)
 
     sudo apt-get install libglu1-mesa libpulse-mainloop-glib0 libnss3 libasound2 qt5dxcb-plugin libsm6
 
@@ -132,6 +132,43 @@ The included libcrypto.so.1.1 in the Slicer installation is incompatible with th
 
     $SLICER_ROOT/lib/Slicer-5.xx/libcrypto.*
 :::
+
+If double-clicking the app does not launch it, try the following steps in order:
+
+1. Verify execution rights of the app
+
+   - Right-click on the app → *Properties* → make sure **“Executable as a program”** is checked.
+   - Or check from a terminal:
+
+     ```shell
+     ls -la
+     ```
+
+     You should see something like `-rwxr-xr-x` at the beginning of the line for the executable.
+
+     :::{note}
+     Some archive managers (e.g., certain `unrar`/`unzip` tools) may require running extraction with `sudo` to restore the correct file permissions.
+     :::
+
+     If execution rights are missing, add them with:
+
+     ```shell
+     chmod +x Slicer
+     ```
+
+2. Launch from the terminal
+
+   ```shell
+   ./Slicer
+   ```
+
+3. If you get the error
+
+   ```
+   error: Failed to obtain launcher executable name !
+   ```
+
+   try moving the executable into your *Software Home* folder and double-click the app again. It should launch properly from there.
 
 ## Using Slicer
 
@@ -186,18 +223,18 @@ All data in the scene can be saved at once using `File` menu -> `Save data`, or 
 
 ![](https://github.com/Slicer/Slicer/releases/download/docs-resources/getting_started_extensions_manager.png)
 
-For details about downloading extensions, see [Extensions Manager documentation](extensions_manager.md).
+For details about downloading extensions, see [Extensions Manager documentation](extensions.md#extensions-manager).
 Click [here](https://www.slicer.org/wiki/Documentation/Nightly/ModuleExtensionListing/Extensions_by_category) for a full list of extensions. The links on the page will provide documentation for each extension.
 
-Slicer is extensible. If you are interested in customizing or adding functionality to Slicer, click [here](https://www.slicer.org/wiki/Documentation/Nightly/Training#Tutorials_for_software_developers).
+Slicer is extensible. If you are interested in customizing or adding functionality to Slicer, click [here](https://training.slicer.org/#developer-tutorials).
 
 ### Tutorials
 
 You learn both basic concepts and highly specialized workflows from the numerous available step-by-step and video tutorials.
 
-Try the [Welcome Tutorial](https://www.slicer.org/wiki/Documentation/Nightly/Training#Slicer_Welcome_Tutorial) and the [Data Loading and 3D Visualization Tutorial](https://www.slicer.org/wiki/Documentation/Nightly/Training#Slicer4_Data_Loading_and_3D_Visualization) to learn the basics.
+Try the [Welcome Tutorial](https://training.slicer.org/#stc-gen-101-welcome-tutorial) and the [Data Loading and 3D Visualization Tutorial](https://training.slicer.org/#stc-vis-102-data-loading-and-3d-visualization) to learn the basics.
 
-For more tutorials, visit the [Tutorial page](https://www.slicer.org/wiki/Documentation/Nightly/Training).
+For more tutorials, visit the [Tutorial page](https://training.slicer.org/).
 
 ### User manual
 
@@ -221,7 +258,7 @@ Terms used in various fields of medical and biomedical image computing and clini
 - **Color legend** (or color bar, scalar bar): a widget overlaid on slice or 3D views that displays a color legend, indicating meaning of colors.
 - **Coordinate system** (or coordinate frame, reference frame, space): Specified by position of origin, axis directions, and distance unit. All coordinate systems in 3D Slicer are right-handed.
 - **Extension** (or Slicer extension): A collection of modules that is not bundled with the core application but can be downloaded and installed using the Extensions manager.
-- [**Extensions manager**](extensions_manager): A software component of Slicer that allows browsing, installing, uninstalling extensions in the [Extensions catalog (also known as the Slicer app store)](https://extensions.slicer.org) directly from the application.
+- [**Extensions manager**](extensions.md#extensions-manager): A software component of Slicer that allows browsing, installing, uninstalling extensions in the [Extensions catalog (also known as the Slicer app store)](https://extensions.slicer.org) directly from the application.
 - [**Extensions index**](https://github.com/Slicer/ExtensionsIndex): A repository that contains description of each extension that the Extension catalog is built from.
 - **Extent**: Range of integer coordinates along 3 axes. Defined in VTK by 6 values, for IJK axes: `I_min`, `I_max`, `J_min`, `J_max`, `K_min`, `K_max`. Both minimum and maximum values are inclusive, therefore size of an array is `(I_max - I_min + 1)` x `(J_max - J_min + 1)` x `(K_max - K_min + 1)`.
 - **Fiducial**: Represents a point in 3D space. The term originates from image-guided surgery, where "fiducial markers" are used to mark point positions.

@@ -1,7 +1,7 @@
 project(MRMLLogic)
 
 #-----------------------------------------------------------------------------
-cmake_minimum_required(VERSION 3.16.3...3.19.7 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.20.6...3.22.6 FATAL_ERROR)
 #-----------------------------------------------------------------------------
 
 # --------------------------------------------------------------------------
@@ -35,15 +35,6 @@ set(include_dirs
   ${RemoteIO_INCLUDE_DIRS}
   )
 include_directories(${include_dirs})
-
-# --------------------------------------------------------------------------
-# Configure headers
-# --------------------------------------------------------------------------
-set(configure_header_file vtkMRMLLogicConfigure.h)
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/${configure_header_file}.in
-  ${CMAKE_CURRENT_BINARY_DIR}/${configure_header_file}
-  )
 
 # --------------------------------------------------------------------------
 # Install headers
@@ -103,6 +94,15 @@ target_link_libraries(${lib_name} ${libs})
 if(Slicer_LIBRARY_PROPERTIES)
   set_target_properties(${lib_name} PROPERTIES ${Slicer_LIBRARY_PROPERTIES})
 endif()
+
+# --------------------------------------------------------------------------
+# Generate export header
+# --------------------------------------------------------------------------
+include(GenerateExportHeader)
+generate_export_header(${lib_name}
+  EXPORT_FILE_NAME ${CMAKE_CURRENT_BINARY_DIR}/vtkMRMLLogicExport.h
+  EXPORT_MACRO_NAME VTK_MRML_LOGIC_EXPORT
+)
 
 # --------------------------------------------------------------------------
 # Folder

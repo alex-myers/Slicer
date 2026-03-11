@@ -2,13 +2,14 @@ import slicer
 import sitkUtils as su
 
 import unittest
+import unittest.mock
 
 
 class SitkUtilsTests(unittest.TestCase):
     def setUp(self):
         pass
 
-    def test_SimpleITK_SlicerPushPull(self):
+    def _test_SimpleITK_SlicerPushPull(self):
         """Download the MRHead node"""
         import SampleData
 

@@ -34,8 +34,8 @@
 #   MOC_SRCS .............: Optional list of headers to run through the meta object compiler (moc)
 #                           using Qt(4|5)_WRAP_CPP CMake macro
 #
-#   UI_SRCS ..............: Optional list of UI file to run through UI compiler (uic) using
-#                           Qt(4|5)_WRAP_UI CMake macro
+#   UI_SRCS ..............: Optional list of UI file to run through UI compiler (uic) leveraging
+#                           CMake's auto-uic feature.
 #
 #   INCLUDE_DIRECTORIES ..: Optional list of extra folder that should be included. See implementation
 #                           for the list of folder included by default.
@@ -116,9 +116,28 @@ macro(SlicerMacroBuildBaseQtLibrary)
   #-----------------------------------------------------------------------------
   # Update Slicer_Base_INCLUDE_DIRS
   #-----------------------------------------------------------------------------
+  get_property(_isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+
   set(Slicer_Base_INCLUDE_DIRS ${Slicer_Base_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}
+    # Ensure generated AUTOUIC headers (ui_*.h) are discoverable.
+    #
+    # By default CMake writes them to:
+    #
+    #   - Single-config generators (Ninja/Makefiles):
+    #       <AUTOGEN_BUILD_DIR>/include
+    #
+    #   - Multi-config generators (VS, Xcode, Ninja Multi-Config):
+    #       <AUTOGEN_BUILD_DIR>/include_<CONFIG>
+    #
+    # where AUTOGEN_BUILD_DIR defaults to:
+    #   <target-binary-dir>/<target-name>_autogen
+    #
+    # References:
+    # - https://cmake.org/cmake/help/latest/manual/cmake-qt.7.html#autouic
+    # - https://cmake.org/cmake/help/latest/prop_tgt/AUTOGEN_BUILD_DIR.html
+    ${CMAKE_CURRENT_BINARY_DIR}/${lib_name}_autogen/include$<$<BOOL:${_isMultiConfig}>:_$<CONFIG>>
     CACHE INTERNAL "Slicer Base includes" FORCE)
 
   #-----------------------------------------------------------------------------
@@ -135,25 +154,6 @@ macro(SlicerMacroBuildBaseQtLibrary)
   set(dynamicHeaders
     "${dynamicHeaders};${CMAKE_CURRENT_BINARY_DIR}/${MY_EXPORT_HEADER_PREFIX}Export.h")
 
-  #-----------------------------------------------------------------------------
-  # Sources
-  # --------------------------------------------------------------------------
-    set(_moc_options OPTIONS -DSlicer_HAVE_QT5)
-    QT5_WRAP_CPP(SLICERQTBASELIB_MOC_OUTPUT ${SLICERQTBASELIB_MOC_SRCS} ${_moc_options})
-    QT5_WRAP_UI(SLICERQTBASELIB_UI_CXX ${SLICERQTBASELIB_UI_SRCS})
-    if(DEFINED SLICERQTBASELIB_RESOURCES)
-      QT5_ADD_RESOURCES(SLICERQTBASELIB_QRC_SRCS ${SLICERQTBASELIB_RESOURCES})
-    endif()
-
-    QT5_ADD_RESOURCES(SLICERQTBASELIB_QRC_SRCS ${Slicer_SOURCE_DIR}/Resources/qSlicer.qrc)
-
-  set_source_files_properties(
-    ${SLICERQTBASELIB_UI_CXX}
-    ${SLICERQTBASELIB_MOC_OUTPUT}
-    ${SLICERQTBASELIB_QRC_SRCS}
-    WRAP_EXCLUDE
-    )
-
   # --------------------------------------------------------------------------
   # Source groups
   # --------------------------------------------------------------------------
@@ -164,9 +164,6 @@ macro(SlicerMacroBuildBaseQtLibrary)
   )
 
   source_group("Generated" FILES
-    ${SLICERQTBASELIB_UI_CXX}
-    ${SLICERQTBASELIB_MOC_OUTPUT}
-    ${SLICERQTBASELIB_QRC_SRCS}
     ${dynamicHeaders}
   )
 
@@ -199,11 +196,34 @@ macro(SlicerMacroBuildBaseQtLibrary)
   # --------------------------------------------------------------------------
   add_library(${lib_name}
     ${SLICERQTBASELIB_SRCS}
-    ${SLICERQTBASELIB_MOC_OUTPUT}
-    ${SLICERQTBASELIB_UI_CXX}
-    ${SLICERQTBASELIB_QRC_SRCS}
+    ${Slicer_SOURCE_DIR}/Resources/qSlicer.qrc
+    ${SLICERQTBASELIB_RESOURCES}
     ${QM_OUTPUT_FILES}
     )
+
+  target_compile_definitions(${lib_name} PRIVATE
+    $<$<BOOL:${Qt5_VERSION_MAJOR}>:Slicer_HAVE_QT5>
+    $<$<BOOL:${Qt6_VERSION_MAJOR}>:Slicer_HAVE_QT6>
+    )
+
+  # Configure CMake Qt automatic code generation
+  set(uic_search_paths)
+  foreach(ui_src IN LISTS SLICERQTBASELIB_UI_SRCS)
+    if(NOT IS_ABSOLUTE ${ui_src})
+      set(ui_src "${CMAKE_CURRENT_SOURCE_DIR}/${ui_src}")
+    endif()
+    get_filename_component(ui_path ${ui_src} PATH)
+    list(APPEND uic_search_paths ${ui_path})
+  endforeach()
+  list(REMOVE_DUPLICATES uic_search_paths)
+
+  set_target_properties(${lib_name} PROPERTIES
+    AUTOMOC ON
+    AUTORCC ON
+    AUTOUIC ON
+    AUTOUIC_SEARCH_PATHS "${uic_search_paths}"
+    )
+
   set_target_properties(${lib_name} PROPERTIES LABELS ${lib_name})
 
   # Apply user-defined properties to the library target.

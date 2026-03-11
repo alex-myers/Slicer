@@ -10,6 +10,7 @@ set(${KIT}_INCLUDE_DIRECTORIES
   ${qSlicerSegmentationsModule_INCLUDE_DIRS}
   ${qSlicerSubjectHierarchyModuleWidgets_INCLUDE_DIRS}
   ${vtkSlicerSubjectHierarchyModuleLogic_INCLUDE_DIRS}
+  ${vtkSlicerTerminologiesModuleLogic_INCLUDE_DIRS}
   ${qSlicerTerminologiesModuleWidgets_INCLUDE_DIRS}
   ${qMRMLWidgets_INCLUDE_DIRS}
   ${MRMLLogic_INCLUDE_DIRS}
@@ -20,11 +21,6 @@ set(${KIT}_SRCS
   qSlicerSubjectHierarchySegmentationsPlugin.cxx
   qSlicerSubjectHierarchySegmentationsPlugin.h
   qSlicerSubjectHierarchySegmentsPlugin.cxx
-  qSlicerSubjectHierarchySegmentsPlugin.h
-  )
-
-set(${KIT}_MOC_SRCS
-  qSlicerSubjectHierarchySegmentationsPlugin.h
   qSlicerSubjectHierarchySegmentsPlugin.h
   )
 
@@ -53,7 +49,6 @@ SlicerMacroBuildModuleQtLibrary(
   FOLDER "Module-${MODULE_NAME}"
   INCLUDE_DIRECTORIES ${${KIT}_INCLUDE_DIRECTORIES}
   SRCS ${${KIT}_SRCS}
-  MOC_SRCS ${${KIT}_MOC_SRCS}
   UI_SRCS ${${KIT}_UI_SRCS}
   TARGET_LIBRARIES ${${KIT}_TARGET_LIBRARIES}
   RESOURCES ${${KIT}_RESOURCES}

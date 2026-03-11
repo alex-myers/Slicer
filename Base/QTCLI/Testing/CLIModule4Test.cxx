@@ -24,6 +24,7 @@
 
 // STD includes
 #include <fstream>
+#include <iostream>
 
 // Use an anonymous namespace to keep class types and function names
 // from colliding when module is used as shared object module.  Every
@@ -41,8 +42,8 @@ bool outputResult(int result, const std::string& outputFile)
 
   if (!myfile.is_open())
   {
-      std::cerr << "Failed to open file:" << outputFile << std::endl;
-      return false;
+    std::cerr << "Failed to open file:" << outputFile << std::endl;
+    return false;
   }
 
   myfile << result << "\n";
@@ -53,8 +54,7 @@ bool outputResult(int result, const std::string& outputFile)
 
 } // end of anonymous namespace
 
-
-int main(int argc, char * argv[])
+int main(int argc, char* argv[])
 {
 
   PARSE_ARGS;

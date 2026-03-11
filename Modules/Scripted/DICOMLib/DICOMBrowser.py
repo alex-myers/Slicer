@@ -13,7 +13,7 @@ from slicer.i18n import tr as _
 
 import DICOMLib
 from DICOMLib import DICOMUtils
-
+from collections import defaultdict
 
 #########################################################
 #
@@ -45,7 +45,10 @@ class SlicerDICOMBrowser(VTKObservationMixin, qt.QWidget):
         VTKObservationMixin.__init__(self)
         qt.QWidget.__init__(self, slicer.util.mainWindow() if parent == "mainWindow" else parent)
 
-        self.pluginInstances = {}
+        # Allow customization of DICOM plugins
+        self.enabledPluginClassNames = None  # can be set to a list containing enabled DICOM plugin class names, or set to None for default set
+        self.pluginInstances = {}  # custom DICOM plugin instances can be added to override the default set
+
         self.fileLists = []
         self.extensionCheckPending = False
 
@@ -55,13 +58,15 @@ class SlicerDICOMBrowser(VTKObservationMixin, qt.QWidget):
 
         # Add ctkVisualDICOMBrowser
         self.dicomVisualBrowser = ctk.ctkDICOMVisualBrowserWidget()
-        self.dicomVisualBrowser.findChild(ctk.ctkCollapsibleGroupBox, "ActionsCollapsibleGroupBox").hide()
-        if settingsValue("DICOM/thumbnailsSize", False) == "large":
-            self.dicomVisualBrowser.thumbnailSize = ctk.ctkDICOMStudyItemWidget.Large
-        elif settingsValue("DICOM/thumbnailsSize", False) == "medium":
-            self.dicomVisualBrowser.thumbnailSize = ctk.ctkDICOMStudyItemWidget.Medium
-        elif settingsValue("DICOM/thumbnailsSize", False) == "small":
-            self.dicomVisualBrowser.thumbnailSize = ctk.ctkDICOMStudyItemWidget.Small
+        thumbnailsSize = settingsValue("DICOM/thumbnailsSize", "small")
+        if thumbnailsSize == "large":
+            self.dicomVisualBrowser.thumbnailSizePreset = ctk.ctkDICOMVisualBrowserWidget.ThumbnailSizePresetOption.Large
+        elif thumbnailsSize == "medium":
+            self.dicomVisualBrowser.thumbnailSizePreset = ctk.ctkDICOMVisualBrowserWidget.ThumbnailSizePresetOption.Medium
+        elif thumbnailsSize == "small":
+            self.dicomVisualBrowser.thumbnailSizePreset = ctk.ctkDICOMVisualBrowserWidget.ThumbnailSizePresetOption.Small
+        elif thumbnailsSize == "hidden":
+            self.dicomVisualBrowser.thumbnailSizePreset = ctk.ctkDICOMVisualBrowserWidget.ThumbnailSizePresetOption.Hidden
 
         if settingsValue("DICOM/detailedLogging", False, converter=toBool):
             ctk.ctk.setDICOMLogLevel(ctk.ctkErrorLogLevel.Debug)
@@ -84,12 +89,22 @@ class SlicerDICOMBrowser(VTKObservationMixin, qt.QWidget):
         self.dicomVisualBrowser.seriesRetrieved.connect(self.onSeriesRetrieved)
         self.dicomVisualBrowser.connect("sendRequested(QStringList)", self.onSend)
 
+        # Hide the close button in the visual DICOM browser
+        closePushButton = self.dicomVisualBrowser.findChild(qt.QPushButton, "ClosePushButton")
+        if closePushButton:
+            closePushButton.hide()
+
+        # Hide the import button in the visual DICOM browser
+        importPushButton = self.dicomVisualBrowser.findChild(qt.QPushButton, "ImportPushButton")
+        if importPushButton:
+            importPushButton.hide()
+
     def onSeriesRetrieved(self, seriesInstanceUIDs):
         seriesList = [str(seriesInstanceUID) for seriesInstanceUID in seriesInstanceUIDs]
         if seriesList is None or not seriesList:
             return
         nodes = DICOMUtils.loadSeriesByUID(seriesList)
-        if len(nodes) > 0 and not settingsValue("DICOM/BrowserPersistent", False, converter=toBool):
+        if len(nodes) > 0 and not self.browserPersistent:
             self.close()
 
     def open(self):
@@ -104,7 +119,7 @@ class SlicerDICOMBrowser(VTKObservationMixin, qt.QWidget):
             sendDialog = DICOMLib.DICOMSendDialog(fileList, self)
 
     def createNewDatabaseDirectory(self):
-        if self.useExpertimentalVisualDICOMBrowser:
+        if self.useVisualDICOMBrowser:
             self.dicomVisualBrowser.createNewDatabaseDirectory()
         else:
             self.dicomBrowser.createNewDatabaseDirectory()
@@ -114,7 +129,7 @@ class SlicerDICOMBrowser(VTKObservationMixin, qt.QWidget):
         self.dicomVisualBrowser.databaseDirectory = databaseDirectory
 
     def importDirectoryMode(self):
-        if self.useExpertimentalVisualDICOMBrowser:
+        if self.useVisualDICOMBrowser:
             return self.dicomVisualBrowser.ImportDirectoryMode
         else:
             return self.dicomBrowser.ImportDirectoryMode
@@ -124,33 +139,50 @@ class SlicerDICOMBrowser(VTKObservationMixin, qt.QWidget):
         self.dicomBrowser.ImportDirectoryMode = mode
 
     def importFolder(self):
-        if self.useExpertimentalVisualDICOMBrowser:
+        if self.useVisualDICOMBrowser:
             self.dicomVisualBrowser.openImportDialog()
         else:
             self.dicomBrowser.openImportDialog()
 
     def importDirectories(self, directoriesToAdd):
-        if self.useExpertimentalVisualDICOMBrowser:
+        if self.useVisualDICOMBrowser:
             self.dicomVisualBrowser.importDirectories(directoriesToAdd)
         else:
             self.dicomBrowser.importDirectories(directoriesToAdd)
 
     def importDirectory(self, dicomFilesDirectory):
-        if self.useExpertimentalVisualDICOMBrowser:
+        if self.useVisualDICOMBrowser:
             self.dicomVisualBrowser.importDirectory(dicomFilesDirectory, self.importDirectoryMode())
         else:
             self.dicomBrowser.importDirectory(dicomFilesDirectory, self.importDirectoryMode())
 
-    def toggleBrowsers(self, useExpertimentalVisualDICOMBrowser):
-        self.useExpertimentalVisualDICOMBrowser = useExpertimentalVisualDICOMBrowser
-        self.settings.setValue("DICOM/UseExpertimentalVisualDICOMBrowser", bool(useExpertimentalVisualDICOMBrowser))
+    def toggleBrowsers(self, useVisualDICOMBrowser):
+        self.useVisualDICOMBrowser = useVisualDICOMBrowser
+        selectedPatientUIDs = []
+        selectedSeriesInstanceUIDs = []
+        visualPatientView = self.dicomVisualBrowser.patientView()
+        if self.dicomVisualBrowser.visible:
+            selectedPatientUIDs = visualPatientView.selectedPatientUIDs()
+            selectedSeriesInstanceUIDs = visualPatientView.selectedSeriesInstanceUIDs()
+        elif self.dicomBrowser.visible:
+            selectedPatientUIDs = self.dicomBrowser.selectedItems(ctk.ctkDICOMModel.IndexType.PatientType)
+            selectedSeriesInstanceUIDs = self.dicomBrowser.selectedItems(ctk.ctkDICOMModel.IndexType.SeriesType)
 
-        self.dicomVisualBrowser.visible = self.useExpertimentalVisualDICOMBrowser
-        self.dicomBrowser.visible = not self.useExpertimentalVisualDICOMBrowser
-        self.loadableTableFrame.visible = not self.useExpertimentalVisualDICOMBrowser
-        self.actionButtonsFrame.visible = not self.useExpertimentalVisualDICOMBrowser
-        if self.useExpertimentalVisualDICOMBrowser:
-            self.dicomVisualBrowser.onShowPatients()
+        self.dicomVisualBrowser.visible = self.useVisualDICOMBrowser
+        self.dicomBrowser.visible = not self.useVisualDICOMBrowser
+
+        if self.dicomVisualBrowser.visible:
+            visualDisplayMode = visualPatientView.displayMode
+            if len(selectedPatientUIDs) > 1 and visualDisplayMode == ctk.ctkDICOMPatientView.DisplayMode.TabMode:
+                visualPatientView.displayMode = ctk.ctkDICOMPatientView.DisplayMode.ListMode
+            visualPatientView.selectPatientUIDs(selectedPatientUIDs)
+            visualPatientView.selectSeriesInstanceUIDs(selectedSeriesInstanceUIDs)
+        elif self.dicomBrowser.visible:
+            self.dicomBrowser.setSelectedItems(ctk.ctkDICOMModel.IndexType.SeriesType, selectedSeriesInstanceUIDs)
+            self.dicomBrowser.setSelectedItems(ctk.ctkDICOMModel.IndexType.PatientType, selectedPatientUIDs)
+
+        self.loadableTableFrame.visible = (not self.useVisualDICOMBrowser) and self.advancedView
+        self.actionButtonsFrame.visible = not self.useVisualDICOMBrowser
 
     def setup(self, showPreview=False):
         """
@@ -390,7 +422,6 @@ class SlicerDICOMBrowser(VTKObservationMixin, qt.QWidget):
 
     def setBrowserPersistence(self, state):
         self.browserPersistent = state
-        self.settings.setValue("DICOM/BrowserPersistent", bool(self.browserPersistent))
 
     def onAdvancedViewButton(self, checked):
         self.advancedView = checked
@@ -443,7 +474,7 @@ class SlicerDICOMBrowser(VTKObservationMixin, qt.QWidget):
         of what to load
         """
 
-        (self.loadablesByPlugin, loadEnabled) = self.getLoadablesFromFileLists(self.fileLists)
+        (self.loadablesByPlugin, _loadEnabled) = self.getLoadablesFromFileLists(self.fileLists)
         DICOMLib.selectHighestConfidenceLoadables(self.loadablesByPlugin)
         self.loadableTable.setLoadables(self.loadablesByPlugin)
         self.updateButtonStates()
@@ -453,27 +484,6 @@ class SlicerDICOMBrowser(VTKObservationMixin, qt.QWidget):
 
         loadablesByPlugin = {}
         loadEnabled = False
-
-        # Get selected plugins from application settings
-        # Settings are filled in DICOMWidget using DICOMPluginSelector
-        settings = qt.QSettings()
-        selectedPlugins = []
-        if settings.contains("DICOM/disabledPlugins/size"):
-            size = settings.beginReadArray("DICOM/disabledPlugins")
-            disabledPlugins = []
-
-            for i in range(size):
-                settings.setArrayIndex(i)
-                disabledPlugins.append(str(settings.allKeys()[0]))
-            settings.endArray()
-
-            for pluginClass in slicer.modules.dicomPlugins:
-                if pluginClass not in disabledPlugins:
-                    selectedPlugins.append(pluginClass)
-        else:
-            # All DICOM plugins would be enabled by default
-            for pluginClass in slicer.modules.dicomPlugins:
-                selectedPlugins.append(pluginClass)
 
         allFileCount = missingFileCount = 0
         for fileList in fileLists:
@@ -499,10 +509,13 @@ class SlicerDICOMBrowser(VTKObservationMixin, qt.QWidget):
                 cancelled = progressDialog.wasCanceled
                 return cancelled
 
-            loadablesByPlugin, loadEnabled = DICOMLib.getLoadablesFromFileLists(fileLists, selectedPlugins, messages,
+            loadablesByPlugin, loadEnabled = DICOMLib.getLoadablesFromFileLists(fileLists,
+                                                                                self.enabledPluginClassNames,
+                                                                                messages,
                                                                                 lambda progressLabel, progressValue, progressDialog=progressDialog: progressCallback(progressDialog, progressLabel, progressValue),
                                                                                 self.pluginInstances)
 
+            progressDialog.setParent(None)
             progressDialog.close()
 
         if messages:
@@ -526,7 +539,7 @@ class SlicerDICOMBrowser(VTKObservationMixin, qt.QWidget):
                 except Exception:
                     pass
                 isEqual = True
-                for pair in zip(inputFileListCopy, loadableFileListCopy):
+                for pair in zip(inputFileListCopy, loadableFileListCopy, strict=True):
                     if pair[0] != pair[1]:
                         print(f"{pair[0]} != {pair[1]}")
                         isEqual = False
@@ -564,12 +577,26 @@ class SlicerDICOMBrowser(VTKObservationMixin, qt.QWidget):
                         instanceFile = slicer.dicomDatabase.fileForInstance(instance)
                         if instanceFile != "":
                             instanceFileList.append(instanceFile)
-                    if len(instanceFileList) and not self.isFileListInCheckedLoadables(instanceFileList):
+                    if instanceFileList and not self.isFileListInCheckedLoadables(instanceFileList):
                         referencedFileLists.append(instanceFileList)
 
         # if applicable, find all loadables from the file lists
         loadEnabled = False
-        if len(referencedFileLists):
+        seriesUIDTag = "0020,000E"
+        # Create a list of lists, split by referenced SeriesInstanceUID
+        if referencedFileLists:
+            # Create a dictionary
+            groupedBySeries = defaultdict(list)
+            # Get a single list
+            allFiles = [f for sublist in referencedFileLists for f in sublist]
+            # For each file, get the SeriesInstanceUID
+            for f in allFiles:
+                # Get the SeriesInstanceUID of the instance
+                seriesUID = slicer.dicomDatabase.fileValue(f, seriesUIDTag)
+                # Add to appropriate list
+                groupedBySeries[seriesUID].append(f)
+            # Convert to a list of lists
+            referencedFileLists = list(groupedBySeries.values())
             (self.referencedLoadables, loadEnabled) = self.getLoadablesFromFileLists(referencedFileLists)
 
         automaticallyLoadReferences = int(slicer.util.settingsValue("DICOM/automaticallyLoadReferences", qt.QMessageBox.InvalidRole))
@@ -637,6 +664,7 @@ class SlicerDICOMBrowser(VTKObservationMixin, qt.QWidget):
 
         qt.QApplication.restoreOverrideCursor()
 
+        progressDialog.setParent(None)
         progressDialog.close()
 
         if messages:

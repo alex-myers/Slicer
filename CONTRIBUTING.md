@@ -1,5 +1,4 @@
-Contributing to Slicer
-======================
+# Contributing to Slicer
 
 There are many ways to contribute to Slicer, with varying levels of effort.  Do try to
 look through the [documentation](https://slicer.readthedocs.io/en/latest/index.html) first if something is unclear, and let us know how we can
@@ -12,8 +11,7 @@ do better.
 We encourage a range of Pull Requests, from patches that include passing tests and
 documentation, all the way down to half-baked ideas that launch discussions.
 
-The PR Process, Circle CI, and Related Gotchas
-----------------------------------------------
+## Submitting a Pull Request
 
 ### How to submit a PR ?
 
@@ -29,10 +27,12 @@ repository, here are the steps:
 This corresponds to the `Fork & Pull Model` described in the [GitHub collaborative development](https://docs.github.com/pull-requests/collaborating-with-pull-requests/getting-started/about-collaborative-development-models)
 documentation.
 
-When submitting a PR, the developers following the project will be notified. That
-said, to engage specific developers, you can add `Cc: @<username>` comment to notify
-them of your awesome contributions.
-Based on the comments posted by the reviewers, you may have to revisit your patches.
+> [!TIP]
+>
+> When submitting a PR, the developers following the project will be notified. That
+> said, to engage specific developers, you can add `Cc: @<username>` comment to notify
+> them of your awesome contributions.
+> Based on the comments posted by the reviewers, you may have to revisit your patches.
 
 
 ### How to efficiently contribute ?
@@ -88,18 +88,18 @@ Keep in mind that the significant time is invested in reviewing commits and
 *pull requests*, so following these guidelines will greatly help the people
 doing reviews.
 
-These guidelines are largely inspired by Chris Beam's
-[How to Write a Commit Message](https://chris.beams.io/posts/git-commit/)
-post.
-
 Examples:
-  - Bad: `BUG: Check pointer validity before dereferencing` -> implementation detail, self-explanatory (by looking at the code)
-  - Good: `BUG: Fix crash in Module X when clicking Apply button`
-  - Bad: `ENH: More work in qSlicerXModuleWidget` -> more work is too vague, qSlicerXModuleWidget is too low level
-  - Good: `ENH: Add float image outputs in module X`
-  - Bad: `COMP: Typo in cmake variable` -> implementation detail, self-explanatory
-  - Good: `COMP: Fix compilation error with Numpy on Visual Studio`
 
+- ❌ `BUG: Check pointer validity before dereferencing` -> implementation detail, self-explanatory (by looking at the code)
+- ✅ `BUG: Fix crash in Module X when clicking Apply button`
+- ❌ `ENH: More work in qSlicerXModuleWidget` -> more work is too vague, qSlicerXModuleWidget is too low level
+- ✅ `ENH: Add float image outputs in module X`
+- ❌ `COMP: Typo in cmake variable` -> implementation detail, self-explanatory
+- ✅ `COMP: Fix compilation error with Numpy on Visual Studio`
+
+_These guidelines are largely inspired by Chris Beam's
+[How to Write a Commit Message](https://chris.beams.io/posts/git-commit/)
+post._
 
 ### How to integrate a PR ?
 
@@ -107,80 +107,40 @@ Getting your contributions integrated is relatively straightforward, here
 is the checklist:
 
 * All tests pass
-* Consensus is reached. This usually means that at least two reviewers approved
-  the changes (or added a `LGTM` comment) and at least one business day passed
-  without anyone objecting. `LGTM` is an acronym for _Looks Good to Me_.
+* Consensus is reached. This usually means that at least one reviewer approved
+  the changes and at least one business day passed
+  without anyone objecting.
 * To accommodate developers explicitly asking for more time to test the
   proposed changes, integration time can be delayed by few more days.
 
-* If you do NOT have push access, a Slicer core developer will integrate your PR. If
-  you would like to speed up the integration, do not hesitate to send a note on
-  the [Slicer forum][slicer-forum].
-
+> [!TIP]
+>
+> If you do NOT have push access, a Slicer core developer will integrate your PR. If
+> you would like to speed up the integration, do not hesitate to send a note on
+> the [Slicer forum][slicer-forum].
 
 ### Automatic testing of pull requests
 
-Every pull request is tested automatically using CircleCI each time you push a
-commit to it. The Github UI will restrict users from merging pull requests until
-the CI build has returned with a successful result indicating that all tests have
-passed.
+Every pull request (PR) is automatically tested using GitHub Actions each time a
+commit is pushed. The GitHub interface prevents merging until all required CI workflows
+have completed successfully, ensuring that changes meet the project’s testing and
+quality standards.
 
-The testing infrastructure is described in details in the
-[3D Slicer Improves Testing for Pull Requests Using Docker and CircleCI](https://blog.kitware.com/3d-slicer-improves-testing-for-pull-requests-using-docker-and-circleci/)
-blog post.
-
+The testing infrastructure was migrated from CircleCI to GitHub Actions, but the
+principles described in the blog post [3D Slicer Improves Testing for Pull Requests Using Docker and CircleCI](https://blog.kitware.com/3d-slicer-improves-testing-for-pull-requests-using-docker-and-circleci/)
+remain relevant for understanding the overall approach and concepts.
 
 ### Nightly tests
 
 After changes are integrated, every evening at 10pm EST (3am UTC), Slicer build bots (aka factories)
 will build, test and package the Slicer application and all its extensions on Linux, macOS
-and Windows. Results are published daily on CDash ([Stable](https://slicer.cdash.org/index.php?project=SlicerStable) & [Preview](https://slicer.cdash.org/index.php?project=SlicerPreview))
-and developers that introduced changes resulting in build or test failures are notified by
+and Windows. Results are published daily on CDash:
+- [Stable](https://slicer.cdash.org/index.php?project=SlicerStable)
+- [Preview](https://slicer.cdash.org/index.php?project=SlicerPreview))
+
+Developers that introduced changes resulting in build or test failures are notified by
 email.
 
-
-### Decision-making process
-
-1. Given the topic of interest, initiate discussion on the [Slicer forum][slicer-forum].
-
-2. Identify a small circle of community members that are interested to study the
-   topic in more depth.
-
-3. Take the discussion off the general list, work on the analysis of options and
-   alternatives, summarize findings on the wiki or similar. [Labs](https://www.slicer.org/wiki/Documentation/Labs)
-   page are usually a good ground for such summary.
-
-4. Announce on the [Slicer forum][slicer-forum] the in-depth discussion of the topic for the
-   [Slicer Community hangout](https://discourse.slicer.org/c/community/hangout),
-   encourage anyone that is interested in weighing in on the topic to join the
-   discussion. If there is someone who is interested to participate in the discussion,
-   but cannot join the meeting due to conflict, they should notify the leaders of
-   the given project and identify the time suitable for everyone.
-
-5. Hopefully, reach consensus at the hangout and proceed with the agreed plan.
-
-
-*The initial version of these guidelines was established during the [winter
- project week 2017](https://www.na-mic.org/Wiki/index.php/2017_Winter_Project_Week/UpdatingCommunityForums).*
-
-#### Benevolent dictators for life
-
-The [benevolent dictators](https://slicer.readthedocs.io/en/latest/developer_guide/contributing.html#benevolent-dictators-for-life) can
-integrate changes to keep the platform healthy and help interpret
-or address conflict related to the contribution guidelines.
-
-
-These currently include:
-
-* Jean-Christophe Fillion-Robin
-* Andras Lasso
-* Steve Pieper
-
-*Alphabetically ordered by last name.*
-
-The Slicer community is inclusive and welcomes anyone to work to become a core
-developer and then a BDFL. This happens with hard work and approval of the existing
-BDFL.
 
 [slicer-forum]: https://discourse.slicer.org
 [slicer-issues]: https://github.com/Slicer/Slicer/issues

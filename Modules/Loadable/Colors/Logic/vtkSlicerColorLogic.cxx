@@ -10,10 +10,8 @@
 // Colors
 #include "vtkSlicerColorLogic.h"
 
-// Slicer
-#include "vtkSlicerConfigure.h" // for Slicer_SHARE_DIR
-
 // MRML
+#include "vtkMRMLApplicationLogic.h"
 #include "vtkMRMLColorTableStorageNode.h"
 #include "vtkMRMLColorTableNode.h"
 #include "vtkMRMLProceduralColorStorageNode.h"
@@ -25,14 +23,8 @@
 // VTK includes
 #include <vtkNew.h>
 #include <vtkObjectFactory.h>
+#include <vtksys/Directory.hxx>
 #include <vtksys/SystemTools.hxx>
-
-#ifdef WIN32
-#include <windows.h>
-#else
-#include <dirent.h>
-#include <cerrno>
-#endif
 
 #include <sstream>
 #include <cstring>
@@ -67,19 +59,19 @@ void vtkSlicerColorLogic::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 //----------------------------------------------------------------------------
-const char *vtkSlicerColorLogic::GetDefaultLabelMapColorNodeID()
+const char* vtkSlicerColorLogic::GetDefaultLabelMapColorNodeID()
 {
   return vtkMRMLColorLogic::GetFileColorNodeID("GenericColors.txt");
 }
 
 //----------------------------------------------------------------------------
-const char *vtkSlicerColorLogic::GetDefaultEditorColorNodeID()
+const char* vtkSlicerColorLogic::GetDefaultEditorColorNodeID()
 {
   return vtkMRMLColorLogic::GetFileColorNodeID("GenericAnatomyColors.txt");
 }
 
 //----------------------------------------------------------------------------
-const char *vtkSlicerColorLogic::GetDefaultChartColorNodeID()
+const char* vtkSlicerColorLogic::GetDefaultChartColorNodeID()
 {
   return vtkMRMLColorLogic::GetFileColorNodeID("DarkBrightChartColors.txt");
 }
@@ -88,62 +80,64 @@ const char *vtkSlicerColorLogic::GetDefaultChartColorNodeID()
 std::vector<std::string> vtkSlicerColorLogic::FindDefaultColorFiles()
 {
   // get the slicer home dir
-  std::string slicerHome;
-  if (vtksys::SystemTools::GetEnv("SLICER_HOME") == nullptr)
+  vtkMRMLApplicationLogic* appLogic = this->GetMRMLApplicationLogic();
+  if (!appLogic)
   {
-    if (vtksys::SystemTools::GetEnv("PWD") != nullptr)
-    {
-      slicerHome =  std::string(vtksys::SystemTools::GetEnv("PWD"));
-    }
-    else
-    {
-      slicerHome =  std::string("");
-    }
+    vtkErrorMacro("FindDefaultColorFiles failed: Unable to get application logic");
+    return {};
   }
-  else
-  {
-    slicerHome = std::string(vtksys::SystemTools::GetEnv("SLICER_HOME"));
-  }
-  // build up the vector
-  std::vector<std::string> filesVector;
-  filesVector.emplace_back(""); // for relative path
-  filesVector.push_back(slicerHome);
-  filesVector.push_back(std::string(Slicer_SHARE_DIR) + "/ColorFiles");
-  std::string resourcesDirString = vtksys::SystemTools::JoinPath(filesVector);
 
-  // now make up a vector to iterate through of dirs to look in
+  const std::string& homeDir = appLogic->GetHomeDirectory();
+  if (homeDir.empty())
+  {
+    vtkErrorMacro("FindDefaultColorFiles failed: HomeDirectory is not set. "
+                  "Default color files will not be loaded.");
+    return {};
+  }
+
+  const std::string& shareDir = appLogic->GetShareDirectory();
+  if (shareDir.empty())
+  {
+    vtkErrorMacro("FindDefaultColorFiles failed: ShareDirectory is not set. "
+                  "Default color files will not be loaded.");
+    return {};
+  }
+
+  // Find color files in the application share folder
   std::vector<std::string> DirectoriesToCheck;
-
-  DirectoriesToCheck.push_back(resourcesDirString);
-
+  DirectoriesToCheck.push_back(appLogic->GetShareFilePath("ColorFiles"));
   return this->FindColorFiles(DirectoriesToCheck);
 }
 
 //----------------------------------------------------------------------------
 std::vector<std::string> vtkSlicerColorLogic::FindUserColorFiles()
 {
-  std::vector<std::string> DirectoriesToCheck;
+  std::vector<std::string> directoriesToCheck;
   // add the list of dirs set from the application
   if (this->UserColorFilePaths != nullptr)
   {
-    vtkDebugMacro("\nFindColorFiles: got user color file paths = " << this->UserColorFilePaths);
+    vtkDebugMacro("FindColorFiles: got user color file paths = " << this->UserColorFilePaths);
     // parse out the list, breaking at delimiter strings
-#ifdef WIN32
-    const char *delim = ";";
+#ifdef _WIN32
+    const char* delim = ";";
 #else
-    const char *delim = ":";
+    const char* delim = ":";
 #endif
-    char *ptr = strtok(this->UserColorFilePaths, delim);
+    char* ptr = strtok(this->UserColorFilePaths, delim);
     while (ptr != nullptr)
     {
       std::string dir = std::string(ptr);
-      vtkDebugMacro("\nFindColorFiles: Adding user dir " << dir.c_str() << " to the directories to check");
-      DirectoriesToCheck.push_back(dir);
+      vtkDebugMacro("FindColorFiles: Adding user dir " << dir.c_str() << " to the directories to check");
+      directoriesToCheck.push_back(dir);
       ptr = strtok(nullptr, delim);
     }
-  } else { vtkDebugMacro("\nFindColorFiles: oops, the user color file paths aren't set!"); }
+  }
+  else
+  {
+    vtkDebugMacro("FindColorFiles: User color file paths are not set");
+  }
 
-  return this->FindColorFiles(DirectoriesToCheck);
+  return this->FindColorFiles(directoriesToCheck);
 }
 
 //----------------------------------------------------------------------------
@@ -151,85 +145,24 @@ std::vector<std::string> vtkSlicerColorLogic::FindColorFiles(const std::vector<s
 {
   std::vector<std::string> filenames;
 
-  // get the list of color files in these dir
-  for (unsigned int d = 0; d < directories.size(); d++)
+  // Gather all the parameter set files: all text files from the provided directories
+  std::vector<std::string> filesToLoad = vtkMRMLApplicationLogic::FindTextFiles(directories);
+  for (const std::string& fileToLoad : filesToLoad)
   {
-    std::string dirString = directories[d];
-    vtkDebugMacro("FindColorFiles: checking for color files in dir " << d << " = " << dirString.c_str());
-
-    std::vector<std::string> filesVector;
-    filesVector.push_back(dirString);
-    filesVector.emplace_back("/");
-
-#ifdef WIN32
-    WIN32_FIND_DATA findData;
-    HANDLE fileHandle;
-    int flag = 1;
-    std::string search ("*.*");
-    dirString += "/";
-    search = dirString + search;
-
-    fileHandle = FindFirstFile(search.c_str(), &findData);
-    if (fileHandle != INVALID_HANDLE_VALUE)
+    // Check if Slicer supports this color file
+    vtkNew<vtkMRMLColorTableStorageNode> colorStorageNode;
+    vtkNew<vtkMRMLProceduralColorStorageNode> procColorStorageNode;
+    if (colorStorageNode->SupportedFileType(fileToLoad.c_str()) || procColorStorageNode->SupportedFileType(fileToLoad.c_str()))
     {
-      while (flag)
-      {
-        // add this file to the vector holding the base dir name so check the
-        // file type using the full path
-        filesVector.push_back(std::string(findData.cFileName));
-#else
-    DIR *dp;
-    struct dirent *dirp;
-    if ((dp  = opendir(dirString.c_str())) == nullptr)
-    {
-      vtkErrorMacro("\nError(" << errno << ") opening user specified color path: " << dirString.c_str() << ", no color files will be loaded from that directory\n(check Edit -> Application Settings -> Module Settings to adjust your User defined color file paths)");
+      vtkDebugMacro("FindColorFiles: Adding " << fileToLoad);
+      this->AddColorFile(fileToLoad.c_str(), &filenames);
     }
     else
     {
-      while ((dirp = readdir(dp)) != nullptr)
-      {
-        // add this file to the vector holding the base dir name
-        filesVector.emplace_back(dirp->d_name);
-#endif
+      vtkWarningMacro("FindColorFiles: Not a supported color file: " << fileToLoad);
+    }
+  }
 
-        std::string fileToCheck = vtksys::SystemTools::JoinPath(filesVector);
-        int fileType = vtksys::SystemTools::DetectFileType(fileToCheck.c_str());
-        if (fileType == vtksys::SystemTools::FileTypeText)
-        {
-          // check that it's a supported file type
-          // create storage nodes so can check for supported file types
-          vtkNew<vtkMRMLColorTableStorageNode> colorStorageNode;
-          vtkNew<vtkMRMLProceduralColorStorageNode> procColorStorageNode;
-          if (colorStorageNode->SupportedFileType(fileToCheck.c_str()) ||
-              procColorStorageNode->SupportedFileType(fileToCheck.c_str()))
-          {
-            vtkDebugMacro("FindColorFiles: Adding " << fileToCheck.c_str() << " to list of potential color files. Type = " << fileType);
-              // add it to the list
-              this->AddColorFile(fileToCheck.c_str(), &filenames);
-          }
-          else
-          {
-            vtkWarningMacro("FindColorFiles: not a supported file type:\n"<< fileToCheck);
-          }
-        }
-        else
-        {
-          vtkDebugMacro("FindColorFiles: Skipping potential color file " << fileToCheck.c_str() << ", not a text file (file type = " << fileType << ")");
-        }
-        // take this file off so that can build the next file name
-        filesVector.pop_back();
-
-#ifdef WIN32
-        flag = FindNextFile(fileHandle, &findData);
-      } // end of while flag
-      FindClose(fileHandle);
-    } // end of having a valid fileHandle
-#else
-      } // end of while loop over reading the directory entries
-      closedir(dp);
-    } // end of able to open dir
-#endif
-  } // end of looping over dirs
   return filenames;
 }
 
@@ -277,8 +210,7 @@ vtkMRMLColorLegendDisplayNode* vtkSlicerColorLogic::AddDefaultColorLegendDisplay
   std::string title = displayableNode->GetName() ? displayableNode->GetName() : "";
 
   // Create color legend and observe color legend by displayable node
-  colorLegendNode = vtkMRMLColorLegendDisplayNode::SafeDownCast(
-    mrmlScene->AddNewNodeByClass("vtkMRMLColorLegendDisplayNode", title + " color legend"));
+  colorLegendNode = vtkMRMLColorLegendDisplayNode::SafeDownCast(mrmlScene->AddNewNodeByClass("vtkMRMLColorLegendDisplayNode", title + " color legend"));
   if (!colorLegendNode)
   {
     vtkErrorWithObjectMacro(displayNode, "vtkSlicerColorLogic::AddDefaultColorLegendDisplayNode: Failed to create vtkMRMLColorLegendDisplayNode");
@@ -310,21 +242,19 @@ vtkMRMLColorLegendDisplayNode* vtkSlicerColorLogic::AddDefaultColorLegendDisplay
 }
 
 //----------------------------------------------------------------------------
-vtkMRMLColorLegendDisplayNode* vtkSlicerColorLogic::GetNthColorLegendDisplayNode(
-  vtkMRMLDisplayableNode* displayableNode, int n)
+vtkMRMLColorLegendDisplayNode* vtkSlicerColorLogic::GetNthColorLegendDisplayNode(vtkMRMLDisplayableNode* displayableNode, int n)
 {
   if (!displayableNode)
   {
-   vtkGenericWarningMacro("vtkSlicerColorLogic::GetNthColorLegendDisplayNode: Displayable node is invalid");
-   return nullptr;
+    vtkGenericWarningMacro("vtkSlicerColorLogic::GetNthColorLegendDisplayNode: Displayable node is invalid");
+    return nullptr;
   }
 
   int colorLegendIndex = 0;
   int numberOfDisplayNodes = displayableNode->GetNumberOfDisplayNodes();
   for (int i = 0; i < numberOfDisplayNodes; ++i)
   {
-    vtkMRMLColorLegendDisplayNode* colorLegendDisplayNode = vtkMRMLColorLegendDisplayNode::SafeDownCast(
-      displayableNode->GetNthDisplayNode(i));
+    vtkMRMLColorLegendDisplayNode* colorLegendDisplayNode = vtkMRMLColorLegendDisplayNode::SafeDownCast(displayableNode->GetNthDisplayNode(i));
     if (!colorLegendDisplayNode)
     {
       continue;
@@ -344,15 +274,14 @@ int vtkSlicerColorLogic::GetNumberOfColorLegendDisplayNodes(vtkMRMLDisplayableNo
 {
   if (!displayableNode)
   {
-   vtkGenericWarningMacro("vtkSlicerColorLogic::GetNumberOfColorLegendDisplayNodes: Displayable node is invalid");
-   return 0;
+    vtkGenericWarningMacro("vtkSlicerColorLogic::GetNumberOfColorLegendDisplayNodes: Displayable node is invalid");
+    return 0;
   }
   int numberOfColorLegendDIsplayNodes = 0;
   int numberOfDisplayNodes = displayableNode->GetNumberOfDisplayNodes();
   for (int i = 0; i < numberOfDisplayNodes; ++i)
   {
-    vtkMRMLColorLegendDisplayNode* colorLegendDisplayNode = vtkMRMLColorLegendDisplayNode::SafeDownCast(
-      displayableNode->GetNthDisplayNode(i));
+    vtkMRMLColorLegendDisplayNode* colorLegendDisplayNode = vtkMRMLColorLegendDisplayNode::SafeDownCast(displayableNode->GetNthDisplayNode(i));
     if (colorLegendDisplayNode)
     {
       numberOfColorLegendDIsplayNodes++;
@@ -384,8 +313,7 @@ vtkMRMLColorLegendDisplayNode* vtkSlicerColorLogic::GetColorLegendDisplayNode(vt
   int nofDisplayNodes = displayableNode->GetNumberOfDisplayNodes();
   for (int i = 0; i < nofDisplayNodes; ++i)
   {
-    vtkMRMLColorLegendDisplayNode* foundColorLegendNode = vtkMRMLColorLegendDisplayNode::SafeDownCast(
-      displayableNode->GetNthDisplayNode(i));
+    vtkMRMLColorLegendDisplayNode* foundColorLegendNode = vtkMRMLColorLegendDisplayNode::SafeDownCast(displayableNode->GetNthDisplayNode(i));
     if (!foundColorLegendNode)
     {
       continue;
@@ -407,8 +335,7 @@ vtkMRMLColorLegendDisplayNode* vtkSlicerColorLogic::GetColorLegendDisplayNode(vt
 }
 
 //------------------------------------------------------------------------------
-vtkMRMLDisplayNode* vtkSlicerColorLogic::GetFirstNonColorLegendDisplayNode(
-  vtkMRMLDisplayableNode* displayableNode)
+vtkMRMLDisplayNode* vtkSlicerColorLogic::GetFirstNonColorLegendDisplayNode(vtkMRMLDisplayableNode* displayableNode)
 {
   if (!displayableNode)
   {

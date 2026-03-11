@@ -35,7 +35,7 @@ slicer.modules.markups.logic().ImportControlPointsFromCSV(markupsNode, "/path/to
 Markups point list can be loaded from legacy [fcsv file format](/developer_guide/modules/markups.md#markups-fiducial-point-list-file-format-fcsv). Note that this file format is no longer recommended, as it is not a standard csv file format and can only store a small fraction of information that is in a markups node.
 
 ```python
-slicer.util.loadMarkupsFiducialList("/path/to/list/F.fcsv")
+slicer.util.loadMarkups("/path/to/list/F.fcsv")
 ```
 
 ### Adding control points Programmatically
@@ -376,6 +376,31 @@ for pointIndex in range(2):
     projectedLineNode.AddControlPoint(projectedPoint_World[0:3])
 ```
 
+### Measure distances of points from a plane
+
+Place a plane (`P`) and add points to point list (`F`) using Markups module in a view and then run the following code snippet to compute distances of the points from the plane.
+
+```python
+pointListNode = getNode('F')
+planeNode = getNode('P')
+
+# Get transformation that gets point coordinates relative to the plane
+planeToWorld = vtk.vtkMatrix4x4()
+planeNode.GetObjectToWorldMatrix(planeToWorld)
+worldToPlane = vtk.vtkMatrix4x4()
+vtk.vtkMatrix4x4.Invert(planeToWorld, worldToPlane)
+
+for pointIndex in range(pointListNode.GetNumberOfControlPoints()):
+    # Get point position in world coordinate system
+    point_World = [*pointListNode.GetNthControlPointPositionWorld(pointIndex), 1.0]
+    # Get point position in the plane coordinate system
+    point_Plane = worldToPlane.MultiplyPoint(point_World)
+    # Third axis in the plane coordinate system is the plane normal direction, therefore the third coordinate
+    # value is the distance from the plane
+    distanceFromPlane = abs(point_Plane[2])
+    print(f"Distance of point {pointListNode.GetNthControlPointLabel(pointIndex)} from plane: {distanceFromPlane:.2f}")
+```
+
 ### Measure distances of points from a line
 
 Draw a markups line (`L`) and drop markups point list (`F`) in a view and then run the following code snippet to compute distances of the points from the line.
@@ -488,7 +513,7 @@ Event management of Slicer-4.11 version is still subject to change. The example 
 ```python
 def onMarkupChanged(caller,event):
   markupsNode = caller
-  sliceView = markupsNode.GetAttribute("Markups.MovingInSliceView")
+  sliceView = markupsNode.GetAttribute(slicer.vtkMRMLMarkupsDisplayNode.GetMovingInSliceViewAttributeName())
   movingMarkupIndex = markupsNode.GetDisplayNode().GetActiveControlPoint()
   if movingMarkupIndex >= 0:
     pos = [0,0,0]
@@ -503,13 +528,13 @@ def onMarkupChanged(caller,event):
 
 def onMarkupStartInteraction(caller, event):
   markupsNode = caller
-  sliceView = markupsNode.GetAttribute("Markups.MovingInSliceView")
+  sliceView = markupsNode.GetAttribute(slicer.vtkMRMLMarkupsDisplayNode.GetMovingInSliceViewAttributeName())
   movingMarkupIndex = markupsNode.GetDisplayNode().GetActiveControlPoint()
   logging.info("Start interaction: point ID = {0}, slice view = {1}".format(movingMarkupIndex, sliceView))
 
 def onMarkupEndInteraction(caller, event):
   markupsNode = caller
-  sliceView = markupsNode.GetAttribute("Markups.MovingInSliceView")
+  sliceView = markupsNode.GetAttribute(slicer.vtkMRMLMarkupsDisplayNode.GetMovingInSliceViewAttributeName())
   movingMarkupIndex = markupsNode.GetDisplayNode().GetActiveControlPoint()
   logging.info("End interaction: point ID = {0}, slice view = {1}".format(movingMarkupIndex, sliceView))
 
@@ -785,8 +810,9 @@ Custom actions can be assigned to markups, which can be triggered by any interac
 # 3. Double-click on the markup -> this triggers toggleLabelVisibilty.
 # 4. Hover the mouse over a markup then pressing `q` and `w` keys -> this triggers shrinkControlPoints and growControlPoints.
 
-threeDViewWidget = slicer.app.layoutManager().threeDWidget(0)
-markupsDisplayableManager = threeDViewWidget.threeDView().displayableManagerByClassName('vtkMRMLMarkupsDisplayableManager')
+threeDViewNode = slicer.mrmlScene.GetNodeByID("vtkMRMLViewNode1")
+appLogic = slicer.app.applicationLogic()
+markupsDisplayableManager = appLogic.GetViewDisplayableManagerByClassName(threeDViewNode, "vtkMRMLMarkupsDisplayableManager")
 
 def shrinkControlPoints(caller, eventId):
   markupsDisplayNode = caller

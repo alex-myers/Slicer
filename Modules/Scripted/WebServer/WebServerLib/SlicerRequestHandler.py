@@ -10,7 +10,6 @@ import numpy
 import os
 import time
 import urllib
-from typing import Optional
 
 import qt
 import vtk.util.numpy_support
@@ -32,7 +31,7 @@ class SlicerRequestHandler(BaseRequestHandler):
         """
         logger.debug(*args)
 
-    def __init__(self, enableExec=False, logMessage: Optional[BaseRequestLoggingFunction] = None):
+    def __init__(self, enableExec=False, logMessage: BaseRequestLoggingFunction | None = None):
         """
         Initialize a new request handler instance.
         :param enableExec: Whether this instance is permitted to execute arbitrary code.
@@ -958,7 +957,7 @@ space origin: %%origin%%
             if orientation.lower() == "coronal":
                 sliceNode.SetOrientationToCoronal()
             if orientation.lower() != previousOrientation:
-                sliceLogic.FitSliceToAll()
+                sliceLogic.FitSliceToBackground()
 
         imageData = sliceLogic.GetBlend().Update(0)
         imageData = sliceLogic.GetBlend().GetOutputDataObject(0)
@@ -1337,8 +1336,7 @@ space origin: %%origin%%
                 if currentIndentLevel == 0:
                     # first line (contains class name and pointer, not interesting)
                     continue
-                if currentIndentLevel < 2:
-                    currentIndentLevel = 2  # Error in print implementation of the node
+                currentIndentLevel = max(currentIndentLevel, 2)  # Error in print implementation of the node
                 if currentIndentLevel > previousIndentLevel:
                     # new indentation
                     keys.append(key)

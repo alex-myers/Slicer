@@ -30,13 +30,14 @@ vtkMRMLNodeNewMacro(vtkMRMLMarkupsTestLineNode);
 //--------------------------------------------------------------------------------
 vtkMRMLMarkupsTestLineNode::vtkMRMLMarkupsTestLineNode()
 {
+  this->TypeDisplayName = vtkMRMLTr("vtkMRMLMarkupsTestLineNode", "Test Line");
 }
 
 //--------------------------------------------------------------------------------
-vtkMRMLMarkupsTestLineNode::~vtkMRMLMarkupsTestLineNode()=default;
+vtkMRMLMarkupsTestLineNode::~vtkMRMLMarkupsTestLineNode() = default;
 
 //----------------------------------------------------------------------------
 void vtkMRMLMarkupsTestLineNode::PrintSelf(ostream& os, vtkIndent indent)
 {
-  Superclass::PrintSelf(os,indent);
+  Superclass::PrintSelf(os, indent);
 }

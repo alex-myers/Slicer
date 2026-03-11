@@ -32,11 +32,16 @@
 
 // STL includes
 #include <sstream>
+#include <iostream>
 
 static const double EPSILON = 1e-5;
 
-int ComparePlane(double xAxisExpected_World[3], double yAxisExpected_World[3], double zAxisExpected_World[3],
-  double originExpected_World[3], vtkMRMLMarkupsPlaneNode* planeNode, double epsilon)
+int ComparePlane(double xAxisExpected_World[3],
+                 double yAxisExpected_World[3],
+                 double zAxisExpected_World[3],
+                 double originExpected_World[3],
+                 vtkMRMLMarkupsPlaneNode* planeNode,
+                 double epsilon)
 {
   double xAxisActual_World[3] = { 0.0 };
   double yAxisActual_World[3] = { 0.0 };
@@ -57,7 +62,7 @@ int ComparePlane(double xAxisExpected_World[3], double yAxisExpected_World[3], d
   return EXIT_SUCCESS;
 }
 
-int vtkMRMLMarkupsNodeTest4(int , char * [] )
+int vtkMRMLMarkupsNodeTest4(int, char*[])
 {
   std::cout << "Testing vtkMRMLMarkupsPlaneNode" << std::endl;
   vtkNew<vtkMRMLScene> scene;
@@ -131,6 +136,31 @@ int vtkMRMLMarkupsNodeTest4(int , char * [] )
     double originDifference_World[3] = { 0.0 };
     vtkMath::Subtract(actualOrigin_World, expectedOrigin_World, originDifference_World);
     CHECK_DOUBLE_TOLERANCE(vtkMath::Norm(originDifference_World), 0.0, EPSILON);
+
+    /////////////
+    std::cout << "Test FlipNormal with plane offset and transform node" << std::endl;
+    double normalBeforeFlip_World[3] = { 0.0 };
+    planeNode->GetNormalWorld(normalBeforeFlip_World);
+    double originBeforeFlip_World[3] = { 0.0 };
+    planeNode->GetCenterWorld(originBeforeFlip_World);
+
+    planeNode->FlipNormal();
+
+    double normalAfterFlip_World[3] = { 0.0 };
+    planeNode->GetNormalWorld(normalAfterFlip_World);
+    double originAfterFlip_World[3] = { 0.0 };
+    planeNode->GetCenterWorld(originAfterFlip_World);
+
+    // Normal should be flipped (opposite direction)
+    double expectedNormalAfterFlip_World[3] = { -normalBeforeFlip_World[0], -normalBeforeFlip_World[1], -normalBeforeFlip_World[2] };
+    double normalFlipDifference_World[3] = { 0.0 };
+    vtkMath::Subtract(normalAfterFlip_World, expectedNormalAfterFlip_World, normalFlipDifference_World);
+    CHECK_DOUBLE_TOLERANCE(vtkMath::Norm(normalFlipDifference_World), 0.0, EPSILON);
+
+    // Origin should remain the same
+    double originFlipDifference_World[3] = { 0.0 };
+    vtkMath::Subtract(originAfterFlip_World, originBeforeFlip_World, originFlipDifference_World);
+    CHECK_DOUBLE_TOLERANCE(vtkMath::Norm(originFlipDifference_World), 0.0, EPSILON);
   }
 
   std::cout << "Success." << std::endl;

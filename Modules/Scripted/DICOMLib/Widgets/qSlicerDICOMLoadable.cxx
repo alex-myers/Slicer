@@ -55,6 +55,8 @@ public:
   double Confidence;
   /// List of UIDs for the DICOM instances that are referenced by this loadable
   QStringList ReferencedInstanceUIDs;
+  /// Flag shows that object loaded successfully
+  bool LoadSuccess;
 };
 
 //-----------------------------------------------------------------------------
@@ -65,14 +67,14 @@ qSlicerDICOMLoadablePrivate::qSlicerDICOMLoadablePrivate()
 {
   this->Name = QString("Unknown");
   this->Tooltip = QString("No further information available");
-  this->Warning = QString("");
+  this->Warning = QString();
   this->Selected = false;
   this->Confidence = 0.5;
+  this->LoadSuccess = false;
 }
 
 //-----------------------------------------------------------------------------
 qSlicerDICOMLoadablePrivate::~qSlicerDICOMLoadablePrivate() = default;
-
 
 //-----------------------------------------------------------------------------
 // qSlicerDICOMLoadable methods
@@ -108,6 +110,10 @@ CTK_SET_CPP(qSlicerDICOMLoadable, const bool, setSelected, Selected)
 CTK_GET_CPP(qSlicerDICOMLoadable, bool, selected, Selected)
 
 //-----------------------------------------------------------------------------
+CTK_SET_CPP(qSlicerDICOMLoadable, const bool, setLoadSuccess, LoadSuccess)
+CTK_GET_CPP(qSlicerDICOMLoadable, bool, loadSuccess, LoadSuccess)
+
+//-----------------------------------------------------------------------------
 CTK_SET_CPP(qSlicerDICOMLoadable, const double, setConfidence, Confidence)
 CTK_GET_CPP(qSlicerDICOMLoadable, double, confidence, Confidence)
 
@@ -130,13 +136,14 @@ void qSlicerDICOMLoadable::copyToVtkLoadable(vtkSlicerDICOMLoadable* vtkLoadable
   vtkLoadable->SetWarning(d->Warning.toUtf8().constData());
   vtkLoadable->SetSelected(d->Selected);
   vtkLoadable->SetConfidence(d->Confidence);
+  vtkLoadable->SetLoadSuccess(d->LoadSuccess);
 
-  foreach(QString file, d->Files)
+  for (const QString& file : d->Files)
   {
     vtkLoadable->AddFile(file.toUtf8().constData());
   }
 
-  foreach(QString referencedInstanceUID, d->ReferencedInstanceUIDs)
+  for (const QString& referencedInstanceUID : d->ReferencedInstanceUIDs)
   {
     vtkLoadable->AddReferencedInstanceUID(referencedInstanceUID.toUtf8().constData());
   }
@@ -157,6 +164,7 @@ void qSlicerDICOMLoadable::copyFromVtkLoadable(vtkSlicerDICOMLoadable* vtkLoadab
   d->Warning = QString(vtkLoadable->GetWarning());
   d->Selected = vtkLoadable->GetSelected();
   d->Confidence = vtkLoadable->GetConfidence();
+  d->LoadSuccess = vtkLoadable->GetLoadSuccess();
 
   vtkStringArray* filesArray = vtkLoadable->GetFiles();
   if (filesArray)

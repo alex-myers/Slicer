@@ -42,6 +42,9 @@
 #include <vtkNew.h>
 #include "qMRMLWidget.h"
 
+// STD includes
+#include <iostream>
+
 // Common test driver includes
 #include "qMRMLWidgetCxxTests.h"
 
@@ -51,7 +54,7 @@ namespace
 // --------------------------------------------------------------------------
 bool checkNumberOfItems(int line, qMRMLLayoutManager* layoutManager, int expected)
 {
-  vtkMRMLLayoutLogic * layoutLogic = layoutManager->layoutLogic();
+  vtkMRMLLayoutLogic* layoutLogic = layoutManager->layoutLogic();
   vtkCollection* viewNodes = layoutLogic->GetViewNodes();
   if (viewNodes->GetNumberOfItems() != expected)
   {
@@ -66,7 +69,7 @@ bool checkNumberOfItems(int line, qMRMLLayoutManager* layoutManager, int expecte
 } // end of anonymous namespace
 
 // --------------------------------------------------------------------------
-int qMRMLLayoutManagerTest3(int argc, char * argv[] )
+int qMRMLLayoutManagerTest3(int argc, char* argv[])
 {
   qMRMLWidget::preInitializeApplication();
   QApplication app(argc, argv);
@@ -81,7 +84,7 @@ int qMRMLLayoutManagerTest3(int argc, char * argv[] )
   vtkNew<vtkMRMLApplicationLogic> applicationLogic;
   vtkMRMLSliceViewDisplayableManagerFactory::GetInstance()->SetMRMLApplicationLogic(applicationLogic);
 
-  vtkMRMLLayoutNode * layoutNode = nullptr;
+  vtkMRMLLayoutNode* layoutNode = nullptr;
   {
     vtkNew<vtkMRMLLayoutNode> newLayoutNode;
 

@@ -28,6 +28,9 @@
 // VTK includes
 #include <vtkNew.h>
 
+// STD includes
+#include <iostream>
+
 namespace
 {
 
@@ -37,8 +40,7 @@ int TestImportIntoSceneWithNodeIdConflict();
 } // end of anonymous namespace
 
 //---------------------------------------------------------------------------
-int vtkMRMLTransformableNodeReferenceSaveImportTest(int vtkNotUsed(argc),
-                                       char * vtkNotUsed(argv)[] )
+int vtkMRMLTransformableNodeReferenceSaveImportTest(int vtkNotUsed(argc), char* vtkNotUsed(argv)[])
 {
   CHECK_EXIT_SUCCESS(TestImportIntoEmptyScene());
   CHECK_EXIT_SUCCESS(TestImportIntoSceneWithNodeIdConflict());
@@ -81,14 +83,12 @@ int TestImportIntoEmptyScene()
   scene2->Import();
 
   // Check transform node IDs
-  vtkMRMLLinearTransformNode* scene2TransformNode1 =
-    vtkMRMLLinearTransformNode::SafeDownCast(scene2->GetFirstNodeByName("Transform1"));
+  vtkMRMLLinearTransformNode* scene2TransformNode1 = vtkMRMLLinearTransformNode::SafeDownCast(scene2->GetFirstNodeByName("Transform1"));
   CHECK_NOT_NULL(scene2TransformNode1);
   CHECK_STRING(scene2TransformNode1->GetID(), "vtkMRMLLinearTransformNode1");
 
   // Check references
-  vtkMRMLTransformableNode* scene2TransformableNode1 =
-    vtkMRMLTransformableNode::SafeDownCast(scene2->GetFirstNodeByName("Transformable1"));
+  vtkMRMLTransformableNode* scene2TransformableNode1 = vtkMRMLTransformableNode::SafeDownCast(scene2->GetFirstNodeByName("Transformable1"));
   CHECK_NOT_NULL(scene2TransformableNode1);
   CHECK_STRING(scene2TransformableNode1->GetTransformNodeID(), scene2TransformNode1->GetID());
 
@@ -149,14 +149,12 @@ int TestImportIntoSceneWithNodeIdConflict()
   //   +-Transform1
 
   // Check transform1
-  vtkMRMLLinearTransformNode* scene2TransformNode1 =
-    vtkMRMLLinearTransformNode::SafeDownCast(scene2->GetFirstNodeByName("Transform1"));
+  vtkMRMLLinearTransformNode* scene2TransformNode1 = vtkMRMLLinearTransformNode::SafeDownCast(scene2->GetFirstNodeByName("Transform1"));
   CHECK_NOT_NULL(scene2TransformNode1);
   CHECK_STRING_DIFFERENT(scene2TransformNode1->GetID(), "vtkMRMLLinearTransformNode1");
 
   // Check transform1 references
-  vtkMRMLTransformableNode* scene2TransformableNode1 =
-    vtkMRMLTransformableNode::SafeDownCast(scene2->GetFirstNodeByName("Transformable1"));
+  vtkMRMLTransformableNode* scene2TransformableNode1 = vtkMRMLTransformableNode::SafeDownCast(scene2->GetFirstNodeByName("Transformable1"));
   CHECK_NOT_NULL(scene2TransformableNode1);
   CHECK_STRING(scene2TransformableNode1->GetTransformNodeID(), scene2TransformNode1->GetID());
 
@@ -169,4 +167,4 @@ int TestImportIntoSceneWithNodeIdConflict()
   return EXIT_SUCCESS;
 }
 
-}
+} // namespace

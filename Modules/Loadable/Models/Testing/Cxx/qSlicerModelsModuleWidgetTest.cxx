@@ -20,6 +20,9 @@
 
 // Qt includes
 
+// STD includes
+#include <iostream>
+
 // CTK includes
 #include <ctkTest.h>
 
@@ -43,11 +46,10 @@
 #include <vtkTestingOutputWindow.h>
 
 // --------------------------------------------------------------------------
-class qSlicerModelsModuleWidgetTester: public QObject
+class qSlicerModelsModuleWidgetTester : public QObject
 {
   Q_OBJECT
 private:
-
 private slots:
   void testClearCurrentNode();
 };
@@ -64,14 +66,15 @@ void qSlicerModelsModuleWidgetTester::testClearCurrentNode()
 
   scene->SetLoadFromXMLString(1);
   scene->SetSceneXMLString(
-"<MRML  version=\"Slicer4.4.0\" userTags=\"\">"
-" <View id=\"vtkMRMLViewNode1\"  name=\"View1\" ></View>"
-" <ModelDisplay id=\"vtkMRMLModelDisplayNode4\"  name=\"ModelDisplay\"  ></ModelDisplay>"
-" <Model id=\"vtkMRMLModelNode4\"  name=\"left\"  displayNodeRef=\"vtkMRMLModelDisplayNode4\"  references=\"display:vtkMRMLModelDisplayNode4;\"  ></Model>"
-" <ModelDisplay id=\"vtkMRMLModelDisplayNode5\"  name=\"ModelDisplay_1\" ></ModelDisplay>"
-" <ModelHierarchy id=\"vtkMRMLModelHierarchyNode1\"  name=\"Model Hierarchy\" ></ModelHierarchy>"
-" <ModelHierarchy id=\"vtkMRMLModelHierarchyNode2\"  name=\"ModelHierarchy\" parentNodeRef=\"vtkMRMLModelHierarchyNode1\"  associatedNodeRef=\"vtkMRMLModelNode4\"  expanded=\"true\" ></ModelHierarchy>"
-" </MRML>");
+    "<MRML  version=\"Slicer4.4.0\" userTags=\"\">"
+    " <View id=\"vtkMRMLViewNode1\"  name=\"View1\" ></View>"
+    " <ModelDisplay id=\"vtkMRMLModelDisplayNode4\"  name=\"ModelDisplay\"  ></ModelDisplay>"
+    " <Model id=\"vtkMRMLModelNode4\"  name=\"left\"  displayNodeRef=\"vtkMRMLModelDisplayNode4\"  references=\"display:vtkMRMLModelDisplayNode4;\"  ></Model>"
+    " <ModelDisplay id=\"vtkMRMLModelDisplayNode5\"  name=\"ModelDisplay_1\" ></ModelDisplay>"
+    " <ModelHierarchy id=\"vtkMRMLModelHierarchyNode1\"  name=\"Model Hierarchy\" ></ModelHierarchy>"
+    " <ModelHierarchy id=\"vtkMRMLModelHierarchyNode2\"  name=\"ModelHierarchy\" parentNodeRef=\"vtkMRMLModelHierarchyNode1\"  associatedNodeRef=\"vtkMRMLModelNode4\"  "
+    "expanded=\"true\" ></ModelHierarchy>"
+    " </MRML>");
   scene->Connect();
   vtkMRMLModelNode* modelNode = vtkMRMLModelNode::SafeDownCast(scene->GetFirstNode(nullptr, "vtkMRMLModelNode"));
 
@@ -99,9 +102,9 @@ void qSlicerModelsModuleWidgetTester::testClearCurrentNode()
   // This would lead to some inconsistent state (observing a node with a null
   // scene because it has been removed by the scene) and a crash.
   scene->Clear(0);
-  //qApp->exec();
+  // qApp->exec();
 }
 
 // ----------------------------------------------------------------------------
 CTK_TEST_MAIN(qSlicerModelsModuleWidgetTest)
-#include "moc_qSlicerModelsModuleWidgetTest.cxx"
+#include "qSlicerModelsModuleWidgetTest.moc"

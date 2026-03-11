@@ -73,6 +73,20 @@ documentation, and the [Coordinate system convention in Slicer](../user_guide/co
 
 :::
 
+:::{note}
+
+### Be careful with uncommon encoding options
+
+Research data formats like NRRD and NIfTI, and even widely used clinical formats like DICOM,
+support many encoding options that are technically valid but are so rarely seen that support
+libraries and other code in Slicer may not interpret them correctly.
+
+If you are performing data interchange between Slicer and other software, prefer widely used
+conventions (such as LPS or RAS for coordinate systems) and double-check data integrity if you
+deviate from them.
+
+:::
+
 ### Images
 
 Readers may support 2D, 3D, and 4D images of various types, such as scalar, vector, DWI or DTI, containing images, dose maps, displacement fields, etc.
@@ -163,7 +177,10 @@ Surface or volumetric meshes.
 - [**ITK HDF transform**](https://www.itk.org/ItkSoftwareGuide.pdf) (.h5): For linear, b-spline, grid (displacement field), thin-plate spline, and composite transforms. Coordinate system: LPS.
 - [**ITK TXT transform**](https://www.itk.org/ItkSoftwareGuide.pdf) (.tfm, .txt): For linear, b-spline, and thin-plate spline, and composite transforms. Coordinate system: LPS.
 - [**Matlab MAT file**](https://www.itk.org/ItkSoftwareGuide.pdf) (.mat): For linear and b-spline transforms. Coordinate system: LPS.
-- **Displacement field** (.nrrd, .nhdr, .mha, .mhd, .nii, .nii.gz): For storing grid transform as a vector image, each voxel containing displacement vector. Coordinate system: LPS.
+- **Displacement field**: For storing grid transform as a vector image, each voxel containing displacement vector. Voxel values are in physical space (not in voxels).
+  - NRRD (.nrrd, .nhdr): Coordinate system: LPS. Metadata: `dimension: 4`, `sizes: 3 I J K`, `space directions: none (ix, iy, iz) (jx, jy, jz) (kx, ky, kz)`, `kinds: vector domain domain domain`
+  - MetaImage (.mha, .mhd): Coordinate system: LPS. Metadata: `NDims = 3`, `DimSize = I J K`, `ElementNumberOfChannels = 3`
+  - NIFTI (.nii, .nii.gz). Coordinate system: RAS. Metadata: Number of dimensions: 5. Dimensions: `[I, J, K, 1, 3]`. Intent code: `NIFTI_INTENT_DISPVECT (1006)`.
 - [SlicerRT extension](https://www.slicerrt.org/)
   - **Pinnacle DVF** (.dvf)
 

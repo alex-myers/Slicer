@@ -22,6 +22,7 @@
 #define __qSlicerVolumeRenderingModuleWidgetsPlugin_h
 
 // Qt includes
+#include <QObject>
 #include <QtUiPlugin/QDesignerCustomWidgetCollectionInterface>
 
 // VolumeRendering includes
@@ -42,11 +43,8 @@ class Q_SLICER_MODULE_VOLUMERENDERING_WIDGETS_PLUGINS_EXPORT qSlicerVolumeRender
 public:
   QList<QDesignerCustomWidgetInterface*> customWidgets() const override
   {
-    QList<QDesignerCustomWidgetInterface *> plugins;
-    plugins << new qMRMLVolumePropertyNodeWidgetPlugin
-            << new qSlicerPresetComboBoxPlugin
-            << new qSlicerVolumeRenderingPresetComboBoxPlugin
-            << new qSlicerGPUMemoryComboBoxPlugin;
+    QList<QDesignerCustomWidgetInterface*> plugins;
+    plugins << new qMRMLVolumePropertyNodeWidgetPlugin << new qSlicerPresetComboBoxPlugin << new qSlicerVolumeRenderingPresetComboBoxPlugin << new qSlicerGPUMemoryComboBoxPlugin;
     return plugins;
   }
 };

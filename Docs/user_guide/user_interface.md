@@ -41,6 +41,7 @@ The Layout Toolbar provides a drop-down menu of layouts useful for many types of
 - **File**: Functions for loading a previously saved scene or individual datasets of various types, and for downloading sample datasets from the internet. An option for saving scenes and data is also provided here. **Add Data** allows loading data from files. **DICOM** module is recommended to import data from DICOM files and loading of imported DICOM data. **Save** opens the "Save Data" window, which offers a variety of options for saving all data or selected datasets.
 - **Edit**: Contains an option for showing Application Settings, which allows users to customize appearance and behavior of Slicer, such as modules displayed in the toolbar, application font size, temporary directory location, location of additional Slicer modules to include.
 - **View**: Functions for showing/hiding additional windows and widgets, such as **Extensions Manager** for installing extensions from Slicer app store, **Error Log** for checking if the application encountered any potential errors, **Python Console** for getting a Python console to interact with the loaded data or modules, **show/hide toolbars**, or **switch view layout**.
+- **Help**: Contains links to documentation, guides, and community sites. **Report a Bug** provides instructions for bug reporting and and convenient access to log messages. There are also links to search for **Slicer Publications** and learn **How to Cite** Slicer.
 
 ### Toolbar
 
@@ -109,7 +110,11 @@ Slicer has multiple mouse modes: **Transform** (which allows interactive rotate,
 
 The toolbar icons that switch between these mouse modes are shown from left to right above, respectively. Place Point List is the default place option as shown above; options to place other nodes such as Ruler and Region of Interest Widgets are also available from the drop-down Place Mode menu.
 
-> **Note:** Transform mode is the default interaction mode. By default, Place mode persists for one "place" operation after the Place Mode icon is selected, and then the mode switches back to Transform. Place mode can be made persistent (useful for placing multiple control points) by checking the Persistent checkbox shown rightmost in the Mouse Mode Toolbar.
+:::{note}
+
+Transform mode is the default interaction mode. By default, Place mode persists for one "place" operation after the Place Mode icon is selected, and then the mode switches back to Transform. Place mode can be made persistent (useful for placing multiple control points) by checking the Persistent checkbox shown rightmost in the Mouse Mode Toolbar.
+
+:::
 
 #### Adjusting image window/level
 
@@ -118,7 +123,6 @@ Medical images typically contain thousands of gray levels, but regular computer 
 By default 3D Slicer uses window/level setting that is specified in the DICOM file. If it is not available then window/level is set to contain the entire intensity range of the image (except top/bottom 0.1%, calculated using percentiles, to not let a very thin tail of the intensity distribution to decrease the image contrast too much).
 
 Window/level can be manually adjusted anytime by clicking on "Adjust window/level" button on the toolbar then left-click-and-drag in any of the slice viewers. Optimal window/level can be computed for a chosen area by lef-click-and-dragging while holding down <kbd>Ctrl</kbd> key.
-
 
 [![](https://img.youtube.com/vi/u1B0F1KcVsk/0.jpg)](https://youtu.be/u1B0F1KcVsk "Demo video of how to adjust image window/level")
 
@@ -130,7 +134,7 @@ Displays a rendered 3D view of the scene along with visual references to specify
 
 Default orientation axes: A = anterior, P = posterior, R = right, L = left, S = superior and I = inferior.
 
-![](https://github.com/Slicer/Slicer/releases/download/docs-resources/user_interface_3d_view_controls.png)
+![](https://github.com/Slicer/Slicer/releases/download/docs-resources/user_interface_3d_view_controls_2025_03_09.png)
 
 3D View Controls: The blue bar across any 3D View shows a pushpin icon on its left. When the mouse rolls over this icon, a panel for configuring the 3D View is displayed. The panel is hidden when the mouse moves away. For persistent display of this panel, just click the pushpin icon.
 
@@ -151,6 +155,23 @@ Default orientation axes: A = anterior, P = posterior, R = right, L = left, S = 
 - **Zoom in/out** slightly zooms in/out the view. Convenient buttons for touchscreens.
 - **Tilt Lock** can be toggled using `Ctrl` + `b` keyboard shortcut. In tilt lock mode 3D view rotation is restricted to the azimuth axis (left-right direction) by disabling rotation around elevation axis (up-down direction).
 
+#### Ambient shadows
+
+- Shadows visibility: if enabled then ambient shadows are displayed to improve depth perception
+  - Size scale (default: 0): Size of features to be emphasized by shadows. Lower values emphasize surface unevenness (bumps and depressions). Higher size scale makes larger regions that are much farther much darker. The optimal value can be determined by adjusting the value starting from the highest value gradually until regions that are behind objects appear darker. Very high values (1.5 to 3.0) may make the entire image appear darker, therefore it is important to go below this range, typically down to about 0.5 to 1.5.
+  - Intensity scale: (default: 1): Intensity of darkening by shadows. Increase the value to make shadows darker.
+  - Intensity shift: (default: 0): Minimum amount of occlusion required for visible darkening by shadows. It is usually only necessary to increase this value if the intensity scale is increased, which makes the entire image somewhat darker. In this case, increasing the intensity shift can compensate the overall darkening.
+  - Volume opacity threshold (0% to 100%; default: 25%): This value only affects volume rendering. Voxels that have opacity above this value will cast shadows. Choosing too low value results in dark artifacts in regions that have very low opacity. Choosing too high value results artifacts near opaque regions that have somewhat lower opacity value.
+
+Examples:
+![](https://github.com/Slicer/Slicer/releases/download/docs-resources/user_interface_ambient_shadows.png)
+
+:::{note}
+
+Default ambient shadows settings can be chosen in the application menu (Edit / Application Settings / Views / 3D viewer defaults).
+
+:::
+
 ### Slice View
 
 Three default slice views are provided (with Red, Yellow and Green colored bars) in which Axial, Sagittal, Coronal or Oblique 2D slices of volume images can be displayed. Additional generic slice views have a grey colored bar and an identifying number in their upper left corner.
@@ -164,7 +185,6 @@ View Controllers module provides an alternate way of displaying these controller
 - **Reset field of view** (small square) centers the slice on the current background volume
 - **Show in 3D** "eye" button in the top row can show the current slice in 3D views. Drop-down menu of the button contains advanced options to customize how this slice is rendered: "...match volume" means that the properties are taken from the full volume, while "...match 2D" means that the properties are copied from the current slice view (for example, copies zoom and pan position). Typically these differences are subtle and the settings can be left at default.
 - **Slice orientation** displays allows you to choose the orientation for this slice view.
-- **Lightbox** to select a mosiac (a.k.a. contact sheet) view.  Not all operations work in this mode and it may be removed in the future.
 - **Reformat** allows interactive manipulation of the slice orientation.
 - **Slice offset slider** allows slicing through the volume. Step size is set to the background volume's spacing by default but can be modified by clicking on "Spacing and field of view" button. The label next to the offset value (e.g., `S`, `L`, `A`, `IL`, `IRP`) reflects the slice normal direction. If the offset slider moved to the right then the slice moves in this normal direction. If the slice normal direction is not aligned with an axis then the label contains a combination of directions, with the order of axes reflecting the dominance of the axis. For example, if the plane normal points to anterior and slightly left then the label is `AL`, while if the plane normal mostly left and slightly anterior then the label is `LA`.
 - **Blending mode** specifies how foreground and background layers are mixed.
@@ -181,7 +201,21 @@ View Controllers module provides an alternate way of displaying these controller
 - **Interpolation** allows displaying voxel values without interpolation. Recommended to keep interpolation enabled, and only disable it for testing and troubleshooting.
 - **Node selectors** are used to choose which background, foreground, and labelmap volumes and segmentations to display in this slice view. Note: multiple segmentations can be displayed in a slice view, but slice view controls only allow adjusting visibility of the currently selected segmentation node.
 
+:::{version-removed} 5.10
+- **Lightbox** feature to select a mosaic (a.k.a. contact sheet) view was removed. Instead the _Lightbox image columns_ option provided by the
+[Screen Capture](modules/screencapture.md) module may be used.
+:::
+
 ## Mouse & Keyboard Shortcuts
+
+### Alternate macOS Keybindings
+
+When using shortcuts on macOS, replace the following keys with their corresponding macOS version.
+
+| Key | macOS Key |
+| -------- | --------- |
+| `Ctrl` | `Command` / `⌘` |
+| `Alt`  | `Option` / `⌥` / `Alt` |
 
 ### Generic shortcuts
 
@@ -259,9 +293,13 @@ view will not activate the view.
 | `Keypad 0` or `Insert` | reset zoom and pan, rotate to nearest standard view |
 | `left-double-click` | maximize view/restore view layout |
 
-> **Note:** Simulation if shortcuts not available on your device:
-> - One-button mouse: instead of `right-click` do `Ctrl` + `click`
-> - Trackpad: instead of `right-click` do `two-finger click`
+:::{note}
+
+Simulation if shortcuts not available on your device:
+- One-button mouse: instead of `right-click` do `Ctrl` + `click`
+- Trackpad: instead of `right-click` do `two-finger click`
+
+:::
 
 ### Python console
 

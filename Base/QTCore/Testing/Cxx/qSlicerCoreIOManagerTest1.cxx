@@ -26,12 +26,69 @@
 #include "qSlicerCoreIOManager.h"
 
 // MRML includes
+#include <vtkMRMLMessageCollection.h>
+#include "vtkMRMLTextNode.h"
 #include "vtkMRMLScene.h"
-#include "vtkMRMLStorableNode.h"
+#include "vtkMRMLStorageNode.h"
 
 #include "vtkMRMLCoreTestingMacros.h"
 
-int qSlicerCoreIOManagerTest1(int argc, char * argv [])
+// STD includes
+#include <iostream>
+
+int TestLongNodeNameSaving(const char* temporaryDirectory)
+{
+  vtkNew<vtkMRMLScene> scene;
+  if (temporaryDirectory)
+  {
+    scene->SetRootDirectory(temporaryDirectory);
+  }
+
+  std::string longNodeName = "Loremipsumdolorsitametconsecteturadipiscingelitseddoeiusmodtemporin"
+                             "cididuntutlaboreetdoloremagnaaliquaUtenimadminimveniamquisnostrudex"
+                             "ercitationullamcolaborisnisiutaliquipexeacommodoconsequatDuisauteir"
+                             "uredolorinreprehenderitinvoluptatevelitessecillumdoloreeufugiatnull"
+                             "apariaturExcepteursintoccaecatcupidatatnonproidentsuntinculpaquioff"
+                             "iciadeseruntmollitanimidestlaborum";
+  std::string extension = ".txt";
+  std::string longFileName = longNodeName + extension;
+  std::string safeFileName = qSlicerCoreIOManager::forceFileNameValidCharacters(QString::fromStdString(longFileName)).toStdString();
+
+  qSlicerCoreIOManager ioManager;
+  ioManager.setDefaultMaximumFileNameLength(25);
+  safeFileName = ioManager.forceFileNameMaxLength(QString::fromStdString(longFileName), extension.length()).toStdString();
+
+  vtkSmartPointer<vtkMRMLTextNode> textNode = vtkMRMLTextNode::SafeDownCast(scene->AddNewNodeByClass("vtkMRMLTextNode", longNodeName));
+  textNode->SetText(longNodeName);
+  textNode->SetForceCreateStorageNode(true);
+  textNode->AddDefaultStorageNode();
+  vtkMRMLStorageNode* storageNode = textNode->GetStorageNode();
+
+#ifdef Q_OS_WIN
+  std::cout << std::endl << "||||||||||||||||||||" << std::endl;
+  std::cout << std::endl << "Testing long file name: " << longFileName << std::endl;
+  storageNode->SetFileName(longFileName.c_str());
+  CHECK_INT(storageNode->WriteData(textNode), 0); // Writing should fail. File name too long.
+#endif
+
+  std::cout << std::endl << "||||||||||||||||||||" << std::endl;
+  std::cout << std::endl << "Testing safe file name: " << safeFileName << std::endl;
+  storageNode->SetFileName(safeFileName.c_str());
+  storageNode->GetUserMessages()->ClearMessages();
+  CHECK_INT(storageNode->WriteData(textNode), 1); // Writing should succeed.
+
+  std::cout << std::endl << "||||||||||||||||||||" << std::endl;
+  std::cout << std::endl << "Testing scene save with long node name: " << longNodeName << std::endl;
+  storageNode->SetFileName("");
+  std::stringstream scenePathSS;
+  scenePathSS << scene->GetRootDirectory() << "/" << "Loremipsum.mrb";
+  std::string scenePath = scenePathSS.str();
+  CHECK_BOOL(scene->WriteToMRB(scenePath.c_str()), true); // Scene should automatically shorten filename.
+
+  return EXIT_SUCCESS;
+}
+
+int qSlicerCoreIOManagerTest1(int argc, char* argv[])
 {
   // make the core application so that the manager can be instantiated
   qSlicerCoreApplication app(argc, argv);
@@ -42,12 +99,11 @@ int qSlicerCoreIOManagerTest1(int argc, char * argv [])
   QStringList allWritableExtensions = manager.allWritableFileExtensions();
   if (allWritableExtensions.isEmpty())
   {
-    std::cerr << "Failed to get the list of all writable file extensions."
-              << std::endl;
+    std::cerr << "Failed to get the list of all writable file extensions." << std::endl;
     return EXIT_FAILURE;
   }
   qDebug() << "All writable extensions = ";
-  foreach (QString ext, allWritableExtensions)
+  for (const QString& ext : allWritableExtensions)
   {
     qDebug() << ext;
   }
@@ -56,12 +112,11 @@ int qSlicerCoreIOManagerTest1(int argc, char * argv [])
   QStringList allReadableExtensions = manager.allReadableFileExtensions();
   if (allReadableExtensions.isEmpty())
   {
-    std::cerr << "Failed to get the list of all readable file extensions."
-              << std::endl;
+    std::cerr << "Failed to get the list of all readable file extensions." << std::endl;
     return EXIT_FAILURE;
   }
   qDebug() << "All readable extensions = ";
-  foreach (QString ext, allReadableExtensions)
+  for (const QString& ext : allReadableExtensions)
   {
     qDebug() << ext;
   }
@@ -75,10 +130,10 @@ int qSlicerCoreIOManagerTest1(int argc, char * argv [])
                 << "something.seg.nrrd" << "some.more.seg.seg.nrrd" << "some.less.nrrd";
   QStringList storageNodeClassNames;
   storageNodeClassNames << "vtkMRMLScalarVolumeNode" << "vtkMRMLScalarVolumeNode" << "vtkMRMLScalarVolumeNode"
-    << "vtkMRMLScalarVolumeNode" << "vtkMRMLScalarVolumeNode" << "vtkMRMLModelNode"
-    << "vtkMRMLTransformNode"
-    << "vtkMRMLModelNode" << "vtkMRMLColorTableNode"
-    << "vtkMRMLSegmentationNode" << "vtkMRMLSegmentationNode" << "vtkMRMLSegmentationNode";
+                        << "vtkMRMLScalarVolumeNode" << "vtkMRMLScalarVolumeNode" << "vtkMRMLModelNode"
+                        << "vtkMRMLTransformNode"
+                        << "vtkMRMLModelNode" << "vtkMRMLColorTableNode"
+                        << "vtkMRMLSegmentationNode" << "vtkMRMLSegmentationNode" << "vtkMRMLSegmentationNode";
   QStringList expectedExtensions;
   // thisisafailurecase is the default Qt completeSuffix since it doesn't match any
   // known Slicer ext, same with no suffix, and the vtp.gz one
@@ -97,13 +152,22 @@ int qSlicerCoreIOManagerTest1(int argc, char * argv [])
     QString ext = manager.completeSlicerWritableFileNameSuffix(storableNode);
     if (expectedExtensions[i] != ext)
     {
-      qWarning() << "Failed on file " << testFileNames[i]
-                 << ", expected extension " << expectedExtensions[i]
-                 << ", but got " << ext;
+      qWarning() << "Failed on file " << testFileNames[i] << ", expected extension " << expectedExtensions[i] << ", but got " << ext;
       return EXIT_FAILURE;
     }
     qDebug() << "Found extension " << ext << " from file " << testFileNames[i] << " using " << storageNodeClassNames[i];
   }
+
+  const char* temporaryDirectory = nullptr;
+  if (argc > 1)
+  {
+    temporaryDirectory = argv[1];
+  }
+  else
+  {
+    temporaryDirectory = app.mrmlScene()->GetRootDirectory();
+  }
+  CHECK_EXIT_SUCCESS(TestLongNodeNameSaving(temporaryDirectory));
 
   return EXIT_SUCCESS;
 }

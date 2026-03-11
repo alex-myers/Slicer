@@ -16,12 +16,19 @@ This is accomplished by specifying color and opacity for each voxel, based on it
   - Option A: drag-and-drop the volume in the subject hierarchy tree into a 3D view
   - Option B: right-click on the eye icon, and choose "Show in 3D views as volume rendering"
 
-To adjust volume rendering settings
-- Right-click on the eye icon and choose "Volume rendering options" to switch to edit visualization options in Volume rendering module
-- Choose a different preset in Display section,
-- Adjust "Offset" slider to change what image intensity range is visible
+To adjust volume rendering settings:
+- Option A: Switch to "Adjust window/level" mouse mode using the toolbar. Click on a displayed volume and click-and-drag to adjust the rendering settings.
+  - Moving the mouse vertically: shifts the opacity and color transfer functions, which changes what range of voxel values are visible in the image (similar to intensity "level" adjustment).
+  - Moving the mouse horizontally: shrinks or stretches the transfer functions (similar to intensity "window" adjustment).
+  - Holding down <kbd>Ctrl</kbd> key while starting the click-and drag and then moving the mouse vertically: adjusts the opacity of the volume.
+- Option B:
+  - Go to `Volume rendering` module and select the volume to be adjusted. This can be achieved by right-click on the eye icon in the `Data` module and choose "Volume rendering settings".
+  - Choose a different preset in Display section.
+  - Adjust "Offset" slider to change what image intensity range is visible.
 
 ![](https://github.com/Slicer/Slicer/releases/download/docs-resources/module_volumerendering_basic.png)
+
+Note that if the volume is under a non-linear warping transformation then internally the entire volume is resampled at its native resolution. To better control image quality and computation time, `Crop volume` module can be used to resample at a different resolution or resample only a certain part of the volume.
 
 ### Render different volumes in two views
 
@@ -116,14 +123,12 @@ See [video demo/tutorial of these steps](https://youtu.be/xZwyW6SaoM4?t=12) for 
   - RGB volume rendering is not supported (volume does not appear)
   - Only "Composite with shading" rendering technique is supported (volume does not appear if "Maximum Intensity Projection" or "Minimum Intensity Projection" technique is selected)
 - To reduce staircase artifacts during rendering, choose enable "Surface smoothing" in Advanced/Techniques/Advanced rendering properties section, or choose "Normal" or "Maximum" as quality.
-- The volume must not be under a warping (affine or non-linear) transformation. To render a warped volume, the transform must be hardened on the volume. (see [related issue](https://github.com/Slicer/Slicer/issues/6648))
 - If the application crashes when rotating or zooming a volume: This indicates that you get a TDR error, i.e., the operating system shuts down applications that keep the graphics card busy for too long. This happens because the size of the volume is too large for your GPU to comfortably handle. There are several ways to work around this:
-  - Option A: Run the code snippet in the Python console (<kbd>Ctrl</kbd>-<kbd>3</kbd>) to split the volume to smaller chunks (that way you have a better chance that the graphics card will not be unresponsive for too long) _after_ enabling volume rendering.
+  - Option A: Run the code snippet in the Python console (<kbd>Ctrl</kbd>-<kbd>3</kbd>) to split the volume to smaller chunks (that way you have a better chance that the graphics card will not be unresponsive for too long).
     ```python
-    threeDViewWidget = slicer.app.layoutManager().threeDWidget(0)
-    vrDisplayableManager = threeDViewWidget.threeDView().displayableManagerByClassName('vtkMRMLVolumeRenderingDisplayableManager')
-    vrMapper = vrDisplayableManager.GetVolumeMapper(getNode('skull'))
-    vrMapper.SetPartitions(1,1,2)
+    slicer.vtkMRMLVolumeRenderingDisplayableManager.SetMaximum3DTextureSize(400)
+    for vrDisplayNode in getNodesByClass('vtkMRMLVolumeRenderingDisplayNode'):
+        slicer.util.arrayFromVolumeModified(vrDisplayNode.GetVolumeNode())
     ```
   - Option B: Crop and downsample your volume using Crop volume and volume render this smaller volume.
   - Option C: Increase TDR delay value in registry (see details [here](https://docs.microsoft.com/en-us/windows-hardware/drivers/display/tdr-registry-keys))

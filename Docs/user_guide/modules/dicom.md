@@ -186,6 +186,82 @@ DICOM module settings:
         - Acquisition geometry regularization option supports the creation of a nonlinear transform that corrects for things like missing slices or gantry tilt in the acquisition. The regularization transformation can also be hardened to the volume. See more information [here](https://github.com/Slicer/Slicer/commit/3328b81211cb2e9ae16a0b49097744171c8c71c0)
         - Autoloading subseries by time is an option break up some 4D acquisitions into individual volume, but is optional since some volumes are also acquired in time unites and should not be split.
 
+
+## Visual DICOM Browser
+
+The Visual DICOM Browser provides a thumbnail-based interface for browsing and loading DICOM data. This interface is particularly useful when you need to quickly identify images visually.
+
+### When to use
+
+- When you need to quickly identify anatomical regions or specific acquisitions visually
+- In multi-monitor setups where you want the browser displayed on a secondary display
+
+### Features
+
+- **Thumbnail previews**: View preview images of all series in the database
+
+- **Quick visual identification**: Easily identify the correct series by viewing the images
+
+- **Tab patient mode and list mode**: Toggle between a tab-based patient view (optimized for clinical workflows) and a list mode (ideal for managing large research databases)
+
+![](https://github.com/Slicer/Slicer/releases/download/docs-resources/module_dicom_visualbrowser_tabmode.png)
+
+*Tab patient mode: organized by patient tabs for clinical workflows*
+
+![](https://github.com/Slicer/Slicer/releases/download/docs-resources/module_dicom_visualbrowser_listmode.png)
+
+*List mode: flat list view ideal for large research databases*
+
+- **Dynamic thumbnails size settings**: Choose between different thumbnail sizes (small, medium, large) to suit your workflow
+
+- **Side panel mode**: Display the Visual DICOM Browser in a dockable side panel, allowing you to keep the browser visible while working with data in the main views
+
+![](https://github.com/Slicer/Slicer/releases/download/docs-resources/module_dicom_visualbrowser_sidepanel.png)
+
+*Side panel mode: keep the browser visible while working with data*
+
+- **Integrated query/retrieve**: Query and retrieve functionality is built directly into the UI, allowing the browser to display both local database content (with interactive filtering) and remote database content (with loading progress bars and status reports)
+
+- **Advanced job tracking**: The advanced section includes comprehensive job tracking with detailed logging for each query and retrieve operation
+
+![](https://github.com/Slicer/Slicer/releases/download/docs-resources/module_dicom_visualbrowser_jobs.png)
+
+*Job tracking: monitor query and retrieve operations with detailed logs*
+
+- **Server configuration**: Configure multiple servers with their individual settings
+
+![](https://github.com/Slicer/Slicer/releases/download/docs-resources/module_dicom_visualbrowser_serversettings.png)
+
+*Server settings: configure multiple DICOM servers*
+
+
+### How to use
+
+1. In the DICOM module, click the "Visual browser" button to toggle between the traditional text-based browser and the Visual DICOM Browser
+2. Navigate and load data:
+   - **Double-click** on a series to load all selected series into the scene
+   - **Right-click** on a series to open a context menu with additional options
+3. Adjust thumbnail size using any of these methods:
+   - **Keyboard shortcuts**: Press `Ctrl+` to increase or `Ctrl-` to decrease thumbnail size
+   - **Mouse scroll**: Hold `Ctrl` and scroll with the mouse wheel while hovering over the widget
+   - **Application Settings**: Navigate to Edit / Application Settings / DICOM / Thumbnails size to set a specific size
+4. (Optional) Click "Side panel" to dock the browser to the side of the main window, allowing you to work with your data while keeping the browser visible
+5. The docked browser can be:
+   - Moved to different dock areas (left, right, top, bottom)
+   - Undocked and floated as a separate window
+   - Maximized to fullscreen using the maximize button in the dock's title bar
+   - Returned to center view by clicking "Show in center view"
+
+### Advanced proxy server configuration
+
+Advanced configuration allows you to specify a PACS system using the C-MOVE protocol along with a proxy using the C-GET protocol. When configured this way, the C-MOVE operation will be automatically executed on the proxy server, and C-GET will automatically start to retrieve the data to Slicer once the C-MOVE retrieve is finished.
+
+![](https://github.com/Slicer/Slicer/releases/download/docs-resources/module_dicom_visualbrowser_proxyserversettings.png)
+
+*Proxy server configuration: advanced setup for C-MOVE with proxy C-GET*
+
+**Note**: DICOMweb protocol is not yet supported. See the [development roadmap](https://github.com/commontk/CTK/issues/1230) for more information.
+
 ## Troubleshooting
 
 ### How do I know if the files I have are stored using DICOM format? How do I get started?
@@ -220,7 +296,7 @@ If you have trouble importing DICOM data here are some steps to try:
 - Try the [DICOM Patcher](dicompatcher.md) module.
 - Review the Error Log (menu: View / Error log) for information.
 - Try loading the data by selecting one of the files in the [Add data](../data_loading_and_saving).  *Note: be sure to turn on Show Options and then turn off the Single File option in order to load the selected series as a volume*. In general, this is not recommended, as the loaded data may be incomplete or distorted, but it might work in some cases when proper DICOM loading fails.
-- If you are still unable to load the data, you may need to find a utility that converts the data into something Slicer can read.  Sometimes tools like [FreeSurfer](https://surfer.nmr.mgh.harvard.edu/), [FSL](https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/) or [MRIcron](https://www.nitrc.org/projects/mricron ) can understand special formats that Slicer does not handle natively.  These systems typically export [NIfTI](https://nifti.nimh.nih.gov/nifti-1/) files that Slicer can read.
+- If you are still unable to load the data, you may need to find a utility that converts the data into something Slicer can read.  Sometimes tools like [FreeSurfer](https://surfer.nmr.mgh.harvard.edu/), [FSL](https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/), [dcm2niix](https://github.com/rordenlab/dcm2niix), [dicom2nifti](https://github.com/icometrix/dicom2nifti), or [MRIcron](https://www.nitrc.org/projects/mricron ) can understand special formats that Slicer does not handle natively.  These systems typically export [NIfTI](https://nifti.nimh.nih.gov/nifti-1/) files that Slicer can read.
 - For archival studies, are you sure that your data is in DICOM format, or is it possible the data is stored in one of the proprietary [MR](https://www.dclunie.com/medical-image-faq/html/part4.html) or [CT](https://www.dclunie.com/medical-image-faq/html/part3.html) formats that predated DICOM? If the latter, you may want to try the dcm2nii tool distributed with [MRIcron](https://www.nitrc.org/frs/?group_id=152) up until 2016. More recent versions of MRIcorn include dcm2niix, which is better for modern DICOM images. However, the legacy dcm2nii includes support for proprietary formats from GE, Philips, Siemens and Elscint.
 - If none of the above help, then you can get help from the Slicer developer team, by posting on the [Slicer forum](https://discourse.slicer.org) a short description of what you expect the data set to contain and the following information about the data set:
   - You may share the DICOM files if they do not contain patient confidential information: upload the dataset somewhere (Dropbox, OneDrive, Google drive, ...) and post the download link. *Please be careful not to accidentally reveal private health information (patient name, birthdate, ID, etc.)*. If you want to remove identifiers from the DICOM files you may want to look at [DicomCleaner](https://www.dclunie.com/pixelmed/software/webstart/DicomCleanerUsage.html), [gdcmanon](http://gdcm.sourceforge.net/html/gdcmanon.html) or [the RSNA Clinical Trial Processor](https://mircwiki.rsna.org/index.php?title=CTP-The_RSNA_Clinical_Trial_Processor) software.
@@ -243,6 +319,90 @@ Some non-clinical (industrial or pre-clinical) imaging systems do not generate v
 Scanners may create image volumes with varying image slice spacing. Slicer can represent such images in the scene by apply a non-linear transform. To enable this feature, go to menu: Edit / Application settings / DICOM and set *Acquisition geometry regularization* to *apply regularization transform*. Slice view, segmentation, and many other features work directly on non-linearly transformed volumes. For some other features, such as volume rendering, you need to harden the transform on the volume: go to Data module, in the row of the volume node, right-click on the transform column, and choose *Harden transform*.
 
 Note that if Slicer displays a warning about non-uniform slice spacing then it may be due to missing or corrupted DICOM files. There is no reliable mechanism to distinguish between slices that are missing because they had not been acquired (for example, to reduce patient dose) or they were acquired but later they were lost.
+
+## Slicer Integration in hospital/PACS context
+
+This section provides practical recommendations for working with hospital IT/PACS teams to integrate Slicer (or Slicer-based applications) into clinical or research workflows.
+
+### Core assumptions & constraints
+
+It is not possible to *scan the network* to discover PACS. DICOM Application Entities (AEs) don't self-advertise; endpoints must be explicitly provisioned (host/IP, port, AE Title) and allowed through firewalls. Leveraging its DICOM networking capabilities, Slicer is itself a DICOM AE.
+
+There are two fundamental flows to work with DICOM:
+
+1. **Push:** An AE (e.g., scanner, PACS/router) pushes (`C-STORE`) to Slicer's AE.
+2. **Pull:** Slicer queries (`C-FIND`) and retrieves (`C-MOVE` or `C-GET`) from a PACS/VNA/router.
+   (Slicer may also use **DICOMweb**: `QIDO-RS`/`WADO-RS`/`STOW-RS`.)
+
+In hospitals with many modalities/AEs, **prefer central integration** via the enterprise **PACS/VNA** (or a router/broker) rather than connecting Slicer to each modality individually.
+
+### Supported technical patterns
+
+#### Push to Slicer (`C-STORE` → Slicer)
+
+**Architecture:** A modality, PACS, or routing node pushes specific studies/series to Slicer's AE.
+
+* **Pros:** Simple user experience; deterministic; works well for scheduled research/processing pipelines.
+* **Cons:** Requires routing rules; local copies on the Slicer host can become a shadow archive unless retention is governed; ensure consistent Patient ID/Accession handling.
+* **Recommendations**
+  * Register Slicer AE with PACS: **AE Title / Host / Port** (commonly 104 or 11112).
+  * Create **routing rules** (e.g., by Accession Number, Modality, Study Description, Research flag).
+  * Use **TLS** (DICOM over TLS) if mandated by policy; exchange certs with PACS.
+  * Set storage quota & PHI retention policy on the Slicer host.
+
+**Best for:** Controlled workflows (e.g., "all cardiac MR from clinic X to Slicer-Lab").
+
+#### Pull from PACS/VNA (Query/Retrieve)
+
+**Architecture:** Slicer performs `C-FIND` queries and `C-MOVE/C-GET` retrievals against PACS/VNA or a DICOM router.
+
+* **Pros:** On-demand; one integration point covers many modalities.
+* **Cons:** Users need patient/study identifiers; retrieved studies also create local copies—enforce retention/purge to avoid a shadow archive; `C-MOVE` must target a valid destination AE.
+* **Recommendations**
+  * Provision PACS endpoint in Slicer (AE/host/port).
+  * **C-MOVE destination:** either
+    * **Slicer's own AE** (built-in **C-STORE SCP**), or
+    * a **local receiving AE** on the same host/subnet (e.g., **Orthanc**, **dcmtk `storescp`**) that writes to a folder or local store. Slicer then **imports** from that local store—either by performing **DIMSE Query/Retrieve** against the local AE, or by **importing from a designated "hot folder"** that the receiver writes to. If your local store exposes **DICOMweb**, you may also fetch via `QIDO-RS/WADO-RS`
+  * Enforce role-appropriate **access control** and **auditing**.
+  * **TLS** per security policy.
+
+**Best for:** Interactive case selection; ad-hoc research pulls; multi-modality environments; many upstream AEs via one PACS.
+
+#### DICOMweb (`QIDO-RS` / `WADO-RS` / `STOW-RS`)
+
+**Architecture:** Slicer uses `QIDO-RS` to search, `WADO-RS` to fetch, and optionally `STOW-RS` to push.
+
+* **Pros:** Modern HTTP(S); easier firewalling/reverse proxy; integrates with enterprise identity when used with a reverse proxy/broker; **well-suited to hybrid setups**—for example, **Slicer running on-prem** accessing a **cloud-hosted archive/service** through an HTTPS API gateway. The inverse also works (cloud-hosted Slicer reaching an on-prem PACS/VNA via a reverse proxy). In both cases you typically standardize on port **443**, use normal TLS termination, and leverage identity brokering without bespoke VPNs.
+* **Cons:** Requires DICOMweb enablement on PACS/VNA and a compatible Slicer service for DICOMweb workflows. Core Slicer does not natively handle OIDC flows; use a proxy/broker.
+
+**Recommendations**
+  * PACS/VNA DICOMweb base URLs; **mutual TLS** and/or **OIDC** tokens per site policy.
+  * Confirm **multipart** support and accepted **transfer syntaxes**; document any required auth headers or proxy paths.
+  * **Reachability:** The DICOMweb reverse proxy does not need to be internet-wide. Prefer **private connectivity** (VPN/PrivateLink) with a private DNS name and firewall rules allowing only hospital subnets. If a public URL is used, restrict by **IP allowlists**, require **mTLS** and/or **OIDC** at the proxy, and protect with a **WAF/rate-limiting** policy.
+
+**Definition**
+> A **reverse proxy** is an HTTPS front end (e.g., NGINX, Apache, Kong) placed **in front of** the PACS/VNA. It terminates TLS and can perform **OIDC/OAuth2** authentication with the hospital identity provider (IdP). The reverse proxy forwards authorized **DICOMweb** requests to the internal service. This setup allows **Slicer (on-prem or in cloud)** to connect over HTTPS to a single URL, while the **PACS/VNA** remains isolated on its private network or VPC (reachable via private connectivity or a tightly restricted public endpoint).
+
+**Best for:** Web-native environments, **on-prem Slicer ↔ cloud archive** integrations via API gateways, or sites standardizing on DICOMweb.
+
+#### Broker/Router middle tier (Orthanc, dcm4chee-arc, commercial routers)
+
+**Architecture:** A broker sits between PACS/VNA and Slicer to handle routing, study filtering, de-identification, caching, throttling, and DIMSE↔DICOMweb translation.
+
+* **Pros:** Decouples Slicer from PACS; central place for **filters, de-identification, study whitelists**, and **access auditing**.
+* **Cons:** Additional system to deploy/patch/monitor.
+
+**Best for:** Research programs, multi-site feeds, de-identification pipelines, or batch processing.
+
+### Security, privacy, and governance
+
+* **Intended use:** Slicer/Slicer-based apps are typically **not cleared as diagnostic devices**; document intended use in SOPs.
+* **PHI handling:** For research, perform **de-identification upstream** (preferably at the router) so only compliant data reaches Slicer.
+* **Transport security:** Use **DICOM over TLS** (mutual certificates) and/or **HTTPS** for DICOMweb; plan certificate ownership and rotation.
+* **Identity & access:** Prefer centralized auth (AD/LDAP/SSO via broker or DICOMweb). Apply least-privilege access to query/pull.
+* **Audit:** Enable and retain **ATNA-style** logs (who accessed what/when). See **DICOM PS3.15 – A.5 Audit Trail Message Format Profile** ([link](https://dicom.nema.org/medical/dicom/current/output/html/part15.html#sect_A.5)) and **IHE ITI TF Vol. 1, Ch. 9 – ATNA** ([link](https://profiles.ihe.net/ITI/TF/Volume1/ch-9.html)). Forward audit records to the organization's **SIEM (Security Information and Event Management)** for centralized monitoring and retention.
+* **Storage & retention:** Define local **quota** and **auto-purge** policy (e.g., delete after N days) to avoid shadow archives; encrypt disks.
+
 
 ## Information for developers
 
@@ -268,6 +428,8 @@ Authors:
 - Alireza Mehrtash (BWH)
 - Csaba Pinter (PerkLab, Queen's)
 - Andras Lasso (PerkLab, Queen's)
+- Jean-Christophe Fillion-Robin (Kitware)
+- Davide Punzo (DNA-HIVE/PI3)
 
 ## Acknowledgements
 
@@ -281,3 +443,6 @@ This work is part of the [National Alliance for Medical Image Computing](https:/
 ![](https://github.com/Slicer/Slicer/releases/download/docs-resources/logo_dicom_offis.png)
 ![](https://github.com/Slicer/Slicer/releases/download/docs-resources/logo_spl.png)
 ![](https://github.com/Slicer/Slicer/releases/download/docs-resources/logo_perklab.png)
+![](https://github.com/Slicer/Slicer/releases/download/docs-resources/logo_kitware.png)
+![](https://github.com/Slicer/Slicer/releases/download/docs-resources/logo_hive.png)
+![](https://github.com/Slicer/Slicer/releases/download/docs-resources/logo_PI3.png)

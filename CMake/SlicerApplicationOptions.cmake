@@ -40,6 +40,10 @@ foreach(property IN LISTS application_properties)
   set(Slicer_MAIN_PROJECT_${property} "${${Slicer_MAIN_PROJECT}_${property}}")
 endforeach()
 
+if(NOT DEFINED Slicer_MAIN_PROJECT_APPLICATION_DISPLAY_NAME OR Slicer_MAIN_PROJECT_APPLICATION_DISPLAY_NAME STREQUAL "")
+  set(Slicer_MAIN_PROJECT_APPLICATION_DISPLAY_NAME "${Slicer_MAIN_PROJECT_APPLICATION_NAME}")
+endif()
+
 #-----------------------------------------------------------------------------
 # Terminal support
 #-----------------------------------------------------------------------------
@@ -107,16 +111,16 @@ mark_as_superbuild(Slicer_DISCLAIMER_AT_STARTUP)
 message(STATUS "Configuring ${Slicer_MAIN_PROJECT_APPLICATION_NAME} text of disclaimer at startup [${Slicer_DISCLAIMER_AT_STARTUP}]")
 
 #-----------------------------------------------------------------------------
-# Set Slicer_MAIN_PROJECT_SOURCE_DIR and <Slicer_MAIN_PROJECT_APPLICATION_NAME>_SOURCE_DIR
+# Set Slicer_MAIN_PROJECT_SOURCE_DIR
 #-----------------------------------------------------------------------------
 # Propagate source directory to support building Slicer-based application
 # that (1) includes Slicer as an external project or (2) add Slicer source
 # tree using 'add_subdirectory()'.
 # Source directory it then used in 'SlicerConfigureVersionHeaderTarget' module.
-if(NOT DEFINED ${Slicer_MAIN_PROJECT_APPLICATION_NAME}_SOURCE_DIR)
-  set(${Slicer_MAIN_PROJECT_APPLICATION_NAME}_SOURCE_DIR ${CMAKE_SOURCE_DIR})
+if(NOT DEFINED Slicer_MAIN_PROJECT_SOURCE_DIR)
+  set(Slicer_MAIN_PROJECT_SOURCE_DIR ${CMAKE_SOURCE_DIR})
 endif()
-mark_as_superbuild(${Slicer_MAIN_PROJECT_APPLICATION_NAME}_SOURCE_DIR)
+mark_as_superbuild(Slicer_MAIN_PROJECT_SOURCE_DIR)
 
 #-----------------------------------------------------------------------------
 # Set application bundle identifier for macOS
@@ -166,6 +170,39 @@ if(WIN32)
   mark_as_superbuild(Slicer_CPACK_NSIS_INSTALL_ROOT:STRING)
   message(STATUS "Configuring ${Slicer_MAIN_PROJECT_APPLICATION_NAME} install root [${Slicer_CPACK_NSIS_INSTALL_ROOT}]")
 
+endif()
+
+#-----------------------------------------------------------------------------
+# Installer branding
+#-----------------------------------------------------------------------------
+if(WIN32)
+
+  # Set the following variables:
+  # - Slicer_CPACK_NSIS_INSTALLER_HEADER_FILE
+  # - Slicer_CPACK_NSIS_INSTALLER_WELCOME_FILE
+  # - Slicer_CPACK_NSIS_INSTALLER_UNWELCOME_FILE
+
+  set(Slicer_CPACK_NSIS_INSTALLER_HEADER_FILE_DEFAULT "${Slicer_APPLICATIONS_DIR}/${Slicer_MAIN_PROJECT}/Resources/Installer/Header.bmp")
+  set(Slicer_CPACK_NSIS_INSTALLER_WELCOME_FILE_DEFAULT "${Slicer_APPLICATIONS_DIR}/${Slicer_MAIN_PROJECT}/Resources/Installer/WelcomeFinishPage.bmp")
+  set(Slicer_CPACK_NSIS_INSTALLER_UNWELCOME_FILE_DEFAULT "${Slicer_CPACK_NSIS_INSTALLER_WELCOME_FILE_DEFAULT}")
+
+  foreach(_page IN ITEMS
+      HEADER
+      WELCOME
+      UNWELCOME
+    )
+    set(_varname "Slicer_CPACK_NSIS_INSTALLER_${_page}_FILE")
+    if(NOT DEFINED ${_varname})
+      set(${_varname} ${${_varname}_DEFAULT} CACHE FILEPATH "NSIS installer ${_page} page")
+      mark_as_advanced(${_varname})
+    endif()
+    mark_as_superbuild(${_varname}:FILEPATH)
+    set(_filepath "${${_varname}}")
+    message(STATUS "Configuring ${Slicer_MAIN_PROJECT_APPLICATION_NAME} NSIS installer ${_page} page [${_filepath}]")
+    if(NOT EXISTS "${_filepath}")
+      message(FATAL_ERROR "Variable ${_varname} is set to a nonexistent filepath [${_filepath}]")
+    endif()
+  endforeach()
 endif()
 
 #-----------------------------------------------------------------------------

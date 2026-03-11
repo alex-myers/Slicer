@@ -31,18 +31,26 @@ if(NOT Slicer_USE_SYSTEM_${proj})
   file(WRITE ${requirements_file} [===[
   # [scipy]
   # Hashes correspond to the following packages:
-  #  - scipy-1.13.1-cp39-cp39-macosx_10_9_x86_64.whl
-  #  - scipy-1.13.1-cp39-cp39-macosx_12_0_arm64.whl
-  #  - scipy-1.13.1-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl
-  #  - scipy-1.13.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-  #  - scipy-1.13.1-cp39-cp39-musllinux_1_1_x86_64.whl
-  #  - scipy-1.13.1-cp39-cp39-win_amd64.whl
-  scipy==1.13.1 --hash=sha256:436bbb42a94a8aeef855d755ce5a465479c721e9d684de76bf61a62e7c2b81d5 \
-                --hash=sha256:8335549ebbca860c52bf3d02f80784e91a004b71b059e3eea9678ba994796a24 \
-                --hash=sha256:d533654b7d221a6a97304ab63c41c96473ff04459e404b83275b60aa8f4b7004 \
-                --hash=sha256:637e98dcf185ba7f8e663e122ebf908c4702420477ae52a04f9908707456ba4d \
-                --hash=sha256:a014c2b3697bde71724244f63de2476925596c24285c7a637364761f8710891c \
-                --hash=sha256:392e4ec766654852c25ebad4f64e4e584cf19820b980bc04960bca0b0cd6eaa2
+  #  - scipy-1.16.3-cp312-cp312-macosx_10_14_x86_64.whl
+  #  - scipy-1.16.3-cp312-cp312-macosx_12_0_arm64.whl
+  #  - scipy-1.16.3-cp312-cp312-macosx_14_0_arm64.whl
+  #  - scipy-1.16.3-cp312-cp312-macosx_14_0_x86_64.whl
+  #  - scipy-1.16.3-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl
+  #  - scipy-1.16.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
+  #  - scipy-1.16.3-cp312-cp312-musllinux_1_2_aarch64.whl
+  #  - scipy-1.16.3-cp312-cp312-musllinux_1_2_x86_64.whl
+  #  - scipy-1.16.3-cp312-cp312-win_amd64.whl
+  #  - scipy-1.16.3-cp312-cp312-win_arm64.whl
+  scipy==1.16.3 --hash=sha256:81fc5827606858cf71446a5e98715ba0e11f0dbc83d71c7409d05486592a45d6 \
+                --hash=sha256:c97176013d404c7346bf57874eaac5187d969293bf40497140b0a2b2b7482e07 \
+                --hash=sha256:2b71d93c8a9936046866acebc915e2af2e292b883ed6e2cbe5c34beb094b82d9 \
+                --hash=sha256:3d4a07a8e785d80289dfe66b7c27d8634a773020742ec7187b85ccc4b0e7b686 \
+                --hash=sha256:0553371015692a898e1aa858fed67a3576c34edefa6b7ebdb4e9dde49ce5c203 \
+                --hash=sha256:72d1717fd3b5e6ec747327ce9bda32d5463f472c9dce9f54499e81fbd50245a1 \
+                --hash=sha256:1fb2472e72e24d1530debe6ae078db70fb1605350c88a3d14bc401d6306dbffe \
+                --hash=sha256:c5192722cffe15f9329a3948c4b1db789fbb1f05c97899187dcf009b283aea70 \
+                --hash=sha256:56edc65510d1331dae01ef9b658d428e33ed48b4f77b1d51caf479a0253f96dc \
+                --hash=sha256:a8a26c78ef223d3e30920ef759e25625a0ecdd0d60e5a8818b7513c3e5384cf2
   # [/scipy]
   ]===])
 

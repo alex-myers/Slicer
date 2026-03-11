@@ -66,6 +66,15 @@ class AbstractScriptedSegmentEditorAutoCompleteEffect(AbstractScriptedSegmentEdi
         self.delayedAutoUpdateTimer.stop()
         self.observeSegmentation(False)
 
+    def cleanup(self):
+        # Disconnect the timer signal to allow proper garbage collection.
+        #
+        # This prevents lingering signal/slot connections from keeping
+        # the object alive. For more details, see the parent class
+        # cleanup() docstring or the following issue:
+        # https://github.com/Slicer/Slicer/issues/7392
+        self.delayedAutoUpdateTimer.disconnect("timeout()", self.onPreview)
+
     @staticmethod
     def isBackgroundLabelmap(labelmapOrientedImageData, label=None):
         if labelmapOrientedImageData is None:
@@ -198,6 +207,11 @@ class AbstractScriptedSegmentEditorAutoCompleteEffect(AbstractScriptedSegmentEdi
             self.delayedAutoUpdateTimer.start()
 
     def observeSegmentation(self, observationEnabled):
+        if not self.scriptedEffect:
+            # This can be the case if the Python interpreter has already begun its shutdown process
+            # when observeSegmentation is called from __del__ method.
+            return
+
         import vtkSegmentationCorePython as vtkSegmentationCore
 
         parameterSetNode = self.scriptedEffect.parameterSetNode()
@@ -396,7 +410,7 @@ class AbstractScriptedSegmentEditorAutoCompleteEffect(AbstractScriptedSegmentEdi
         effectiveGeometryImage = slicer.vtkOrientedImageData()
         effectiveGeometryString = segmentationNode.GetSegmentation().DetermineCommonLabelmapGeometry(
             vtkSegmentationCore.vtkSegmentation.EXTENT_UNION_OF_EFFECTIVE_SEGMENTS, self.selectedSegmentIds)
-        if effectiveGeometryString is None:
+        if not effectiveGeometryString:
             return True
         vtkSegmentationCore.vtkSegmentationConverter.DeserializeImageGeometry(effectiveGeometryString, effectiveGeometryImage)
 

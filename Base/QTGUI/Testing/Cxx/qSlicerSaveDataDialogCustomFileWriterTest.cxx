@@ -29,6 +29,7 @@
 #include "qSlicerFileWriter.h"
 
 // MRML includes
+#include <qMRMLUtils.h>
 #include <vtkMRMLLinearTransformNode.h>
 #include <vtkMRMLTransformStorageNode.h>
 #include <vtkMRMLScene.h>
@@ -37,18 +38,19 @@
 #include <vtkNew.h>
 
 //-----------------------------------------------------------------------------
-class qSlicerDummyFileWriter: public qSlicerFileWriter
+class qSlicerDummyFileWriter : public qSlicerFileWriter
 {
 public:
   qSlicerDummyFileWriter(qSlicerIO::IOFileType fileType, QObject* parent = nullptr)
     : qSlicerFileWriter(parent)
     , FileType(fileType)
-    {}
+  {
+  }
   ~qSlicerDummyFileWriter() override = default;
-  virtual QStringList nodeTags()const {return QStringList() << "LinearTransform";}
-  QString description()const override{return "Dummy";}
-  qSlicerIO::IOFileType fileType()const override{return this->FileType;}
-  QStringList extensions(vtkObject*)const override{return QStringList(QString("MyType(*.mhd *.vtk)"));}
+  virtual QStringList nodeTags() const { return QStringList() << "LinearTransform"; }
+  QString description() const override { return "Dummy"; }
+  qSlicerIO::IOFileType fileType() const override { return this->FileType; }
+  QStringList extensions(vtkObject*) const override { return QStringList(QString("MyType(*.mhd *.vtk)")); }
 
   bool write(const IOProperties& properties) override;
 
@@ -65,7 +67,7 @@ bool qSlicerDummyFileWriter::write(const IOProperties& properties)
 }
 
 //-----------------------------------------------------------------------------
-int qSlicerSaveDataDialogCustomFileWriterTest(int argc, char * argv[] )
+int qSlicerSaveDataDialogCustomFileWriterTest(int argc, char* argv[])
 {
   qSlicerApplication app(argc, argv);
   app.coreIOManager()->registerIO(new qSlicerDummyFileWriter(QString("TransformFile"), nullptr));
@@ -80,10 +82,7 @@ int qSlicerSaveDataDialogCustomFileWriterTest(int argc, char * argv[] )
 
   if (argc < 2 || QString(argv[1]) != "-I")
   {
-    // Quit the dialog
-    QTimer::singleShot(100, &app, SLOT(quit()));
-    // Quit the app
-    QTimer::singleShot(120, &app, SLOT(quit()));
+    qMRMLUtils::closeAllTopLevelWidgetsLater();
   }
 
   return saveDataDialog.exec();

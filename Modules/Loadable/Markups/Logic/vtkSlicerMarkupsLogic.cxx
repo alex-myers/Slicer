@@ -25,38 +25,24 @@
 #include "vtkMRMLMarkupsClosedCurveNode.h"
 #include "vtkMRMLMarkupsCurveNode.h"
 #include "vtkMRMLMarkupsDisplayNode.h"
-#include "vtkMRMLMarkupsFiducialDisplayNode.h"
 #include "vtkMRMLMarkupsFiducialNode.h"
-#include "vtkMRMLMarkupsFiducialStorageNode.h"
 #include "vtkMRMLMarkupsJsonStorageNode.h"
 #include "vtkMRMLMarkupsLineNode.h"
 #include "vtkMRMLMarkupsNode.h"
-#include "vtkMRMLMarkupsPlaneDisplayNode.h"
 #include "vtkMRMLMarkupsPlaneJsonStorageNode.h"
 #include "vtkMRMLMarkupsPlaneNode.h"
-#include "vtkMRMLMarkupsROIDisplayNode.h"
 #include "vtkMRMLMarkupsROIJsonStorageNode.h"
 #include "vtkMRMLMarkupsROINode.h"
-#include "vtkMRMLMarkupsStorageNode.h"
 #include "vtkMRMLTableStorageNode.h"
 
-// Markups vtk widgets includes
+// Markups VTK widgets includes
 #include "vtkSlicerAngleWidget.h"
 #include "vtkSlicerCurveWidget.h"
 #include "vtkSlicerLineWidget.h"
+#include "vtkSlicerMarkupsInteractionWidget.h"
 #include "vtkSlicerPlaneWidget.h"
 #include "vtkSlicerPointsWidget.h"
 #include "vtkSlicerROIWidget.h"
-#include "vtkSlicerMarkupsInteractionWidget.h"
-
-// Annotation MRML includes
-#include "vtkMRMLAnnotationLineDisplayNode.h"
-#include "vtkMRMLAnnotationRulerNode.h"
-#include "vtkMRMLAnnotationROINode.h"
-#include "vtkMRMLAnnotationFiducialNode.h"
-#include "vtkMRMLAnnotationPointDisplayNode.h"
-#include "vtkMRMLAnnotationTextDisplayNode.h"
-#include "vtkMRMLAnnotationHierarchyNode.h"
 
 // MRML includes
 #include "vtkMRMLCameraNode.h"
@@ -65,26 +51,23 @@
 #include "vtkMRMLInteractionNode.h"
 #include "vtkMRMLMessageCollection.h"
 #include "vtkMRMLScene.h"
-#include "vtkMRMLSelectionNode.h"
-#include "vtkMRMLSliceCompositeNode.h"
-#include "vtkMRMLSliceNode.h"
 #include "vtkMRMLSceneViewNode.h"
+#include "vtkMRMLSelectionNode.h"
+#include "vtkMRMLSliceNode.h"
 #include <vtkMRMLSubjectHierarchyNode.h>
 #include "vtkMRMLTableNode.h"
 
 // Annotation/MRML includes for legacy annotation file loading
-#include "vtkMRMLAnnotationRulerNode.h"
-#include "vtkMRMLAnnotationRulerStorageNode.h"
-#include "vtkMRMLAnnotationTextDisplayNode.h"
-#include "vtkMRMLAnnotationLineDisplayNode.h"
 #include "vtkMRMLAnnotationFiducialNode.h"
 #include "vtkMRMLAnnotationFiducialsStorageNode.h"
 #include "vtkMRMLAnnotationHierarchyNode.h"
+#include "vtkMRMLAnnotationLineDisplayNode.h"
+#include "vtkMRMLAnnotationLinesStorageNode.h"
 #include "vtkMRMLAnnotationPointDisplayNode.h"
 #include "vtkMRMLAnnotationROINode.h"
-#include "vtkMRMLAnnotationSnapshotNode.h"
-#include "vtkMRMLAnnotationSnapshotStorageNode.h"
-#include "vtkMRMLAnnotationLinesStorageNode.h"
+#include "vtkMRMLAnnotationRulerNode.h"
+#include "vtkMRMLAnnotationRulerStorageNode.h"
+#include "vtkMRMLAnnotationTextDisplayNode.h"
 
 // vtkAddon includes
 #include "vtkAddonMathUtilities.h"
@@ -98,13 +81,11 @@
 
 // STD includes
 #include <cassert>
-#include <list>
 
 //----------------------------------------------------------------------------
 class vtkSlicerMarkupsLogic::vtkInternal
 {
 public:
-
   void UpdatePlacementValidInSelectionNode()
   {
     if (!this->SelectionNode)
@@ -153,12 +134,11 @@ vtkStandardNewMacro(vtkSlicerMarkupsLogic);
 class vtkSlicerMarkupsLogicCallback : public vtkCommand
 {
 public:
-  static vtkSlicerMarkupsLogicCallback *New()
-  { return new vtkSlicerMarkupsLogicCallback; }
+  static vtkSlicerMarkupsLogicCallback* New() { return new vtkSlicerMarkupsLogicCallback; }
 
   vtkSlicerMarkupsLogicCallback() = default;
 
-  void Execute (vtkObject *vtkNotUsed(caller), unsigned long event, void*) override
+  void Execute(vtkObject* vtkNotUsed(caller), unsigned long event, void*) override
   {
     if (event == vtkCommand::ModifiedEvent)
     {
@@ -171,11 +151,8 @@ public:
       this->markupsLogic->InvokeEvent(vtkCommand::ModifiedEvent);
     }
   }
-  void SetLogic(vtkSlicerMarkupsLogic *logic)
-  {
-    this->markupsLogic = logic;
-  }
-  vtkSlicerMarkupsLogic * markupsLogic;
+  void SetLogic(vtkSlicerMarkupsLogic* logic) { this->markupsLogic = logic; }
+  vtkSlicerMarkupsLogic* markupsLogic;
 };
 
 //----------------------------------------------------------------------------
@@ -202,13 +179,11 @@ void vtkSlicerMarkupsLogic::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 //---------------------------------------------------------------------------
-void vtkSlicerMarkupsLogic::ProcessMRMLNodesEvents(vtkObject *caller,
-                                                   unsigned long event,
-                                                   void *callData)
+void vtkSlicerMarkupsLogic::ProcessMRMLNodesEvents(vtkObject* caller, unsigned long event, void* callData)
 {
   vtkDebugMacro("ProcessMRMLNodesEvents: Event " << event);
 
-  vtkMRMLMarkupsDisplayNode *markupsDisplayNode = vtkMRMLMarkupsDisplayNode::SafeDownCast(caller);
+  vtkMRMLMarkupsDisplayNode* markupsDisplayNode = vtkMRMLMarkupsDisplayNode::SafeDownCast(caller);
   if (markupsDisplayNode)
   {
     if (event == vtkMRMLMarkupsDisplayNode::ResetToDefaultsEvent)
@@ -246,13 +221,13 @@ void vtkSlicerMarkupsLogic::ProcessMRMLNodesEvents(vtkObject *caller,
             sliceNode->JumpSliceByOffsetting(worldPos[0], worldPos[1], worldPos[2]);
           }
         }
-          // Jump centered in all other slices in the view group
-          this->JumpSlicesToNthPointInMarkup(markupsDisplayNode->GetDisplayableNode()->GetID(), componentIndex,
-            true /* centered */, viewGroup, sliceNode);
+        // Jump centered in all other slices in the view group
+        this->JumpSlicesToNthPointInMarkup(markupsDisplayNode->GetDisplayableNode()->GetID(), componentIndex, true /* centered */, viewGroup, sliceNode);
       }
-      else if (callData != nullptr && (componentType == vtkMRMLMarkupsDisplayNode::ComponentRotationHandle
-        || componentType == vtkMRMLMarkupsDisplayNode::ComponentTranslationHandle
-        || componentType == vtkMRMLMarkupsDisplayNode::ComponentScaleHandle))
+      else if (callData != nullptr
+               && (componentType == vtkMRMLMarkupsDisplayNode::ComponentRotationHandle       //
+                   || componentType == vtkMRMLMarkupsDisplayNode::ComponentTranslationHandle //
+                   || componentType == vtkMRMLMarkupsDisplayNode::ComponentScaleHandle))
       {
         // Jump to the location of the current handle position.
         vtkMRMLInteractionEventData* eventData = reinterpret_cast<vtkMRMLInteractionEventData*>(callData);
@@ -317,15 +292,25 @@ void vtkSlicerMarkupsLogic::ProcessMRMLNodesEvents(vtkObject *caller,
 }
 
 //---------------------------------------------------------------------------
-void vtkSlicerMarkupsLogic::SetMRMLSceneInternal(vtkMRMLScene * newScene)
+void vtkSlicerMarkupsLogic::SetMRMLSceneInternal(vtkMRMLScene* newScene)
 {
   // List of events the slice logics should listen
   vtkNew<vtkIntArray> events;
+  vtkNew<vtkFloatArray> priorities;
   events->InsertNextValue(vtkMRMLScene::NodeAddedEvent);
+  priorities->InsertNextValue(0.0);
   events->InsertNextValue(vtkMRMLScene::NodeRemovedEvent);
+  priorities->InsertNextValue(0.0);
   events->InsertNextValue(vtkMRMLScene::EndBatchProcessEvent);
+  priorities->InsertNextValue(0.0);
+
   events->InsertNextValue(vtkMRMLScene::EndImportEvent);
-  this->SetAndObserveMRMLSceneEventsInternal(newScene, events.GetPointer());
+  // This priority must be higher than the default value used in vtkSlicerSceneViewsModuleLogic::SetMRMLSceneInternal
+  // to ensure vtkSlicerMarkupsLogic::OnMRMLSceneEndImport() runs before
+  // vtkSlicerSceneViewsModuleLogic::OnMRMLSceneEndImport() to convert old annotation nodes before converting old scene view nodes.
+  priorities->InsertNextValue(10.0);
+
+  this->SetAndObserveMRMLSceneEventsInternal(newScene, events, priorities);
 
   vtkMRMLSelectionNode* selectionNode = nullptr;
   if (this->GetMRMLScene())
@@ -353,7 +338,7 @@ void vtkSlicerMarkupsLogic::UpdatePlaceNodeClassNamesInSelectionNode()
     vtkErrorMacro("vtkSlicerMarkupsLogic::UpdatePlaceNodeClassNamesInSelectionNode failed: invalid scene");
     return;
   }
-  vtkMRMLSelectionNode *selectionNode = vtkMRMLSelectionNode::SafeDownCast(this->GetMRMLScene()->GetNodeByID(this->GetSelectionNodeID().c_str()));
+  vtkMRMLSelectionNode* selectionNode = vtkMRMLSelectionNode::SafeDownCast(this->GetMRMLScene()->GetNodeByID(this->GetSelectionNodeID().c_str()));
   if (!selectionNode)
   {
     vtkErrorMacro("vtkSlicerMarkupsLogic::UpdatePlaceNodeClassNamesInSelectionNode failed: invalid selection node");
@@ -372,8 +357,8 @@ void vtkSlicerMarkupsLogic::UpdatePlaceNodeClassNamesInSelectionNode()
     const char* markupsClassName = markupEntryIt->second.MarkupsNode->GetClassName();
     if (selectionNode->PlaceNodeClassNameInList(markupsClassName) < 0)
     {
-      vtkSmartPointer<vtkMRMLMarkupsNode> markupsNode = vtkSmartPointer<vtkMRMLMarkupsNode>::Take(
-        vtkMRMLMarkupsNode::SafeDownCast(this->GetMRMLScene()->CreateNodeByClass(markupsClassName)));
+      vtkSmartPointer<vtkMRMLMarkupsNode> markupsNode =
+        vtkSmartPointer<vtkMRMLMarkupsNode>::Take(vtkMRMLMarkupsNode::SafeDownCast(this->GetMRMLScene()->CreateNodeByClass(markupsClassName)));
       if (!markupsNode)
       {
         vtkErrorMacro("vtkSlicerMarkupsLogic::ObserveMRMLScene: Failed to create markups node by class " << markupsClassName);
@@ -398,7 +383,7 @@ void vtkSlicerMarkupsLogic::RegisterNodes()
 {
   assert(this->GetMRMLScene() != nullptr);
 
-  vtkMRMLScene *scene = this->GetMRMLScene();
+  vtkMRMLScene* scene = this->GetMRMLScene();
   if (!scene)
   {
     vtkErrorMacro("vtkSlicerMarkupsLogic::RegisterNodes failed: invalid scene");
@@ -406,8 +391,6 @@ void vtkSlicerMarkupsLogic::RegisterNodes()
   }
 
   // Generic markups nodes
-  scene->RegisterAbstractNodeClass("vtkMRMLMarkupsNode", "Markup");
-  scene->RegisterNodeClass(vtkSmartPointer<vtkMRMLMarkupsDisplayNode>::New());
   scene->RegisterNodeClass(vtkSmartPointer<vtkMRMLMarkupsJsonStorageNode>::New());
 
   // NOTE: the order of registration determines the order of the create push buttons in the GUI
@@ -415,8 +398,6 @@ void vtkSlicerMarkupsLogic::RegisterNodes()
   vtkNew<vtkMRMLMarkupsFiducialNode> fiducialNode;
   vtkNew<vtkSlicerPointsWidget> pointsWidget;
   this->RegisterMarkupsNode(fiducialNode, pointsWidget);
-  scene->RegisterNodeClass(vtkSmartPointer<vtkMRMLMarkupsFiducialDisplayNode>::New());
-  scene->RegisterNodeClass(vtkSmartPointer<vtkMRMLMarkupsFiducialStorageNode>::New());
 
   vtkNew<vtkMRMLMarkupsLineNode> lineNode;
   vtkNew<vtkSlicerLineWidget> lineWidget;
@@ -437,13 +418,11 @@ void vtkSlicerMarkupsLogic::RegisterNodes()
   vtkNew<vtkMRMLMarkupsPlaneNode> planeNode;
   vtkNew<vtkSlicerPlaneWidget> planeWidget;
   this->RegisterMarkupsNode(planeNode, planeWidget);
-  scene->RegisterNodeClass(vtkSmartPointer<vtkMRMLMarkupsPlaneDisplayNode>::New());
   scene->RegisterNodeClass(vtkSmartPointer<vtkMRMLMarkupsPlaneJsonStorageNode>::New());
 
   vtkNew<vtkMRMLMarkupsROINode> roiNode;
   vtkNew<vtkSlicerROIWidget> roiWidget;
   this->RegisterMarkupsNode(roiNode, roiWidget);
-  scene->RegisterNodeClass(vtkSmartPointer<vtkMRMLMarkupsROIDisplayNode>::New());
   scene->RegisterNodeClass(vtkSmartPointer<vtkMRMLMarkupsROIJsonStorageNode>::New());
 }
 
@@ -476,14 +455,14 @@ void vtkSlicerMarkupsLogic::OnMRMLSceneNodeAdded(vtkMRMLNode* node)
   {
     return;
   }
-  if (this->GetMRMLScene() &&
-      (this->GetMRMLScene()->IsImporting() ||
-       this->GetMRMLScene()->IsRestoring() ||
+  if (this->GetMRMLScene() &&                 //
+      (this->GetMRMLScene()->IsImporting() || //
+       this->GetMRMLScene()->IsRestoring() || //
        this->GetMRMLScene()->IsBatchProcessing()))
   {
     return;
   }
-  vtkMRMLMarkupsNode *markupsNode = vtkMRMLMarkupsNode::SafeDownCast(node);
+  vtkMRMLMarkupsNode* markupsNode = vtkMRMLMarkupsNode::SafeDownCast(node);
   if (!markupsNode)
   {
     return;
@@ -495,8 +474,7 @@ void vtkSlicerMarkupsLogic::OnMRMLSceneNodeAdded(vtkMRMLNode* node)
     int modifyFlag = markupsNode->StartModify();
     std::string displayNodeID = this->AddNewDisplayNodeForMarkupsNode(markupsNode);
     markupsNode->EndModify(modifyFlag);
-    vtkDebugMacro("Added a display node with id " << displayNodeID.c_str()
-                  << " for markups node with id " << markupsNode->GetID());
+    vtkDebugMacro("Added a display node with id " << displayNodeID.c_str() << " for markups node with id " << markupsNode->GetID());
   }
   // make it active for adding to via the mouse
   this->SetActiveList(markupsNode);
@@ -529,13 +507,13 @@ std::string vtkSlicerMarkupsLogic::GetSelectionNodeID()
   }
 
   // try the application logic first
-  vtkMRMLApplicationLogic *mrmlAppLogic = this->GetMRMLApplicationLogic();
+  vtkMRMLApplicationLogic* mrmlAppLogic = this->GetMRMLApplicationLogic();
   if (mrmlAppLogic)
   {
-    vtkMRMLSelectionNode *selectionNode = mrmlAppLogic->GetSelectionNode();
+    vtkMRMLSelectionNode* selectionNode = mrmlAppLogic->GetSelectionNode();
     if (selectionNode)
     {
-      char *id = selectionNode->GetID();
+      char* id = selectionNode->GetID();
       if (id)
       {
         selectionNodeID = std::string(id);
@@ -569,14 +547,14 @@ std::string vtkSlicerMarkupsLogic::GetActiveListID()
   }
 
   // get the selection node
-  vtkMRMLSelectionNode *selectionNode = vtkMRMLSelectionNode::SafeDownCast(this->GetMRMLScene()->GetNodeByID(this->GetSelectionNodeID().c_str()));
+  vtkMRMLSelectionNode* selectionNode = vtkMRMLSelectionNode::SafeDownCast(this->GetMRMLScene()->GetNodeByID(this->GetSelectionNodeID().c_str()));
   if (!selectionNode)
   {
     vtkErrorMacro("GetActiveListID: unable to get the selection node that governs active lists.");
     return listID;
   }
 
-  const char *activePlaceNodeID = selectionNode->GetActivePlaceNodeID();
+  const char* activePlaceNodeID = selectionNode->GetActivePlaceNodeID();
   // is there no active fiducial list?
   if (activePlaceNodeID == nullptr)
   {
@@ -595,9 +573,9 @@ void vtkSlicerMarkupsLogic::SetActiveListID(vtkMRMLMarkupsNode* markupsNode)
 }
 
 //---------------------------------------------------------------------------
-void vtkSlicerMarkupsLogic::SetActiveList(vtkMRMLMarkupsNode *markupsNode)
+void vtkSlicerMarkupsLogic::SetActiveList(vtkMRMLMarkupsNode* markupsNode)
 {
-  vtkMRMLSelectionNode *selectionNode = vtkMRMLSelectionNode::SafeDownCast(this->GetMRMLScene()->GetNodeByID(this->GetSelectionNodeID().c_str()));
+  vtkMRMLSelectionNode* selectionNode = vtkMRMLSelectionNode::SafeDownCast(this->GetMRMLScene()->GetNodeByID(this->GetSelectionNodeID().c_str()));
   if (!selectionNode)
   {
     vtkErrorMacro("vtkSlicerMarkupsLogic::SetActiveList: No selection node in the scene.");
@@ -607,15 +585,14 @@ void vtkSlicerMarkupsLogic::SetActiveList(vtkMRMLMarkupsNode *markupsNode)
   if (markupsNode == nullptr)
   {
     // If fiducial node was placed then reset node ID and deactivate placement
-    const char *activePlaceNodeClassName = selectionNode->GetActivePlaceNodeClassName();
+    const char* activePlaceNodeClassName = selectionNode->GetActivePlaceNodeClassName();
     if (activePlaceNodeClassName && strcmp(activePlaceNodeClassName, "vtkMRMLMarkupsFiducialNode") == 0)
     {
       selectionNode->SetReferenceActivePlaceNodeID(nullptr);
-      vtkSmartPointer<vtkCollection> interactionNodes = vtkSmartPointer<vtkCollection>::Take
-        (this->GetMRMLScene()->GetNodesByClass("vtkMRMLInteractionNode"));
-      for(int interactionNodeIndex = 0; interactionNodeIndex < interactionNodes->GetNumberOfItems(); ++interactionNodeIndex)
+      vtkSmartPointer<vtkCollection> interactionNodes = vtkSmartPointer<vtkCollection>::Take(this->GetMRMLScene()->GetNodesByClass("vtkMRMLInteractionNode"));
+      for (int interactionNodeIndex = 0; interactionNodeIndex < interactionNodes->GetNumberOfItems(); ++interactionNodeIndex)
       {
-        vtkMRMLInteractionNode *interactionNode = vtkMRMLInteractionNode::SafeDownCast(interactionNodes->GetItemAsObject(interactionNodeIndex));
+        vtkMRMLInteractionNode* interactionNode = vtkMRMLInteractionNode::SafeDownCast(interactionNodes->GetItemAsObject(interactionNodeIndex));
         if (interactionNode->GetCurrentInteractionMode() == vtkMRMLInteractionNode::Place)
         {
           interactionNode->SetCurrentInteractionMode(vtkMRMLInteractionNode::ViewTransform);
@@ -626,17 +603,17 @@ void vtkSlicerMarkupsLogic::SetActiveList(vtkMRMLMarkupsNode *markupsNode)
   }
 
   // check if need to update the current type of node that's being placed
-  const char *activePlaceNodeClassName = selectionNode->GetActivePlaceNodeClassName();
-  if (!activePlaceNodeClassName ||
-      (activePlaceNodeClassName &&
+  const char* activePlaceNodeClassName = selectionNode->GetActivePlaceNodeClassName();
+  if (!activePlaceNodeClassName || //
+      (activePlaceNodeClassName && //
        strcmp(activePlaceNodeClassName, markupsNode->GetClassName()) != 0))
   {
     // call the set reference to make sure the event is invoked
     selectionNode->SetReferenceActivePlaceNodeClassName(markupsNode->GetClassName());
   }
   // set this markup node active if it's not already
-  const char *activePlaceNodeID = selectionNode->GetActivePlaceNodeID();
-  if (!activePlaceNodeID ||
+  const char* activePlaceNodeID = selectionNode->GetActivePlaceNodeID();
+  if (!activePlaceNodeID || //
       (activePlaceNodeID && strcmp(activePlaceNodeID, markupsNode->GetID()) != 0))
   {
     selectionNode->SetReferenceActivePlaceNodeID(markupsNode->GetID());
@@ -644,7 +621,7 @@ void vtkSlicerMarkupsLogic::SetActiveList(vtkMRMLMarkupsNode *markupsNode)
 }
 
 //---------------------------------------------------------------------------
-std::string vtkSlicerMarkupsLogic::AddNewDisplayNodeForMarkupsNode(vtkMRMLNode *mrmlNode)
+std::string vtkSlicerMarkupsLogic::AddNewDisplayNodeForMarkupsNode(vtkMRMLNode* mrmlNode)
 {
   std::string id;
   if (!mrmlNode || !mrmlNode->GetScene())
@@ -654,7 +631,7 @@ std::string vtkSlicerMarkupsLogic::AddNewDisplayNodeForMarkupsNode(vtkMRMLNode *
   }
 
   // is there already a display node?
-  vtkMRMLDisplayableNode *displayableNode = vtkMRMLDisplayableNode::SafeDownCast(mrmlNode);
+  vtkMRMLDisplayableNode* displayableNode = vtkMRMLDisplayableNode::SafeDownCast(mrmlNode);
   if (displayableNode && displayableNode->GetDisplayNode() != nullptr)
   {
     return displayableNode->GetDisplayNodeID();
@@ -680,7 +657,7 @@ std::string vtkSlicerMarkupsLogic::AddNewDisplayNodeForMarkupsNode(vtkMRMLNode *
 }
 
 //---------------------------------------------------------------------------
-std::string vtkSlicerMarkupsLogic::AddNewFiducialNode(const char *name, vtkMRMLScene *scene)
+std::string vtkSlicerMarkupsLogic::AddNewFiducialNode(const char* name, vtkMRMLScene* scene)
 {
   vtkMRMLMarkupsNode* markupsNode = this->AddNewMarkupsNode("vtkMRMLMarkupsFiducialNode", name ? name : "", scene);
   if (!markupsNode)
@@ -700,8 +677,7 @@ std::string vtkSlicerMarkupsLogic::AddNewFiducialNode(const char *name, vtkMRMLS
 }
 
 //---------------------------------------------------------------------------
-vtkMRMLMarkupsNode* vtkSlicerMarkupsLogic::AddNewMarkupsNode(
-  std::string className, std::string nodeName/*=std::string()*/, vtkMRMLScene* scene/*=nullptr*/)
+vtkMRMLMarkupsNode* vtkSlicerMarkupsLogic::AddNewMarkupsNode(std::string className, std::string nodeName /*=std::string()*/, vtkMRMLScene* scene /*=nullptr*/)
 {
   if (!scene)
   {
@@ -713,8 +689,7 @@ vtkMRMLMarkupsNode* vtkSlicerMarkupsLogic::AddNewMarkupsNode(
     return nullptr;
   }
 
-  vtkSmartPointer<vtkMRMLNode> node = vtkSmartPointer<vtkMRMLNode>::Take(
-    scene->CreateNodeByClass(className.c_str()));
+  vtkSmartPointer<vtkMRMLNode> node = vtkSmartPointer<vtkMRMLNode>::Take(scene->CreateNodeByClass(className.c_str()));
   vtkMRMLMarkupsNode* markupsNode = vtkMRMLMarkupsNode::SafeDownCast(node);
 
   // If node class is not known in the provided scene then create it using the main scene
@@ -734,7 +709,14 @@ vtkMRMLMarkupsNode* vtkSlicerMarkupsLogic::AddNewMarkupsNode(
   // Set node name
   if (nodeName.empty())
   {
-    nodeName = scene->GenerateUniqueName(markupsNode->GetDefaultNodeNamePrefix());
+    if (node->GetName())
+    {
+      nodeName = node->GetName(); // use default node name exactly as given
+    }
+    else
+    {
+      nodeName = scene->GenerateUniqueName(markupsNode->GetDefaultNodeNamePrefix());
+    }
   }
   markupsNode->SetName(nodeName.c_str());
 
@@ -784,13 +766,13 @@ int vtkSlicerMarkupsLogic::AddControlPoint(double r, double a, double s)
   }
 
   // get the active list
-  vtkMRMLNode *listNode = this->GetMRMLScene()->GetNodeByID(listID.c_str());
+  vtkMRMLNode* listNode = this->GetMRMLScene()->GetNodeByID(listID.c_str());
   if (!listNode)
   {
     vtkErrorMacro("AddControlPoint: failed to get the active point list with id " << listID);
     return -1;
   }
-  vtkMRMLMarkupsFiducialNode *fiducialNode = vtkMRMLMarkupsFiducialNode::SafeDownCast(listNode);
+  vtkMRMLMarkupsFiducialNode* fiducialNode = vtkMRMLMarkupsFiducialNode::SafeDownCast(listNode);
   if (!fiducialNode)
   {
     vtkErrorMacro("AddControlPoint: active list is not a point list: " << listNode->GetClassName());
@@ -798,12 +780,11 @@ int vtkSlicerMarkupsLogic::AddControlPoint(double r, double a, double s)
   }
   vtkDebugMacro("AddControlPoint: adding a control point to the list " << listID);
   // add a control point to the active point list
-  return fiducialNode->AddControlPoint(vtkVector3d(r,a,s), std::string());
+  return fiducialNode->AddControlPoint(vtkVector3d(r, a, s), std::string());
 }
 
 //---------------------------------------------------------------------------
-void vtkSlicerMarkupsLogic::JumpSlicesToLocation(double x, double y, double z, bool centered,
-                                                 int viewGroup /* =-1 */, vtkMRMLSliceNode* exclude /* =nullptr */)
+void vtkSlicerMarkupsLogic::JumpSlicesToLocation(double x, double y, double z, bool centered, int viewGroup /* =-1 */, vtkMRMLSliceNode* exclude /* =nullptr */)
 {
   if (!this->GetMRMLScene())
   {
@@ -812,13 +793,12 @@ void vtkSlicerMarkupsLogic::JumpSlicesToLocation(double x, double y, double z, b
   }
 
   // save the whole state as iterating over all slice nodes
-  int jumpMode = centered ? vtkMRMLSliceNode::CenteredJumpSlice: vtkMRMLSliceNode::OffsetJumpSlice;
+  int jumpMode = centered ? vtkMRMLSliceNode::CenteredJumpSlice : vtkMRMLSliceNode::OffsetJumpSlice;
   vtkMRMLSliceNode::JumpAllSlices(this->GetMRMLScene(), x, y, z, jumpMode, viewGroup, exclude);
 }
 
 //---------------------------------------------------------------------------
-void vtkSlicerMarkupsLogic::JumpSlicesToNthPointInMarkup(const char *id, int n, bool centered,
-                                                         int viewGroup /* =-1 */, vtkMRMLSliceNode* exclude /* =nullptr */)
+void vtkSlicerMarkupsLogic::JumpSlicesToNthPointInMarkup(const char* id, int n, bool centered, int viewGroup /* =-1 */, vtkMRMLSliceNode* exclude /* =nullptr */)
 {
   if (!id)
   {
@@ -830,12 +810,12 @@ void vtkSlicerMarkupsLogic::JumpSlicesToNthPointInMarkup(const char *id, int n, 
     return;
   }
   // get the markups node
-  vtkMRMLNode *mrmlNode = this->GetMRMLScene()->GetNodeByID(id);
+  vtkMRMLNode* mrmlNode = this->GetMRMLScene()->GetNodeByID(id);
   if (mrmlNode == nullptr)
   {
     return;
   }
-  vtkMRMLMarkupsNode *markupNode = vtkMRMLMarkupsNode::SafeDownCast(mrmlNode);
+  vtkMRMLMarkupsNode* markupNode = vtkMRMLMarkupsNode::SafeDownCast(mrmlNode);
   if (markupNode)
   {
     double point[4];
@@ -845,7 +825,7 @@ void vtkSlicerMarkupsLogic::JumpSlicesToNthPointInMarkup(const char *id, int n, 
 }
 
 //---------------------------------------------------------------------------
-void vtkSlicerMarkupsLogic::FocusCamerasOnNthPointInMarkup(const char *id, int n)
+void vtkSlicerMarkupsLogic::FocusCamerasOnNthPointInMarkup(const char* id, int n)
 {
 
   if (!this->GetMRMLScene())
@@ -854,9 +834,9 @@ void vtkSlicerMarkupsLogic::FocusCamerasOnNthPointInMarkup(const char *id, int n
     return;
   }
 
-  std::vector<vtkMRMLNode *> cameraNodes;
+  std::vector<vtkMRMLNode*> cameraNodes;
   this->GetMRMLScene()->GetNodesByClass("vtkMRMLCameraNode", cameraNodes);
-  vtkMRMLNode *node;
+  vtkMRMLNode* node;
   for (unsigned int i = 0; i < cameraNodes.size(); ++i)
   {
     node = cameraNodes[i];
@@ -867,8 +847,7 @@ void vtkSlicerMarkupsLogic::FocusCamerasOnNthPointInMarkup(const char *id, int n
   }
 }
 //---------------------------------------------------------------------------
-void vtkSlicerMarkupsLogic::FocusCameraOnNthPointInMarkup(
-  const char *cameraNodeID, const char *markupNodeID, int n)
+void vtkSlicerMarkupsLogic::FocusCameraOnNthPointInMarkup(const char* cameraNodeID, const char* markupNodeID, int n)
 {
   if (!cameraNodeID || !markupNodeID)
   {
@@ -881,13 +860,13 @@ void vtkSlicerMarkupsLogic::FocusCameraOnNthPointInMarkup(
   }
 
   // get the camera node
-  vtkMRMLNode *mrmlNode1 = this->GetMRMLScene()->GetNodeByID(cameraNodeID);
+  vtkMRMLNode* mrmlNode1 = this->GetMRMLScene()->GetNodeByID(cameraNodeID);
   if (mrmlNode1 == nullptr)
   {
     vtkErrorMacro("FocusCameraOnNthPointInMarkup: unable to find node with id " << cameraNodeID);
     return;
   }
-  vtkMRMLCameraNode *cameraNode = vtkMRMLCameraNode::SafeDownCast(mrmlNode1);
+  vtkMRMLCameraNode* cameraNode = vtkMRMLCameraNode::SafeDownCast(mrmlNode1);
   if (!cameraNode)
   {
     vtkErrorMacro("FocusCameraOnNthPointInMarkup: unable to find camera with id " << cameraNodeID);
@@ -895,13 +874,13 @@ void vtkSlicerMarkupsLogic::FocusCameraOnNthPointInMarkup(
   }
 
   // get the markups node
-  vtkMRMLNode *mrmlNode2 = this->GetMRMLScene()->GetNodeByID(markupNodeID);
+  vtkMRMLNode* mrmlNode2 = this->GetMRMLScene()->GetNodeByID(markupNodeID);
   if (mrmlNode2 == nullptr)
   {
     vtkErrorMacro("FocusCameraOnNthPointInMarkup: unable to find node with id " << markupNodeID);
     return;
   }
-  vtkMRMLMarkupsNode *markup = vtkMRMLMarkupsNode::SafeDownCast(mrmlNode2);
+  vtkMRMLMarkupsNode* markup = vtkMRMLMarkupsNode::SafeDownCast(mrmlNode2);
   if (!markup)
   {
     vtkErrorMacro("FocusCameraOnNthPointInMarkup: unable to find markup with id " << markupNodeID);
@@ -915,7 +894,7 @@ void vtkSlicerMarkupsLogic::FocusCameraOnNthPointInMarkup(
 }
 
 //---------------------------------------------------------------------------
-char* vtkSlicerMarkupsLogic::LoadMarkups(const char* fileName, const char* nodeName/*=nullptr*/, vtkMRMLMessageCollection* userMessages/*=nullptr*/)
+char* vtkSlicerMarkupsLogic::LoadMarkups(const char* fileName, const char* nodeName /*=nullptr*/, vtkMRMLMessageCollection* userMessages /*=nullptr*/)
 {
   if (!fileName)
   {
@@ -925,7 +904,7 @@ char* vtkSlicerMarkupsLogic::LoadMarkups(const char* fileName, const char* nodeN
 
   // get file extension
   std::string extension = vtkMRMLStorageNode::GetLowercaseExtensionFromFileName(fileName);
-  if( extension.empty() )
+  if (extension.empty())
   {
     vtkErrorMacro("vtkSlicerMarkupsLogic::LoadMarkups failed: no file extension specified: " << fileName);
     return nullptr;
@@ -948,13 +927,13 @@ char* vtkSlicerMarkupsLogic::LoadMarkups(const char* fileName, const char* nodeN
 }
 
 //---------------------------------------------------------------------------
-char* vtkSlicerMarkupsLogic::LoadMarkupsFiducials(const char* fileName, const char* fidsName/*=nullptr*/, vtkMRMLMessageCollection* userMessages/*=nullptr*/)
+char* vtkSlicerMarkupsLogic::LoadMarkupsFiducials(const char* fileName, const char* fidsName /*=nullptr*/, vtkMRMLMessageCollection* userMessages /*=nullptr*/)
 {
   return this->LoadMarkups(fileName, fidsName, userMessages);
 }
 
 //---------------------------------------------------------------------------
-char* vtkSlicerMarkupsLogic::LoadMarkupsFromJson(const char* fileName, const char* nodeName/*=nullptr*/, vtkMRMLMessageCollection* userMessages/*=nullptr*/)
+char* vtkSlicerMarkupsLogic::LoadMarkupsFromJson(const char* fileName, const char* nodeName /*=nullptr*/, vtkMRMLMessageCollection* userMessages /*=nullptr*/)
 {
   if (!fileName)
   {
@@ -966,8 +945,7 @@ char* vtkSlicerMarkupsLogic::LoadMarkupsFromJson(const char* fileName, const cha
 
   std::vector<std::string> markupsTypes;
   // make a storage node and fiducial node and set the file name
-  vtkMRMLMarkupsJsonStorageNode* tempStorageNode = vtkMRMLMarkupsJsonStorageNode::SafeDownCast(
-    this->GetMRMLScene()->AddNewNodeByClass("vtkMRMLMarkupsJsonStorageNode"));
+  vtkMRMLMarkupsJsonStorageNode* tempStorageNode = vtkMRMLMarkupsJsonStorageNode::SafeDownCast(this->GetMRMLScene()->AddNewNodeByClass("vtkMRMLMarkupsJsonStorageNode"));
   if (!tempStorageNode)
   {
     vtkErrorMacro("LoadMarkups: failed to instantiate markups storage node by class vtkMRMLMarkupsJsonStorageNode");
@@ -981,7 +959,7 @@ char* vtkSlicerMarkupsLogic::LoadMarkupsFromJson(const char* fileName, const cha
   this->GetMRMLScene()->RemoveNode(tempStorageNode);
 
   vtkMRMLMarkupsNode* importedMarkupsNode = nullptr;
-  for(unsigned int markupsIndex = 0; markupsIndex < markupsTypes.size(); ++markupsIndex)
+  for (unsigned int markupsIndex = 0; markupsIndex < markupsTypes.size(); ++markupsIndex)
   {
     std::string markupsType = markupsTypes[markupsIndex];
     vtkMRMLMarkupsJsonStorageNode* storageNode = this->AddNewJsonStorageNodeForMarkupsType(markupsType);
@@ -1023,7 +1001,7 @@ char* vtkSlicerMarkupsLogic::LoadMarkupsFromJson(const char* fileName, const cha
 }
 
 //---------------------------------------------------------------------------
-char * vtkSlicerMarkupsLogic::LoadMarkupsFromFcsv(const char* fileName, const char* nodeName/*=nullptr*/, vtkMRMLMessageCollection* userMessages/*=nullptr*/)
+char* vtkSlicerMarkupsLogic::LoadMarkupsFromFcsv(const char* fileName, const char* nodeName /*=nullptr*/, vtkMRMLMessageCollection* userMessages /*=nullptr*/)
 {
   if (!fileName)
   {
@@ -1041,7 +1019,7 @@ char * vtkSlicerMarkupsLogic::LoadMarkupsFromFcsv(const char* fileName, const ch
   }
 
   std::string newNodeName;
-  if (nodeName && strlen(nodeName)>0)
+  if (nodeName && strlen(nodeName) > 0)
   {
     newNodeName = nodeName;
   }
@@ -1085,7 +1063,7 @@ char * vtkSlicerMarkupsLogic::LoadMarkupsFromFcsv(const char* fileName, const ch
 }
 
 //---------------------------------------------------------------------------
-void vtkSlicerMarkupsLogic::SetAllControlPointsVisibility(vtkMRMLMarkupsNode *node, bool flag)
+void vtkSlicerMarkupsLogic::SetAllControlPointsVisibility(vtkMRMLMarkupsNode* node, bool flag)
 {
   if (!node)
   {
@@ -1100,7 +1078,7 @@ void vtkSlicerMarkupsLogic::SetAllControlPointsVisibility(vtkMRMLMarkupsNode *no
 }
 
 //---------------------------------------------------------------------------
-void vtkSlicerMarkupsLogic::ToggleAllControlPointsVisibility(vtkMRMLMarkupsNode *node)
+void vtkSlicerMarkupsLogic::ToggleAllControlPointsVisibility(vtkMRMLMarkupsNode* node)
 {
   if (!node)
   {
@@ -1115,7 +1093,7 @@ void vtkSlicerMarkupsLogic::ToggleAllControlPointsVisibility(vtkMRMLMarkupsNode 
 }
 
 //---------------------------------------------------------------------------
-void vtkSlicerMarkupsLogic::SetAllControlPointsLocked(vtkMRMLMarkupsNode *node, bool flag)
+void vtkSlicerMarkupsLogic::SetAllControlPointsLocked(vtkMRMLMarkupsNode* node, bool flag)
 {
   if (!node)
   {
@@ -1130,7 +1108,7 @@ void vtkSlicerMarkupsLogic::SetAllControlPointsLocked(vtkMRMLMarkupsNode *node, 
 }
 
 //---------------------------------------------------------------------------
-void vtkSlicerMarkupsLogic::ToggleAllControlPointsLocked(vtkMRMLMarkupsNode *node)
+void vtkSlicerMarkupsLogic::ToggleAllControlPointsLocked(vtkMRMLMarkupsNode* node)
 {
   if (!node)
   {
@@ -1145,7 +1123,7 @@ void vtkSlicerMarkupsLogic::ToggleAllControlPointsLocked(vtkMRMLMarkupsNode *nod
 }
 
 //---------------------------------------------------------------------------
-void vtkSlicerMarkupsLogic::SetAllControlPointsSelected(vtkMRMLMarkupsNode *node, bool flag)
+void vtkSlicerMarkupsLogic::SetAllControlPointsSelected(vtkMRMLMarkupsNode* node, bool flag)
 {
   if (!node)
   {
@@ -1160,7 +1138,7 @@ void vtkSlicerMarkupsLogic::SetAllControlPointsSelected(vtkMRMLMarkupsNode *node
 }
 
 //---------------------------------------------------------------------------
-void vtkSlicerMarkupsLogic::ToggleAllControlPointsSelected(vtkMRMLMarkupsNode *node)
+void vtkSlicerMarkupsLogic::ToggleAllControlPointsSelected(vtkMRMLMarkupsNode* node)
 {
   if (!node)
   {
@@ -1175,8 +1153,7 @@ void vtkSlicerMarkupsLogic::ToggleAllControlPointsSelected(vtkMRMLMarkupsNode *n
 }
 
 //---------------------------------------------------------------------------
-void vtkSlicerMarkupsLogic::CopyBasicDisplayProperties(vtkMRMLMarkupsDisplayNode *sourceDisplayNode,
-                                                       vtkMRMLMarkupsDisplayNode *targetDisplayNode)
+void vtkSlicerMarkupsLogic::CopyBasicDisplayProperties(vtkMRMLMarkupsDisplayNode* sourceDisplayNode, vtkMRMLMarkupsDisplayNode* targetDisplayNode)
 {
   if (!sourceDisplayNode || !targetDisplayNode)
   {
@@ -1225,7 +1202,7 @@ void vtkSlicerMarkupsLogic::CopyBasicDisplayProperties(vtkMRMLMarkupsDisplayNode
 }
 
 //---------------------------------------------------------------------------
-void vtkSlicerMarkupsLogic::SetDisplayNodeToDefaults(vtkMRMLMarkupsDisplayNode *displayNode)
+void vtkSlicerMarkupsLogic::SetDisplayNodeToDefaults(vtkMRMLMarkupsDisplayNode* displayNode)
 {
   if (!displayNode)
   {
@@ -1244,7 +1221,7 @@ void vtkSlicerMarkupsLogic::SetDisplayNodeToDefaults(vtkMRMLMarkupsDisplayNode *
 }
 
 //---------------------------------------------------------------------------
-void vtkSlicerMarkupsLogic::SetDisplayDefaultsFromNode(vtkMRMLMarkupsDisplayNode *displayNode)
+void vtkSlicerMarkupsLogic::SetDisplayDefaultsFromNode(vtkMRMLMarkupsDisplayNode* displayNode)
 {
   if (!displayNode)
   {
@@ -1263,8 +1240,7 @@ void vtkSlicerMarkupsLogic::SetDisplayDefaultsFromNode(vtkMRMLMarkupsDisplayNode
 }
 
 //---------------------------------------------------------------------------
-bool vtkSlicerMarkupsLogic::MoveNthControlPointToNewListAtIndex(int n, vtkMRMLMarkupsNode *markupsNode,
-                                                                vtkMRMLMarkupsNode *newMarkupsNode, int newIndex)
+bool vtkSlicerMarkupsLogic::MoveNthControlPointToNewListAtIndex(int n, vtkMRMLMarkupsNode* markupsNode, vtkMRMLMarkupsNode* newMarkupsNode, int newIndex)
 {
   if (!markupsNode || !newMarkupsNode)
   {
@@ -1274,21 +1250,19 @@ bool vtkSlicerMarkupsLogic::MoveNthControlPointToNewListAtIndex(int n, vtkMRMLMa
 
   if (!markupsNode->ControlPointExists(n))
   {
-    vtkErrorMacro("MoveNthControlPointToNewListAtIndex: source index n " << n
-                  << " is not in list of size " << markupsNode->GetNumberOfControlPoints());
+    vtkErrorMacro("MoveNthControlPointToNewListAtIndex: source index n " << n << " is not in list of size " << markupsNode->GetNumberOfControlPoints());
     return false;
   }
 
   // get the control point
-  vtkMRMLMarkupsNode::ControlPoint *newControlPoint = new vtkMRMLMarkupsNode::ControlPoint;
+  vtkMRMLMarkupsNode::ControlPoint* newControlPoint = new vtkMRMLMarkupsNode::ControlPoint;
   *newControlPoint = *markupsNode->GetNthControlPoint(n);
 
   // add it to the destination list
   bool insertVal = newMarkupsNode->InsertControlPoint(newControlPoint, newIndex);
   if (!insertVal)
   {
-    vtkErrorMacro("MoveNthControlPointToNewListAtIndex: failed to insert new control point at " << newIndex <<
-                  ", control point is still on source list.");
+    vtkErrorMacro("MoveNthControlPointToNewListAtIndex: failed to insert new control point at " << newIndex << ", control point is still on source list.");
     return false;
   }
 
@@ -1299,8 +1273,7 @@ bool vtkSlicerMarkupsLogic::MoveNthControlPointToNewListAtIndex(int n, vtkMRMLMa
 }
 
 //---------------------------------------------------------------------------
-bool vtkSlicerMarkupsLogic::CopyNthControlPointToNewList(int n, vtkMRMLMarkupsNode *markupsNode,
-                                                         vtkMRMLMarkupsNode *newMarkupsNode)
+bool vtkSlicerMarkupsLogic::CopyNthControlPointToNewList(int n, vtkMRMLMarkupsNode* markupsNode, vtkMRMLMarkupsNode* newMarkupsNode)
 {
   if (!markupsNode || !newMarkupsNode)
   {
@@ -1310,13 +1283,12 @@ bool vtkSlicerMarkupsLogic::CopyNthControlPointToNewList(int n, vtkMRMLMarkupsNo
 
   if (!markupsNode->ControlPointExists(n))
   {
-    vtkErrorMacro("CopyNthControlPointToNewList: source index n " << n
-                  << " is not in list of size " << markupsNode->GetNumberOfControlPoints());
+    vtkErrorMacro("CopyNthControlPointToNewList: source index n " << n << " is not in list of size " << markupsNode->GetNumberOfControlPoints());
     return false;
   }
 
   // get the control point
-  vtkMRMLMarkupsNode::ControlPoint *newControlPoint = new vtkMRMLMarkupsNode::ControlPoint;
+  vtkMRMLMarkupsNode::ControlPoint* newControlPoint = new vtkMRMLMarkupsNode::ControlPoint;
   *newControlPoint = *markupsNode->GetNthControlPoint(n);
 
   // add it to the destination list
@@ -1325,9 +1297,8 @@ bool vtkSlicerMarkupsLogic::CopyNthControlPointToNewList(int n, vtkMRMLMarkupsNo
   return true;
 }
 
-
 //---------------------------------------------------------------------------
-void vtkSlicerMarkupsLogic::ConvertAnnotationFiducialsToMarkups(vtkStringArray* addedNodeIds/*=nullptr*/, vtkStringArray* removedNodeIds/*=nullptr*/)
+void vtkSlicerMarkupsLogic::ConvertAnnotationFiducialsToMarkups(vtkStringArray* addedNodeIds /*=nullptr*/, vtkStringArray* removedNodeIds /*=nullptr*/)
 {
   if (!this->GetMRMLScene())
   {
@@ -1336,24 +1307,22 @@ void vtkSlicerMarkupsLogic::ConvertAnnotationFiducialsToMarkups(vtkStringArray* 
 
   // there can be annotation fiducials in the main scene, as well as in scene
   // view scenes, so collect all of those in one vector to iterate over
-  std::vector<vtkMRMLScene *> scenes;
+  std::vector<vtkMRMLScene*> scenes;
   scenes.push_back(this->GetMRMLScene());
 
-  vtkSmartPointer<vtkCollection> sceneViews = vtkSmartPointer<vtkCollection>::Take(
-    this->GetMRMLScene()->GetNodesByClass("vtkMRMLSceneViewNode"));
-  int numberOfSceneViews = sceneViews->GetNumberOfItems();
-  for (int n = 0; n < numberOfSceneViews; ++n)
+  std::vector<vtkMRMLNode*> sceneViewNodes;
+  this->GetMRMLScene()->GetNodesByClass("vtkMRMLSceneViewNode", sceneViewNodes);
+  for (vtkMRMLNode* node : sceneViewNodes)
   {
-    vtkMRMLSceneViewNode *sceneView =
-      vtkMRMLSceneViewNode::SafeDownCast(sceneViews->GetItemAsObject(n));
-    if (sceneView && sceneView->GetStoredScene())
+    vtkMRMLSceneViewNode* sceneViewNode = vtkMRMLSceneViewNode::SafeDownCast(node);
+    if (!sceneViewNode)
     {
-      scenes.push_back(sceneView->GetStoredScene());
+      continue;
     }
+    scenes.push_back(sceneViewNode->GetStoredScene());
   }
 
-  vtkDebugMacro("ConvertAnnotationFiducialsToMarkups: Have " << scenes.size()
-                << " scenes to check for annotation fiducial hierarchies");
+  vtkDebugMacro("ConvertAnnotationFiducialsToMarkups: Have " << scenes.size() << " scenes to check for annotation fiducial hierarchies");
 
   // now iterate over this scene and the scene view scenes to get out the
   // annotation fiducials that need to be converted
@@ -1372,13 +1341,13 @@ void vtkSlicerMarkupsLogic::ConvertAnnotationFiducialsToMarkups(vtkStringArray* 
       }
       for (int n = 0; n < numberOfAnnotationFids; ++n)
       {
-        vtkMRMLNode *mrmlNode = vtkMRMLNode::SafeDownCast(annotationFiducials->GetItemAsObject(n));
+        vtkMRMLNode* mrmlNode = vtkMRMLNode::SafeDownCast(annotationFiducials->GetItemAsObject(n));
         if (!mrmlNode)
         {
           continue;
         }
         std::string parentNodeID;
-        vtkMRMLHierarchyNode *oneToOneHierarchyNode = vtkMRMLHierarchyNode::GetAssociatedHierarchyNode(mrmlNode->GetScene(), mrmlNode->GetID());
+        vtkMRMLHierarchyNode* oneToOneHierarchyNode = vtkMRMLHierarchyNode::GetAssociatedHierarchyNode(mrmlNode->GetScene(), mrmlNode->GetID());
         if (oneToOneHierarchyNode)
         {
           parentNodeID = oneToOneHierarchyNode->GetParentNodeID();
@@ -1402,8 +1371,7 @@ void vtkSlicerMarkupsLogic::ConvertAnnotationFiducialsToMarkups(vtkStringArray* 
       return;
     }
 
-    vtkDebugMacro("Converting " << hierarchyNodeIDs->GetNumberOfValues()
-                    << " annotation hierarchies to markup lists");
+    vtkDebugMacro("Converting " << hierarchyNodeIDs->GetNumberOfValues() << " annotation hierarchies to markup lists");
 
     // now iterate over the hierarchies that have fiducials in them and convert
     // them to markups lists
@@ -1441,7 +1409,7 @@ void vtkSlicerMarkupsLogic::ConvertAnnotationFiducialsToMarkups(vtkStringArray* 
         markupsListID = this->AddNewFiducialNode(hierarchyNode->GetName(), scene);
         hierarchyNode->SetAssociatedNodeID(markupsListID.c_str());
       }
-      vtkMRMLMarkupsFiducialNode *markupsNode = vtkMRMLMarkupsFiducialNode::SafeDownCast(scene->GetNodeByID(markupsListID.c_str()));
+      vtkMRMLMarkupsFiducialNode* markupsNode = vtkMRMLMarkupsFiducialNode::SafeDownCast(scene->GetNodeByID(markupsListID.c_str()));
       if (!markupsNode)
       {
         continue;
@@ -1451,40 +1419,39 @@ void vtkSlicerMarkupsLogic::ConvertAnnotationFiducialsToMarkups(vtkStringArray* 
         addedNodeIds->InsertNextValue(markupsNode->GetID());
       }
       vtkDebugMacro("Found " << children->GetNumberOfItems() << " annotation fiducials in this hierarchy");
-      for (int c = 0; c < children->GetNumberOfItems(); ++c)
+      for (int childIndex = 0; childIndex < children->GetNumberOfItems(); ++childIndex)
       {
-        vtkMRMLAnnotationFiducialNode *annotNode = vtkMRMLAnnotationFiducialNode::SafeDownCast(children->GetItemAsObject(c));
+        vtkMRMLAnnotationFiducialNode* annotNode = vtkMRMLAnnotationFiducialNode::SafeDownCast(children->GetItemAsObject(childIndex));
         if (!annotNode)
         {
           continue;
         }
-        double coord[3];
+        double coord[3] = { 0.0, 0.0, 0.0 };
         annotNode->GetFiducialCoordinates(coord);
         int fidIndex = markupsNode->AddControlPoint(vtkVector3d(coord), std::string(annotNode->GetName()));
         vtkDebugMacro("Added a control point at index " << fidIndex);
-        char *desc = annotNode->GetDescription();
+        char* desc = annotNode->GetDescription();
         if (desc)
         {
-          markupsNode->SetNthControlPointDescription(fidIndex,std::string(desc));
+          markupsNode->SetNthControlPointDescription(fidIndex, std::string(desc));
         }
         markupsNode->SetNthControlPointSelected(fidIndex, annotNode->GetSelected());
-        markupsNode->SetNthControlPointVisibility(fidIndex,
-                                                  annotNode->GetDisplayVisibility());
+        markupsNode->SetNthControlPointVisibility(fidIndex, annotNode->GetDisplayVisibility());
         markupsNode->SetNthControlPointLocked(fidIndex, annotNode->GetLocked());
-        const char *assocNodeID = annotNode->GetAttribute("AssociatedNodeID");
+        const char* assocNodeID = annotNode->GetAttribute("AssociatedNodeID");
         if (assocNodeID)
         {
           markupsNode->SetNthControlPointAssociatedNodeID(fidIndex, assocNodeID);
         }
 
         // get the display nodes
-        vtkMRMLAnnotationPointDisplayNode *pointDisplayNode = annotNode->GetAnnotationPointDisplayNode();
-        vtkMRMLAnnotationTextDisplayNode *textDisplayNode = annotNode->GetAnnotationTextDisplayNode();
+        vtkMRMLAnnotationPointDisplayNode* pointDisplayNode = annotNode->GetAnnotationPointDisplayNode();
+        vtkMRMLAnnotationTextDisplayNode* textDisplayNode = annotNode->GetAnnotationTextDisplayNode();
 
-        if (c == 0)
+        if (childIndex == 0)
         {
           // use the first display node to get display settings
-          vtkMRMLMarkupsDisplayNode *markupDisplayNode = markupsNode->GetMarkupsDisplayNode();
+          vtkMRMLMarkupsDisplayNode* markupDisplayNode = markupsNode->GetMarkupsDisplayNode();
           if (!markupDisplayNode || !pointDisplayNode || !textDisplayNode)
           {
             continue;
@@ -1506,13 +1473,21 @@ void vtkSlicerMarkupsLogic::ConvertAnnotationFiducialsToMarkups(vtkStringArray* 
         // clean up the no longer needed annotation nodes
         //
         // remove the 1:1 hierarchy node
-        vtkMRMLHierarchyNode *oneToOneHierarchyNode =
-          vtkMRMLHierarchyNode::GetAssociatedHierarchyNode(annotNode->GetScene(), annotNode->GetID());
+        vtkMRMLHierarchyNode* oneToOneHierarchyNode = vtkMRMLHierarchyNode::GetAssociatedHierarchyNode(annotNode->GetScene(), annotNode->GetID());
         if (oneToOneHierarchyNode)
         {
           if (isMainScene && removedNodeIds)
           {
             removedNodeIds->InsertNextValue(oneToOneHierarchyNode->GetID());
+          }
+          vtkMRMLAnnotationHierarchyNode* annotHierarchyNode = vtkMRMLAnnotationHierarchyNode::SafeDownCast(oneToOneHierarchyNode);
+          if (annotHierarchyNode)
+          {
+            vtkMRMLDisplayNode* displayNode = annotHierarchyNode->GetDisplayNode();
+            if (displayNode)
+            {
+              scene->RemoveNode(displayNode);
+            }
           }
           scene->RemoveNode(oneToOneHierarchyNode);
         }
@@ -1527,7 +1502,7 @@ void vtkSlicerMarkupsLogic::ConvertAnnotationFiducialsToMarkups(vtkStringArray* 
           scene->RemoveNode(textDisplayNode);
         }
         // is there a storage node?
-        vtkMRMLStorageNode *storageNode = annotNode->GetStorageNode();
+        vtkMRMLStorageNode* storageNode = annotNode->GetStorageNode();
         if (storageNode)
         {
           scene->RemoveNode(storageNode);
@@ -1545,7 +1520,7 @@ void vtkSlicerMarkupsLogic::ConvertAnnotationFiducialsToMarkups(vtkStringArray* 
 }
 
 //---------------------------------------------------------------------------
-void vtkSlicerMarkupsLogic::ConvertAnnotationLinesROIsToMarkups(vtkStringArray* addedNodeIds/*=nullptr*/, vtkStringArray* removedNodeIds/*=nullptr*/)
+void vtkSlicerMarkupsLogic::ConvertAnnotationLinesROIsToMarkups(vtkStringArray* addedNodeIds /*=nullptr*/, vtkStringArray* removedNodeIds /*=nullptr*/)
 {
   if (!this->GetMRMLScene())
   {
@@ -1554,26 +1529,25 @@ void vtkSlicerMarkupsLogic::ConvertAnnotationLinesROIsToMarkups(vtkStringArray* 
 
   // there can be annotations in the main scene, as well as in scene
   // view scenes, so collect all of those in one vector to iterate over
-  std::vector<vtkMRMLScene *> scenes;
+  std::vector<vtkMRMLScene*> scenes;
   scenes.push_back(this->GetMRMLScene());
 
-  vtkSmartPointer<vtkCollection> sceneViews = vtkSmartPointer<vtkCollection>::Take(
-    this->GetMRMLScene()->GetNodesByClass("vtkMRMLSceneViewNode"));
-  int numberOfSceneViews = sceneViews->GetNumberOfItems();
-  for (int n = 0; n < numberOfSceneViews; ++n)
+  std::vector<vtkMRMLNode*> sceneViewNodes;
+  this->GetMRMLScene()->GetNodesByClass("vtkMRMLSceneViewNode", sceneViewNodes);
+  for (vtkMRMLNode* node : sceneViewNodes)
   {
-    vtkMRMLSceneViewNode *sceneView = vtkMRMLSceneViewNode::SafeDownCast(sceneViews->GetItemAsObject(n));
-    if (sceneView && sceneView->GetStoredScene())
+    vtkMRMLSceneViewNode* sceneViewNode = vtkMRMLSceneViewNode::SafeDownCast(node);
+    if (!sceneViewNode)
     {
-      scenes.push_back(sceneView->GetStoredScene());
+      continue;
     }
+    scenes.push_back(sceneViewNode->GetStoredScene());
   }
 
   for (vtkMRMLScene* scene : scenes)
   {
     bool isMainScene = (scene == this->GetMRMLScene());
-    vtkSmartPointer<vtkCollection> annotationNodes = vtkSmartPointer<vtkCollection>::Take(
-      this->GetMRMLScene()->GetNodesByClass("vtkMRMLAnnotationNode"));
+    vtkSmartPointer<vtkCollection> annotationNodes = vtkSmartPointer<vtkCollection>::Take(scene->GetNodesByClass("vtkMRMLAnnotationNode"));
     for (int annotationIndex = 0; annotationIndex < annotationNodes->GetNumberOfItems(); ++annotationIndex)
     {
       vtkSmartPointer<vtkMRMLAnnotationNode> annotationNode = vtkMRMLAnnotationNode::SafeDownCast(annotationNodes->GetItemAsObject(annotationIndex));
@@ -1585,16 +1559,14 @@ void vtkSlicerMarkupsLogic::ConvertAnnotationLinesROIsToMarkups(vtkStringArray* 
       if (vtkMRMLAnnotationRulerNode::SafeDownCast(annotationNode))
       {
         vtkMRMLAnnotationRulerNode* annotationRulerNode = vtkMRMLAnnotationRulerNode::SafeDownCast(annotationNode);
-        markupsNode = vtkSmartPointer<vtkMRMLMarkupsLineNode>::Take(
-          vtkMRMLMarkupsLineNode::SafeDownCast(this->GetMRMLScene()->CreateNodeByClass("vtkMRMLMarkupsLineNode")));
+        markupsNode = vtkSmartPointer<vtkMRMLMarkupsLineNode>::Take(vtkMRMLMarkupsLineNode::SafeDownCast(this->GetMRMLScene()->CreateNodeByClass("vtkMRMLMarkupsLineNode")));
         annotationPointDisplayNode = annotationRulerNode->GetAnnotationPointDisplayNode();
         annotationLineDisplayNode = annotationRulerNode->GetAnnotationLineDisplayNode();
       }
       else if (vtkMRMLAnnotationROINode::SafeDownCast(annotationNode))
       {
         vtkMRMLAnnotationROINode* annotationROINode = vtkMRMLAnnotationROINode::SafeDownCast(annotationNode);
-        markupsNode = vtkSmartPointer<vtkMRMLMarkupsROINode>::Take(
-          vtkMRMLMarkupsROINode::SafeDownCast(this->GetMRMLScene()->CreateNodeByClass("vtkMRMLMarkupsROINode")));
+        markupsNode = vtkSmartPointer<vtkMRMLMarkupsROINode>::Take(vtkMRMLMarkupsROINode::SafeDownCast(this->GetMRMLScene()->CreateNodeByClass("vtkMRMLMarkupsROINode")));
         annotationPointDisplayNode = annotationROINode->GetAnnotationPointDisplayNode();
         annotationLineDisplayNode = annotationROINode->GetAnnotationLineDisplayNode();
       }
@@ -1609,16 +1581,18 @@ void vtkSlicerMarkupsLogic::ConvertAnnotationLinesROIsToMarkups(vtkStringArray* 
 
       // from vtkMRMLNode::Copy and vtkMRMLNode::CopyContent
       markupsNode->SetHideFromEditors(annotationNode->GetHideFromEditors());
-      markupsNode->SetAddToScene(annotationNode->GetAddToScene());
+      if (isMainScene)
+      {
+        markupsNode->SetAddToScene(annotationNode->GetAddToScene());
+      }
       markupsNode->SetSingletonTag(annotationNode->GetSingletonTag());
-      markupsNode->SetUndoEnabled(annotationNode->GetUndoEnabled());
       markupsNode->SetUndoEnabled(annotationNode->GetUndoEnabled());
       markupsNode->SetDescription(annotationNode->GetDescription());
       markupsNode->SetSelectable(annotationNode->GetSelectable());
 
       // Copy node attributes to preserve as much information as possible
       const std::vector<std::string>& attributeNames = annotationNode->GetAttributeNames();
-      for(const std::string& attributeName : attributeNames)
+      for (const std::string& attributeName : attributeNames)
       {
         markupsNode->SetAttribute(attributeName.c_str(), annotationNode->GetAttribute(attributeName.c_str()));
       }
@@ -1759,6 +1733,51 @@ void vtkSlicerMarkupsLogic::ConvertAnnotationLinesROIsToMarkups(vtkStringArray* 
 }
 
 //---------------------------------------------------------------------------
+void vtkSlicerMarkupsLogic::RemoveUnusedAnnotationNodes(vtkStringArray* removedNodeIds /*=nullptr*/)
+{
+  if (!this->GetMRMLScene())
+  {
+    return;
+  }
+
+  // there can be annotation fiducials in the main scene, as well as in scene
+  // view scenes, so collect all of those in one vector to iterate over
+  std::vector<vtkMRMLScene*> scenes;
+  scenes.push_back(this->GetMRMLScene());
+
+  std::vector<vtkMRMLNode*> sceneViewNodes;
+  this->GetMRMLScene()->GetNodesByClass("vtkMRMLSceneViewNode", sceneViewNodes);
+  for (vtkMRMLNode* node : sceneViewNodes)
+  {
+    vtkMRMLSceneViewNode* sceneViewNode = vtkMRMLSceneViewNode::SafeDownCast(node);
+    if (!sceneViewNode)
+    {
+      continue;
+    }
+    scenes.push_back(sceneViewNode->GetStoredScene());
+  }
+
+  for (vtkMRMLScene* scene : scenes)
+  {
+    bool isMainScene = (scene == this->GetMRMLScene());
+    vtkSmartPointer<vtkCollection> displayNodes = vtkSmartPointer<vtkCollection>::Take(scene->GetNodesByClass("vtkMRMLAnnotationDisplayNode"));
+    for (int displayIndex = 0; displayIndex < displayNodes->GetNumberOfItems(); ++displayIndex)
+    {
+      vtkSmartPointer<vtkMRMLAnnotationDisplayNode> displayNode = vtkMRMLAnnotationDisplayNode::SafeDownCast(displayNodes->GetItemAsObject(displayIndex));
+      if (!displayNode)
+      {
+        continue;
+      }
+      if (isMainScene && removedNodeIds)
+      {
+        removedNodeIds->InsertNextValue(displayNode->GetID());
+      }
+      scene->RemoveNode(displayNode);
+    }
+  }
+}
+
+//---------------------------------------------------------------------------
 void vtkSlicerMarkupsLogic::ConvertAnnotationHierarchyToSubjectHierarchy(vtkMRMLScene* scene)
 {
   vtkMRMLSubjectHierarchyNode* shNode = vtkMRMLSubjectHierarchyNode::ResolveSubjectHierarchy(scene);
@@ -1772,11 +1791,10 @@ void vtkSlicerMarkupsLogic::ConvertAnnotationHierarchyToSubjectHierarchy(vtkMRML
   vtkMRMLNode* node = nullptr;
   vtkCollectionSimpleIterator mhIt;
   vtkSmartPointer<vtkCollection> mhNodes = vtkSmartPointer<vtkCollection>::Take(scene->GetNodesByClass("vtkMRMLAnnotationHierarchyNode"));
-  std::string newFolderName = vtkMRMLSubjectHierarchyConstants::GetSubjectHierarchyNewItemNamePrefix()
-    + vtkMRMLSubjectHierarchyConstants::GetSubjectHierarchyLevelFolder();
+  std::string newFolderName = vtkMRMLSubjectHierarchyConstants::GetSubjectHierarchyNewItemNamePrefix() + vtkMRMLSubjectHierarchyConstants::GetSubjectHierarchyLevelFolder();
   std::map<std::string, vtkIdType> mhNodeIdToShItemIdMap;
   std::map<std::string, std::string> mhNodeIdToParentNodeIdMap;
-  for (mhNodes->InitTraversal(mhIt); (node = (vtkMRMLNode*)mhNodes->GetNextItemAsObject(mhIt)) ;)
+  for (mhNodes->InitTraversal(mhIt); (node = (vtkMRMLNode*)mhNodes->GetNextItemAsObject(mhIt));)
   {
     // Get direct child hierarchy nodes
     vtkMRMLAnnotationHierarchyNode* mhNode = vtkMRMLAnnotationHierarchyNode::SafeDownCast(node);
@@ -1798,15 +1816,13 @@ void vtkSlicerMarkupsLogic::ConvertAnnotationHierarchyToSubjectHierarchy(vtkMRML
       // when we have all the items created.
       if (folderItemID == vtkMRMLSubjectHierarchyNode::INVALID_ITEM_ID)
       {
-        folderItemID = shNode->CreateFolderItem(shNode->GetSceneItemID(),
-          (mhNode->GetName() ? mhNode->GetName() : shNode->GenerateUniqueItemName(newFolderName)));
+        folderItemID = shNode->CreateFolderItem(shNode->GetSceneItemID(), (mhNode->GetName() ? mhNode->GetName() : shNode->GenerateUniqueItemName(newFolderName)));
       }
     }
     else if (!mhNode->GetAssociatedNodeID())
     {
       // If there are no children but there is no associated node, then something is wrong
-      vtkWarningMacro("OnMRMLSceneEndImport: Invalid annotation hierarchy node found with neither "
-        << "children nor associated node: " << mhNode->GetID());
+      vtkWarningMacro("OnMRMLSceneEndImport: Invalid annotation hierarchy node found with neither " << "children nor associated node: " << mhNode->GetID());
       continue;
     }
 
@@ -1824,8 +1840,7 @@ void vtkSlicerMarkupsLogic::ConvertAnnotationHierarchyToSubjectHierarchy(vtkMRML
     // Move all the direct children of the annotation hierarchy node under the folder if one was created
     if (folderItemID)
     {
-      for (std::vector<vtkMRMLHierarchyNode*>::iterator it = childHierarchyNodes.begin();
-        it != childHierarchyNodes.end(); ++it)
+      for (std::vector<vtkMRMLHierarchyNode*>::iterator it = childHierarchyNodes.begin(); it != childHierarchyNodes.end(); ++it)
       {
         vtkMRMLNode* associatedNode = (*it)->GetAssociatedNode();
         if (associatedNode)
@@ -1843,8 +1858,7 @@ void vtkSlicerMarkupsLogic::ConvertAnnotationHierarchyToSubjectHierarchy(vtkMRML
   } // for all annotation hierarchy nodes
 
   // Set up hierarchy between the created folder items
-  for (std::map<std::string, std::string>::iterator it = mhNodeIdToParentNodeIdMap.begin();
-    it != mhNodeIdToParentNodeIdMap.end(); ++it)
+  for (std::map<std::string, std::string>::iterator it = mhNodeIdToParentNodeIdMap.begin(); it != mhNodeIdToParentNodeIdMap.end(); ++it)
   {
     // Get SH item IDs for the nodes
     vtkIdType currentItemID = mhNodeIdToShItemIdMap[it->first];
@@ -1855,15 +1869,23 @@ void vtkSlicerMarkupsLogic::ConvertAnnotationHierarchyToSubjectHierarchy(vtkMRML
   }
 
   // Remove annotation hierarchy nodes from the scene
-  for (std::map<std::string, vtkIdType>::iterator it = mhNodeIdToShItemIdMap.begin();
-    it != mhNodeIdToShItemIdMap.end(); ++it)
+  for (std::map<std::string, vtkIdType>::iterator it = mhNodeIdToShItemIdMap.begin(); it != mhNodeIdToShItemIdMap.end(); ++it)
   {
+    vtkMRMLAnnotationHierarchyNode* annotHierarchyNode = vtkMRMLAnnotationHierarchyNode::SafeDownCast(scene->GetNodeByID(it->first));
+    if (annotHierarchyNode)
+    {
+      vtkMRMLDisplayNode* displayNode = annotHierarchyNode->GetDisplayNode();
+      if (displayNode)
+      {
+        scene->RemoveNode(displayNode);
+      }
+    }
     scene->RemoveNode(scene->GetNodeByID(it->first));
   }
 }
 
 //---------------------------------------------------------------------------
-void vtkSlicerMarkupsLogic::RenameAllControlPointsFromCurrentFormat(vtkMRMLMarkupsNode *markupsNode)
+void vtkSlicerMarkupsLogic::RenameAllControlPointsFromCurrentFormat(vtkMRMLMarkupsNode* markupsNode)
 {
   if (!markupsNode)
   {
@@ -1877,8 +1899,8 @@ void vtkSlicerMarkupsLogic::RenameAllControlPointsFromCurrentFormat(vtkMRMLMarku
   const int maxLineLength = 1024;
   std::vector<char> buffVector(maxLineLength);
   char* buff = &(buffVector[0]);
-  if (formatString.find("%d") != std::string::npos ||
-      formatString.find("%g") != std::string::npos ||
+  if (formatString.find("%d") != std::string::npos || //
+      formatString.find("%g") != std::string::npos || //
       formatString.find("%f") != std::string::npos)
   {
     numberInFormat = true;
@@ -1921,18 +1943,18 @@ void vtkSlicerMarkupsLogic::RenameAllControlPointsFromCurrentFormat(vtkMRMLMarku
         if (formatString.find("%d") != std::string::npos)
         {
           // integer
-          snprintf(buff, maxLineLength, formatString.c_str(),atoi(oldNumber.c_str()));
+          snprintf(buff, maxLineLength, formatString.c_str(), atoi(oldNumber.c_str()));
         }
         else
         {
           // float
-          snprintf(buff, maxLineLength, formatString.c_str(),atof(oldNumber.c_str()));
+          snprintf(buff, maxLineLength, formatString.c_str(), atof(oldNumber.c_str()));
         }
       }
       else
       {
         // no number found, use n
-        snprintf(buff, maxLineLength, formatString.c_str(),n);
+        snprintf(buff, maxLineLength, formatString.c_str(), n);
       }
       markupsNode->SetNthControlPointLabel(n, std::string(buff));
     }
@@ -1954,12 +1976,10 @@ bool vtkSlicerMarkupsLogic::StartPlaceMode(bool persistent, vtkMRMLInteractionNo
   }
 
   // set up to place markups fiducials
-  vtkMRMLSelectionNode *selectionNode =
-    vtkMRMLSelectionNode::SafeDownCast(
-      this->GetMRMLScene()->GetNodeByID("vtkMRMLSelectionNodeSingleton"));
+  vtkMRMLSelectionNode* selectionNode = vtkMRMLSelectionNode::SafeDownCast(this->GetMRMLScene()->GetNodeByID("vtkMRMLSelectionNodeSingleton"));
   if (!selectionNode)
   {
-    vtkErrorMacro ("StartPlaceMode: No selection node in the scene." );
+    vtkErrorMacro("StartPlaceMode: No selection node in the scene.");
     return false;
   }
   selectionNode->SetReferenceActivePlaceNodeClassName("vtkMRMLMarkupsFiducialNode");
@@ -1967,26 +1987,21 @@ bool vtkSlicerMarkupsLogic::StartPlaceMode(bool persistent, vtkMRMLInteractionNo
   // now go into place mode with the persistece flag set
   if (!interactionNode)
   {
-    interactionNode = vtkMRMLInteractionNode::SafeDownCast(
-      this->GetMRMLScene()->GetNodeByID("vtkMRMLInteractionNodeSingleton"));
+    interactionNode = vtkMRMLInteractionNode::SafeDownCast(this->GetMRMLScene()->GetNodeByID("vtkMRMLInteractionNodeSingleton"));
   }
   if (!interactionNode)
   {
-    vtkErrorMacro ("StartPlaceMode: No interaction node in the scene." );
+    vtkErrorMacro("StartPlaceMode: No interaction node in the scene.");
     return false;
   }
 
   interactionNode->SetCurrentInteractionMode(vtkMRMLInteractionNode::Place);
   interactionNode->SetPlaceModePersistence(persistent ? 1 : 0);
 
-  if (interactionNode->GetCurrentInteractionMode()
-      != vtkMRMLInteractionNode::Place)
+  if (interactionNode->GetCurrentInteractionMode() != vtkMRMLInteractionNode::Place)
   {
-    vtkErrorMacro("StartPlaceMode: Could not set place mode! "
-                  << "Tried to set the interaction mode to "
-                  << vtkMRMLInteractionNode::Place
-                  << ", but it's now "
-                  << interactionNode->GetCurrentInteractionMode());
+    vtkErrorMacro("StartPlaceMode: Could not set place mode! " << "Tried to set the interaction mode to " << vtkMRMLInteractionNode::Place << ", but it's now "
+                                                               << interactionNode->GetCurrentInteractionMode());
     return false;
   }
 
@@ -2000,15 +2015,13 @@ vtkMRMLMarkupsDisplayNode* vtkSlicerMarkupsLogic::GetDefaultMarkupsDisplayNode()
   {
     return nullptr;
   }
-  vtkMRMLMarkupsDisplayNode* defaultNode = vtkMRMLMarkupsDisplayNode::SafeDownCast(
-    this->GetMRMLScene()->GetDefaultNodeByClass("vtkMRMLMarkupsDisplayNode"));
+  vtkMRMLMarkupsDisplayNode* defaultNode = vtkMRMLMarkupsDisplayNode::SafeDownCast(this->GetMRMLScene()->GetDefaultNodeByClass("vtkMRMLMarkupsDisplayNode"));
   if (defaultNode)
   {
     return defaultNode;
   }
   vtkSmartPointer<vtkMRMLMarkupsDisplayNode> newDefaultNode =
-    vtkSmartPointer<vtkMRMLMarkupsDisplayNode>::Take(vtkMRMLMarkupsDisplayNode::SafeDownCast(
-                                                       this->GetMRMLScene()->CreateNodeByClass("vtkMRMLMarkupsDisplayNode")));
+    vtkSmartPointer<vtkMRMLMarkupsDisplayNode>::Take(vtkMRMLMarkupsDisplayNode::SafeDownCast(this->GetMRMLScene()->CreateNodeByClass("vtkMRMLMarkupsDisplayNode")));
   if (!newDefaultNode)
   {
     return nullptr;
@@ -2018,27 +2031,25 @@ vtkMRMLMarkupsDisplayNode* vtkSlicerMarkupsLogic::GetDefaultMarkupsDisplayNode()
 }
 
 //---------------------------------------------------------------------------
-double vtkSlicerMarkupsLogic::GetClosedCurveSurfaceArea(vtkMRMLMarkupsClosedCurveNode* curveNode,
-                                                        vtkPolyData* inputSurface /*=nullptr*/, bool projectWarp /*=true*/)
+double vtkSlicerMarkupsLogic::GetClosedCurveSurfaceArea(vtkMRMLMarkupsClosedCurveNode* curveNode, vtkPolyData* inputSurface /*=nullptr*/, bool projectWarp /*=true*/)
 {
   return vtkMRMLMarkupsClosedCurveNode::GetClosedCurveSurfaceArea(curveNode, inputSurface, projectWarp);
 }
 
 //---------------------------------------------------------------------------
-bool vtkSlicerMarkupsLogic::FitSurfaceProjectWarp(vtkPoints* curvePoints,
-  vtkPolyData* surface, double radiusScalingFactor/*=1.0*/, vtkIdType numberOfInternalGridPoints/*=225*/)
+bool vtkSlicerMarkupsLogic::FitSurfaceProjectWarp(vtkPoints* curvePoints, vtkPolyData* surface, double radiusScalingFactor /*=1.0*/, vtkIdType numberOfInternalGridPoints /*=225*/)
 {
   return vtkMRMLMarkupsClosedCurveNode::FitSurfaceProjectWarp(curvePoints, surface, radiusScalingFactor, numberOfInternalGridPoints);
 }
 
 //---------------------------------------------------------------------------
-bool vtkSlicerMarkupsLogic::IsPolygonClockwise(vtkPoints* points, vtkIdList* pointIds/*nullptr*/)
+bool vtkSlicerMarkupsLogic::IsPolygonClockwise(vtkPoints* points, vtkIdList* pointIds /*nullptr*/)
 {
   return vtkMRMLMarkupsClosedCurveNode::IsPolygonClockwise(points, pointIds);
 }
 
 //---------------------------------------------------------------------------
-bool vtkSlicerMarkupsLogic::FitSurfaceDiskWarp(vtkPoints* curvePoints, vtkPolyData* surface, double radiusScalingFactor/*=1.0*/)
+bool vtkSlicerMarkupsLogic::FitSurfaceDiskWarp(vtkPoints* curvePoints, vtkPolyData* surface, double radiusScalingFactor /*=1.0*/)
 {
   return vtkMRMLMarkupsClosedCurveNode::FitSurfaceDiskWarp(curvePoints, surface, radiusScalingFactor);
 }
@@ -2126,7 +2137,7 @@ void vtkSlicerMarkupsLogic::RegisterMarkupsNode(vtkMRMLMarkupsNode* markupsNode,
   if (!interactionWidgetToUse)
   {
     // Use default interaction widget.
-    interactionWidgetToUse = vtkSmartPointer< vtkSlicerMarkupsInteractionWidget>::New();
+    interactionWidgetToUse = vtkSmartPointer<vtkSlicerMarkupsInteractionWidget>::New();
   }
 
   vtkSlicerMarkupsLogic::vtkInternal::MarkupEntry markup;
@@ -2264,8 +2275,7 @@ const std::list<std::string>& vtkSlicerMarkupsLogic::GetRegisteredMarkupsTypes()
 }
 
 //----------------------------------------------------------------------------
-bool vtkSlicerMarkupsLogic::ImportControlPointsFromTable(vtkMRMLMarkupsNode* markupsNode, vtkMRMLTableNode* tableNode,
-  int startRow/*=0*/, int numberOfRows/*=-1*/)
+bool vtkSlicerMarkupsLogic::ImportControlPointsFromTable(vtkMRMLMarkupsNode* markupsNode, vtkMRMLTableNode* tableNode, int startRow /*=0*/, int numberOfRows /*=-1*/)
 {
   if (!markupsNode || !tableNode || !tableNode->GetTable() || startRow < 0)
   {
@@ -2303,7 +2313,7 @@ bool vtkSlicerMarkupsLogic::ImportControlPointsFromTable(vtkMRMLMarkupsNode* mar
   vtkAbstractArray* arraySelected = table->GetColumnByName("selected");
   vtkAbstractArray* arrayVisible = table->GetColumnByName("visible");
   vtkAbstractArray* arrayLocked = table->GetColumnByName("locked");
-  vtkAbstractArray* arrayDefined= table->GetColumnByName("defined");
+  vtkAbstractArray* arrayDefined = table->GetColumnByName("defined");
 
   for (int row = startRow; row < startRow + numberOfRows; row++)
   {
@@ -2390,8 +2400,9 @@ bool vtkSlicerMarkupsLogic::ImportControlPointsFromTable(vtkMRMLMarkupsNode* mar
 }
 
 //----------------------------------------------------------------------------
-bool vtkSlicerMarkupsLogic::ExportControlPointsToTable(vtkMRMLMarkupsNode* markupsNode, vtkMRMLTableNode* tableNode,
-  int coordinateSystem/*=vtkMRMLStorageNode::CoordinateSystemRAS*/)
+bool vtkSlicerMarkupsLogic::ExportControlPointsToTable(vtkMRMLMarkupsNode* markupsNode,
+                                                       vtkMRMLTableNode* tableNode,
+                                                       int coordinateSystem /*=vtkMRMLStorageNode::CoordinateSystemRAS*/)
 {
   if (!markupsNode || !tableNode || !tableNode->GetTable())
   {
@@ -2414,12 +2425,7 @@ bool vtkSlicerMarkupsLogic::ExportControlPointsToTable(vtkMRMLMarkupsNode* marku
 
   // Get/create coordinate arrays
   vtkAbstractArray* arrayCoordinates[3] = { nullptr, nullptr, nullptr };
-  std::string columnNames[3] =
-    {
-    rasCoordinates ? "r" : "l",
-    rasCoordinates ? "a" : "p",
-    "s"
-    };
+  std::string columnNames[3] = { rasCoordinates ? "r" : "l", rasCoordinates ? "a" : "p", "s" };
   for (int coordIndex = 0; coordIndex < 3; coordIndex++)
   {
     arrayCoordinates[coordIndex] = table->GetColumnByName(columnNames[coordIndex].c_str());
@@ -2499,7 +2505,7 @@ bool vtkSlicerMarkupsLogic::ExportControlPointsToTable(vtkMRMLMarkupsNode* marku
     arraySelected->SetVariantValue(row, controlPoint->Selected);
     arrayVisible->SetVariantValue(row, controlPoint->Visibility);
     arrayLocked->SetVariantValue(row, controlPoint->Locked);
-    arrayDefined->SetVariantValue(row, controlPoint->PositionStatus==vtkMRMLMarkupsNode::PositionDefined);
+    arrayDefined->SetVariantValue(row, controlPoint->PositionStatus == vtkMRMLMarkupsNode::PositionDefined);
   }
 
   return true;
@@ -2520,8 +2526,7 @@ void vtkSlicerMarkupsLogic::GenerateUniqueColor(double color[3])
   vtkMRMLColorTableNode* colorTable = nullptr;
   vtkMRMLScene* scene = this->GetMRMLScene();
   {
-    colorTable = vtkMRMLColorTableNode::SafeDownCast(
-      scene->GetNodeByID("vtkMRMLColorTableNodeFileMediumChartColors.txt"));
+    colorTable = vtkMRMLColorTableNode::SafeDownCast(scene->GetNodeByID("vtkMRMLColorTableNodeFileMediumChartColors.txt"));
   }
   if (colorTable)
   {
@@ -2541,8 +2546,7 @@ void vtkSlicerMarkupsLogic::GenerateUniqueColor(double color[3])
 }
 
 //------------------------------------------------------------------------------
-bool vtkSlicerMarkupsLogic::ExportControlPointsToCSV(vtkMRMLMarkupsNode* markupsNode,
-  const std::string filename, bool lps/*=true*/)
+bool vtkSlicerMarkupsLogic::ExportControlPointsToCSV(vtkMRMLMarkupsNode* markupsNode, const std::string filename, bool lps /*=true*/)
 {
   if (!markupsNode)
   {
@@ -2550,8 +2554,7 @@ bool vtkSlicerMarkupsLogic::ExportControlPointsToCSV(vtkMRMLMarkupsNode* markups
     return false;
   }
   vtkNew<vtkMRMLTableNode> tableNode;
-  if (!vtkSlicerMarkupsLogic::ExportControlPointsToTable(markupsNode, tableNode,
-    lps ? vtkMRMLStorageNode::CoordinateSystemLPS : vtkMRMLStorageNode::CoordinateSystemRAS))
+  if (!vtkSlicerMarkupsLogic::ExportControlPointsToTable(markupsNode, tableNode, lps ? vtkMRMLStorageNode::CoordinateSystemLPS : vtkMRMLStorageNode::CoordinateSystemRAS))
   {
     return false;
   }
@@ -2565,8 +2568,7 @@ bool vtkSlicerMarkupsLogic::ExportControlPointsToCSV(vtkMRMLMarkupsNode* markups
 }
 
 //------------------------------------------------------------------------------
-bool vtkSlicerMarkupsLogic::ImportControlPointsFromCSV(
-  vtkMRMLMarkupsNode* markupsNode, const std::string filename)
+bool vtkSlicerMarkupsLogic::ImportControlPointsFromCSV(vtkMRMLMarkupsNode* markupsNode, const std::string filename)
 {
   if (!markupsNode)
   {
@@ -2600,14 +2602,15 @@ void vtkSlicerMarkupsLogic::OnMRMLSceneEndImport()
   this->ConvertAnnotationFiducialsToMarkups();
   this->ConvertAnnotationLinesROIsToMarkups();
   this->ConvertAnnotationHierarchyToSubjectHierarchy(scene);
+  this->RemoveUnusedAnnotationNodes();
 }
 
 //-----------------------------------------------------------------------------
 // Load an annotation from file
 //-----------------------------------------------------------------------------
-char* vtkSlicerMarkupsLogic::LoadAnnotation(const char *filename, const char *name, int fileType)
+char* vtkSlicerMarkupsLogic::LoadAnnotation(const char* filename, const char* name, int fileType)
 {
-  char *nodeID = nullptr;
+  char* nodeID = nullptr;
   if (!filename)
   {
     vtkErrorMacro("LoadAnnotation: null filename, cannot load");
@@ -2636,7 +2639,7 @@ char* vtkSlicerMarkupsLogic::LoadAnnotation(const char *filename, const char *na
     if (fStorageNode->ReadData(fnode.GetPointer()))
     {
       vtkDebugMacro("LoadAnnotation: fiducial storage node read " << filename);
-      nodeID =  fnode->GetID();
+      nodeID = fnode->GetID();
     }
   }
   else if (fileType == vtkSlicerMarkupsLogic::AnnotationRuler)
@@ -2674,7 +2677,7 @@ char* vtkSlicerMarkupsLogic::LoadAnnotation(const char *filename, const char *na
     if (roiStorageNode->ReadData(roiNode.GetPointer()))
     {
       vtkDebugMacro("LoadAnnotation: fiducial storage node read " << filename);
-      nodeID =  roiNode->GetID();
+      nodeID = roiNode->GetID();
     }
   }
   else
@@ -2689,6 +2692,7 @@ char* vtkSlicerMarkupsLogic::LoadAnnotation(const char *filename, const char *na
   this->ConvertAnnotationFiducialsToMarkups(addedNodeIds);
   this->ConvertAnnotationLinesROIsToMarkups(addedNodeIds);
   this->ConvertAnnotationHierarchyToSubjectHierarchy(this->GetMRMLScene());
+  this->RemoveUnusedAnnotationNodes();
   // Return the converted node, not the old annotation node ID (that is no longer in the scene)
   if (addedNodeIds->GetNumberOfValues() > 0)
   {

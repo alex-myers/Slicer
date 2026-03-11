@@ -21,6 +21,7 @@
 // VTK includes
 #include <vtkActor2D.h>
 #include <vtkCellLocator.h>
+#include <vtkCleanPolyData.h>
 #include <vtkContourTriangulator.h>
 #include <vtkCubeSource.h>
 #include <vtkCutter.h>
@@ -68,8 +69,11 @@ vtkSlicerROIRepresentation2D::vtkSlicerROIRepresentation2D()
   this->ROIOutlineCutter->SetInputConnection(this->ROIToWorldTransformFilter->GetOutputPort());
   this->ROIOutlineCutter->SetCutFunction(this->SlicePlane);
 
+  this->ROIOutlineCleaner = vtkSmartPointer<vtkCleanPolyData>::New();
+  this->ROIOutlineCleaner->SetInputConnection(this->ROIOutlineCutter->GetOutputPort());
+
   this->ROIOutlineWorldToSliceTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
-  this->ROIOutlineWorldToSliceTransformFilter->SetInputConnection(this->ROIOutlineCutter->GetOutputPort());
+  this->ROIOutlineWorldToSliceTransformFilter->SetInputConnection(this->ROIOutlineCleaner->GetOutputPort());
   this->ROIOutlineWorldToSliceTransformFilter->SetTransform(this->WorldToSliceTransform);
 
   this->ROIOutlineMapper = vtkSmartPointer<vtkPolyDataMapper2D>::New();
@@ -96,7 +100,7 @@ vtkSlicerROIRepresentation2D::vtkSlicerROIRepresentation2D()
 vtkSlicerROIRepresentation2D::~vtkSlicerROIRepresentation2D() = default;
 
 //----------------------------------------------------------------------
-void vtkSlicerROIRepresentation2D::UpdateFromMRMLInternal(vtkMRMLNode* caller, unsigned long event, void *callData /*=nullptr*/)
+void vtkSlicerROIRepresentation2D::UpdateFromMRMLInternal(vtkMRMLNode* caller, unsigned long event, void* callData /*=nullptr*/)
 {
   Superclass::UpdateFromMRMLInternal(caller, event, callData);
 
@@ -115,12 +119,8 @@ void vtkSlicerROIRepresentation2D::UpdateFromMRMLInternal(vtkMRMLNode* caller, u
   switch (roiNode->GetROIType())
   {
     case vtkMRMLMarkupsROINode::ROITypeBox:
-    case vtkMRMLMarkupsROINode::ROITypeBoundingBox:
-      this->UpdateCubeSourceFromMRML(roiNode);
-      break;
-    default:
-      this->VisibilityOff();
-      return;
+    case vtkMRMLMarkupsROINode::ROITypeBoundingBox: this->UpdateCubeSourceFromMRML(roiNode); break;
+    default: this->VisibilityOff(); return;
   }
 
   this->ROIActor->SetVisibility(roiNode->GetNumberOfControlPoints() > 0 && this->MarkupsDisplayNode->GetFillVisibility());
@@ -146,11 +146,11 @@ void vtkSlicerROIRepresentation2D::UpdateFromMRMLInternal(vtkMRMLNode* caller, u
 
   // Properties label display
   this->TextActor->SetTextProperty(this->GetControlPointsPipeline(controlPointType)->TextProperty);
-  if (this->MarkupsDisplayNode->GetPropertiesLabelVisibility()
-    && this->AnyPointVisibilityOnSlice
-    && roiNode->GetNumberOfDefinedControlPoints(true) > 0) // including preview
+  if (this->MarkupsDisplayNode->GetPropertiesLabelVisibility() //
+      && this->AnyPointVisibilityOnSlice                       //
+      && roiNode->GetNumberOfDefinedControlPoints(true) > 0)   // including preview
   {
-    double textPos[3] = { 0.0,  0.0, 0.0 };
+    double textPos[3] = { 0.0, 0.0, 0.0 };
     this->GetNthControlPointDisplayPosition(0, textPos);
     this->TextActor->SetDisplayPosition(static_cast<int>(textPos[0]), static_cast<int>(textPos[1]));
     this->TextActor->SetVisibility(true);
@@ -212,7 +212,7 @@ void vtkSlicerROIRepresentation2D::UpdateCubeSourceFromMRML(vtkMRMLMarkupsROINod
 }
 
 //----------------------------------------------------------------------
-void vtkSlicerROIRepresentation2D::GetActors(vtkPropCollection *pc)
+void vtkSlicerROIRepresentation2D::GetActors(vtkPropCollection* pc)
 {
   this->ROIActor->GetActors(pc);
   this->ROIOutlineActor->GetActors(pc);
@@ -220,8 +220,7 @@ void vtkSlicerROIRepresentation2D::GetActors(vtkPropCollection *pc)
 }
 
 //----------------------------------------------------------------------
-void vtkSlicerROIRepresentation2D::ReleaseGraphicsResources(
-  vtkWindow *win)
+void vtkSlicerROIRepresentation2D::ReleaseGraphicsResources(vtkWindow* win)
 {
   this->ROIActor->ReleaseGraphicsResources(win);
   this->ROIOutlineActor->ReleaseGraphicsResources(win);
@@ -229,24 +228,23 @@ void vtkSlicerROIRepresentation2D::ReleaseGraphicsResources(
 }
 
 //----------------------------------------------------------------------
-int vtkSlicerROIRepresentation2D::RenderOverlay(vtkViewport *viewport)
+int vtkSlicerROIRepresentation2D::RenderOverlay(vtkViewport* viewport)
 {
   int count = 0;
   if (this->ROIActor->GetVisibility())
   {
-    count +=  this->ROIActor->RenderOverlay(viewport);
+    count += this->ROIActor->RenderOverlay(viewport);
   }
   if (this->ROIOutlineActor->GetVisibility())
   {
-    count +=  this->ROIOutlineActor->RenderOverlay(viewport);
+    count += this->ROIOutlineActor->RenderOverlay(viewport);
   }
   count += Superclass::RenderOverlay(viewport);
   return count;
 }
 
 //-----------------------------------------------------------------------------
-int vtkSlicerROIRepresentation2D::RenderOpaqueGeometry(
-  vtkViewport *viewport)
+int vtkSlicerROIRepresentation2D::RenderOpaqueGeometry(vtkViewport* viewport)
 {
   int count = 0;
   if (this->ROIActor->GetVisibility())
@@ -262,8 +260,7 @@ int vtkSlicerROIRepresentation2D::RenderOpaqueGeometry(
 }
 
 //-----------------------------------------------------------------------------
-int vtkSlicerROIRepresentation2D::RenderTranslucentPolygonalGeometry(
-  vtkViewport *viewport)
+int vtkSlicerROIRepresentation2D::RenderTranslucentPolygonalGeometry(vtkViewport* viewport)
 {
   int count = 0;
   if (this->ROIActor->GetVisibility())
@@ -305,14 +302,12 @@ double* vtkSlicerROIRepresentation2D::GetBounds()
 //-----------------------------------------------------------------------------
 void vtkSlicerROIRepresentation2D::PrintSelf(ostream& os, vtkIndent indent)
 {
-  //Superclass typedef defined in vtkTypeMacro() found in vtkSetGet.h
+  // Superclass typedef defined in vtkTypeMacro() found in vtkSetGet.h
   this->Superclass::PrintSelf(os, indent);
 }
 
 //----------------------------------------------------------------------
-void vtkSlicerROIRepresentation2D::CanInteract(
-  vtkMRMLInteractionEventData* interactionEventData,
-  int &foundComponentType, int &foundComponentIndex, double &closestDistance2)
+void vtkSlicerROIRepresentation2D::CanInteract(vtkMRMLInteractionEventData* interactionEventData, int& foundComponentType, int& foundComponentIndex, double& closestDistance2)
 {
   foundComponentType = vtkMRMLMarkupsDisplayNode::ComponentNone;
   vtkMRMLMarkupsNode* markupsNode = this->GetMarkupsNode();
@@ -331,15 +326,16 @@ void vtkSlicerROIRepresentation2D::CanInteract(
 }
 
 //-----------------------------------------------------------------------------
-void vtkSlicerROIRepresentation2D::CanInteractWithROI(
-  vtkMRMLInteractionEventData* interactionEventData,
-  int& foundComponentType, int& foundComponentIndex, double& closestDistance2)
+void vtkSlicerROIRepresentation2D::CanInteractWithROI(vtkMRMLInteractionEventData* interactionEventData,
+                                                      int& foundComponentType,
+                                                      int& foundComponentIndex,
+                                                      double& closestDistance2)
 {
   vtkMRMLMarkupsROINode* roiNode = vtkMRMLMarkupsROINode::SafeDownCast(this->MarkupsNode);
-  if (!roiNode
-    || !this->Visibility
-    || !this->ROIActor->GetVisibility()
-    || !this->ROISource)
+  if (!roiNode                            //
+      || !this->Visibility                //
+      || !this->ROIActor->GetVisibility() //
+      || !this->ROISource)
   {
     return;
   }

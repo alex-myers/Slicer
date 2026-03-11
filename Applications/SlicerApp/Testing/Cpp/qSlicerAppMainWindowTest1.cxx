@@ -29,7 +29,7 @@
 # include <ctkPythonConsole.h>
 #endif
 
-#include "qMRMLWidget.h"// SlicerApp includes
+#include "qMRMLWidget.h" // SlicerApp includes
 #include "qSlicerApplication.h"
 #include "qSlicerAppMainWindow.h"
 #ifdef Slicer_USE_PYTHONQT
@@ -38,7 +38,7 @@
 
 // STD includes
 
-int qSlicerAppMainWindowTest1(int argc, char * argv[] )
+int qSlicerAppMainWindowTest1(int argc, char* argv[])
 {
   qMRMLWidget::preInitializeApplication();
   qSlicerApplication app(argc, argv);
@@ -57,7 +57,9 @@ int qSlicerAppMainWindowTest1(int argc, char * argv[] )
 
   if (argc < 2 || QString(argv[1]) != "-I")
   {
-    QTimer::singleShot(100, qApp, SLOT(quit()));
+    // Avoid welcome and exit confirmation popups holding up application exit
+    // by forcing application exit.
+    QTimer::singleShot(1000, []() { QCoreApplication::exit(0); });
   }
 
   return app.exec();

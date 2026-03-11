@@ -1,6 +1,11 @@
 
+if(Slicer_REQUIRED_QT_VERSION VERSION_GREATER_EQUAL "6")
+  set(Slicer_QT_VERSION_MAJOR "${Qt6_VERSION_MAJOR}")
+  set(Slicer_QT_VERSION_MINOR "${Qt6_VERSION_MINOR}")
+else()
   set(Slicer_QT_VERSION_MAJOR "${Qt5_VERSION_MAJOR}")
   set(Slicer_QT_VERSION_MINOR "${Qt5_VERSION_MINOR}")
+endif()
 
 #-----------------------------------------------------------------------------
 # Sanity checks
@@ -146,8 +151,10 @@ foreach(EXTENSION_NAME ${EXTENSION_LIST})
       ${CMAKE_CURRENT_BINARY_DIR}/download_${proj}_wrapper_script.cmake)
     #message(STATUS "Configuring extension download wrapper script: ${download_extension_wrapper_script}")
     file(WRITE ${download_extension_wrapper_script} "
+      # command is a semicolon-separated string that cannot be used as COMMAND directly, because arguments may contain spaces
+      set(command_list \"${command}\")
       execute_process(
-        COMMAND ${command}
+        COMMAND \${command_list}
         WORKING_DIRECTORY \"${CMAKE_CURRENT_BINARY_DIR}\"
         RESULT_VARIABLE result
         ERROR_VARIABLE error
@@ -155,12 +162,12 @@ foreach(EXTENSION_NAME ${EXTENSION_LIST})
       # Sanitize error string to prevent false positive by Visual Studio
       set(sanitized_error \"\${error}\")
       string(REPLACE \"error:\" \"error \" sanitized_error \"\${sanitized_error}\")
-      message(STATUS \"download_${proj}_wrapper_script: Ignoring result \${result}\")
+      message(STATUS \"download_${proj}_wrapper_script: Ignoring result '\${result}'\")
       if(NOT result EQUAL 0)
         message(STATUS \"Generating '${EXTENSION_SOURCE_DIR}/CMakeLists.txt'\")
         file(MAKE_DIRECTORY \"${EXTENSION_SOURCE_DIR}\")
         file(WRITE \"${EXTENSION_SOURCE_DIR}/CMakeLists.txt\"
-          \"cmake_minimum_required(VERSION 3.16.3...3.19.7 FATAL_ERROR)
+          \"cmake_minimum_required(VERSION 3.20.6...3.22.6 FATAL_ERROR)
           project(${proj} NONE)
           message(FATAL_ERROR \\\"Failed to download extension using ${ext_ep_options_repository}\\n\${sanitized_error}\\\")
           \"
@@ -206,17 +213,25 @@ foreach(EXTENSION_NAME ${EXTENSION_LIST})
   set(build_error_file "${CMAKE_CURRENT_BINARY_DIR}/build_${proj}_error.txt")
   #message(STATUS "Configuring extension upload wrapper script: ${build_extension_wrapper_script}")
   file(WRITE ${build_extension_wrapper_script} "
+    # wrapper_command is a semicolon-separated string that cannot be used as COMMAND directly, because arguments may contain spaces
+    set(wrapper_command_list \"${wrapper_command}\")
     execute_process(
-      COMMAND ${wrapper_command}
+      COMMAND \${wrapper_command_list}
       WORKING_DIR \"${EXTENSION_SUPERBUILD_BINARY_DIR}\"
       OUTPUT_FILE \"${build_output_file}\"
       ERROR_FILE \"${build_error_file}\"
       RESULT_VARIABLE result
       )
-    message(STATUS \"build_${proj}_wrapper_script: Ignoring result \${result}\")
+    message(STATUS \"build_${proj}_wrapper_script: Ignoring result '\${result}'\")
     message(STATUS \"build_${proj}_output_file: ${build_output_file}\")
     message(STATUS \"build_${proj}_error_file: ${build_error_file}\")
     ")
+
+  if(CMAKE_VERSION GREATER_EQUAL "3.28")
+    set(maybe_BUILD_JOB_SERVER_AWARE BUILD_JOB_SERVER_AWARE 1)
+  else()
+    set(maybe_BUILD_JOB_SERVER_AWARE "")
+  endif()
 
   # Add extension external project
   #message("ext_ep_download_command:${ext_ep_download_command}")
@@ -227,6 +242,7 @@ foreach(EXTENSION_NAME ${EXTENSION_LIST})
     CONFIGURE_COMMAND ""
     BUILD_COMMAND ${CMAKE_COMMAND} -DCTEST_BUILD_CONFIGURATION=$<CONFIG> -P ${build_extension_wrapper_script}
     INSTALL_COMMAND ""
+    ${maybe_BUILD_JOB_SERVER_AWARE}
     ${EP_ARG_EXTENSION_DEPENDS}
     )
   # This custom external project step forces the build and later

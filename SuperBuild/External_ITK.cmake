@@ -33,7 +33,7 @@ if(NOT DEFINED ITK_DIR AND NOT Slicer_USE_SYSTEM_${proj})
 
   ExternalProject_SetIfNotDefined(
     Slicer_${proj}_GIT_TAG
-    "aacaefd6366bb09e09faefd173d4d3797f386ad0" # slicer-v5.4.0-2024-05-16-311b706
+    "ac65b49c34fcfa3c3422a66026c7fe2bbaa88902" # slicer-v5.4.5-2025-11-19-f51594a
     QUIET
     )
 
@@ -69,9 +69,8 @@ if(NOT DEFINED ITK_DIR AND NOT Slicer_USE_SYSTEM_${proj})
   set(EP_BINARY_DIR ${CMAKE_BINARY_DIR}/${proj}-build)
 
   list(APPEND EXTERNAL_PROJECT_OPTIONAL_CMAKE_CACHE_ARGS
-    -DITK_LEGACY_REMOVE:BOOL=OFF   #<-- Allow LEGACY ITKv4 features for now.
-    -DITK_LEGACY_SILENT:BOOL=OFF   #<-- Use of legacy code will produce compiler warnings
-    -DModule_ITKDeprecated:BOOL=ON #<-- Needed for ITKv5 now. (itkMultiThreader.h and MutexLock backwards compatibility.)
+    -DITK_LEGACY_REMOVE:BOOL=OFF    #<-- Enable LEGACY ITKv4 to avoid dealing with removal of Rigid3DTransform and BSplineDeformableTransform.
+    -DITK_LEGACY_SILENT:BOOL=OFF    #<-- Use of legacy code will produce compiler warnings
     )
 
 

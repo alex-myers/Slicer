@@ -227,7 +227,7 @@ class SampleDataSource:
             "",
         ]
         for fileName, uri, nodeName, loadFile, fileType, checksum in zip(
-            self.fileNames, self.uris, self.nodeNames, self.loadFiles, self.loadFileTypes, self.checksums):
+            self.fileNames, self.uris, self.nodeNames, self.loadFiles, self.loadFileTypes, self.checksums, strict=True):
 
             output.extend([
                 " fileName     : %s" % fileName,
@@ -245,6 +245,20 @@ class SampleDataSource:
 # SampleData widget
 #
 
+class TextEditFinishEventFilter(qt.QObject):
+
+    def __init__(self, *args, **kwargs):
+        qt.QObject.__init__(self, *args, **kwargs)
+        self.textEditFinishedCallback = None
+
+    def eventFilter(self, object, event):
+        if self.textEditFinishedCallback is None:
+            return
+        if (event.type() == qt.QEvent.KeyPress and event.key() in (qt.Qt.Key_Return, qt.Qt.Key_Enter)
+                and (event.modifiers() & qt.Qt.ControlModifier)):
+            self.textEditFinishedCallback()
+            return True  # stop further handling
+        return False
 
 class SampleDataWidget(ScriptedLoadableModuleWidget):
     """Uses ScriptedLoadableModuleWidget base class, available at:
@@ -269,6 +283,34 @@ class SampleDataWidget(ScriptedLoadableModuleWidget):
         if self.developerMode is False:
             self.setCategoryVisible(self.logic.developmentCategoryName, False)
 
+        customFrame = ctk.ctkCollapsibleGroupBox()
+        self.categoryLayout.addWidget(customFrame)
+        customFrame.title = _("Load data from URL")
+        customFrameLayout = qt.QVBoxLayout()
+        customFrame.setLayout(customFrameLayout)
+        self.customSampleLabel = qt.QLabel(_("Download URLs:"))
+        customFrameLayout.addWidget(self.customSampleLabel)
+        self.customSampleUrlEdit = qt.QTextEdit()
+        self.customSampleUrlEdit.toolTip = _("Enter one or more URLs (one per line) to download and load the corresponding data sets. "
+                                            "Press Ctrl+Enter or click 'Load' button to start loading.")
+
+        # Install event filter to catch Ctrl+Enter keypress to start loading
+        self.customSampleUrlEditFinishedEventFilter = TextEditFinishEventFilter()
+        self.customSampleUrlEditFinishedEventFilter.textEditFinishedCallback = self.onCustomDataDownload
+        self.customSampleUrlEdit.installEventFilter(self.customSampleUrlEditFinishedEventFilter)
+
+        customFrameLayout.addWidget(self.customSampleUrlEdit)
+        self.customDownloadButton = qt.QPushButton(_("Load"))
+        self.customDownloadButton.toolTip = _("Download the dataset from the given URL and import it into the scene")
+        self.customDownloadButton.default = True
+        customFrameLayout.addWidget(self.customDownloadButton)
+        self.showCustomDataFolderButton = qt.QPushButton(_("Show folder"))
+        self.showCustomDataFolderButton.toolTip = _("Show folder where custom data sets are downloaded ({path}).").format(path=slicer.app.cachePath)
+        customFrameLayout.addWidget(self.showCustomDataFolderButton)
+        customFrame.collapsed = True
+        self.customDownloadButton.connect("clicked()", self.onCustomDataDownload)
+        self.showCustomDataFolderButton.connect("clicked()", self.onShowCustomDataFolder)
+
         self.log = qt.QTextEdit()
         self.log.readOnly = True
         self.layout.addWidget(self.log)
@@ -278,6 +320,44 @@ class SampleDataWidget(ScriptedLoadableModuleWidget):
 
     def cleanup(self):
         SampleDataWidget.setCategoriesFromSampleDataSources(self.categoryLayout, {}, self.logic)
+
+    def onCustomDataDownload(self):
+        uris = self.customSampleUrlEdit.toPlainText().strip()
+        if not uris:
+            return
+        uriList = [u.strip() for u in uris.splitlines() if u.strip()]
+        totalCount = 0
+        errorCount = 0
+        for uri in uriList:
+            self.logMessage(f"Downloading data from {uri} ...", logging.INFO)
+            if not uri:
+                continue
+            try:
+                totalCount += 1
+                # Get filename from URL
+                import urllib
+                parsedUrl = urllib.parse.urlparse(uri)
+                basename, ext = os.path.splitext(os.path.basename(parsedUrl.path))
+                filename = basename + ext
+                # Download
+                result = self.logic.downloadFromURL(uris=uri, fileNames=filename, forceDownload=True)
+                if not result:
+                    errorCount += 1
+            except Exception as e:
+                errorCount += 1
+                self.logMessage(f"Data download from {uri} failed: {str(e)}", logging.ERROR)
+                import traceback
+                traceback.print_exc()
+
+        if totalCount > 1:
+            self.logMessage("", logging.INFO)
+            if errorCount == 0:
+                self.logMessage(_("All {totalCount} data sets were loaded successfully.").format(totalCount=totalCount), logging.INFO)
+            else:
+                self.logMessage(_("Failed to load {errorCount} out of {totalCount} data sets.").format(errorCount=errorCount, totalCount=totalCount), logging.ERROR)
+
+    def onShowCustomDataFolder(self):
+        qt.QDesktopServices.openUrl(qt.QUrl("file:///" + slicer.app.cachePath, qt.QUrl.TolerantMode))
 
     @staticmethod
     def removeCategories(categoryLayout):
@@ -306,9 +386,17 @@ class SampleDataWidget(ScriptedLoadableModuleWidget):
             iconSize = qt.QSize(int(mainWindow.iconSize.width() * 6), int(mainWindow.iconSize.height() * 4))
         else:
             # There is no main window in the automated tests
-            desktop = qt.QDesktopWidget()
-            mainScreenSize = desktop.availableGeometry(desktop.primaryScreen)
-            iconSize = qt.QSize(int(mainScreenSize.width() / 15), int(mainScreenSize.height() / 10))
+            screens = slicer.app.screens()
+            primaryScreen = screens[0] if screens else None
+            if primaryScreen:
+                mainScreenSize = primaryScreen.availableGeometry.size()
+                iconSize = qt.QSize(
+                    int(mainScreenSize.width() / 15),
+                    int(mainScreenSize.height() / 10),
+                )
+            else:
+                # Absolute fallback (should never happen, but keeps tests robust)
+                iconSize = qt.QSize(128, 128)
 
         categories = sorted(dataSources.keys())
 
@@ -509,6 +597,22 @@ class SampleDataLogic:
 
         return sampleDataSource in slicer.modules.sampleDataSources.get(category, [])
 
+    @staticmethod
+    def registerUrlRewriteRule(name, rewriteFunction):
+        """Adds a URL rewrite rule for custom data sets in SampleData.
+        :param name: Name of the rewrite rule.
+        :param rewriteFunction: Function that implements the rewrite logic.
+        """
+        if not callable(rewriteFunction):
+            raise TypeError(f"Expected 'rewriteFunction' to be callable, got {type(rewriteFunction)}")
+
+        try:
+            slicer.modules.sampleDataUrlRewriteRules
+        except AttributeError:
+            slicer.modules.sampleDataUrlRewriteRules = {}
+
+        slicer.modules.sampleDataUrlRewriteRules[name] = rewriteFunction
+
     def __init__(self, logMessage=None):
         if logMessage:
             self.logMessage = logMessage
@@ -518,6 +622,7 @@ class SampleDataLogic:
         self.registerDevelopmentSampleDataSources()
         if slicer.app.testingEnabled():
             self.registerTestingDataSources()
+        self.registerBuiltInUrlRewriteRules()
         self.downloadPercent = 0
 
     def registerBuiltInSampleDataSources(self):
@@ -626,9 +731,55 @@ class SampleDataLogic:
         """Register sample data sources used by SampleData self-test to test module functionalities."""
         self.registerCustomSampleDataSource(**SampleDataTest.CustomDownloaderDataSource)
 
-    def downloadFileIntoCache(self, uri, name, checksum=None):
-        """Given a uri and and a filename, download the data into
-        a file of the given name in the scene's cache
+    def registerBuiltInUrlRewriteRules(self):
+        """Register built-in URL rewrite rules."""
+
+        def githubFileWebpageUrlRewriteRule(url):
+            """Rewrite GitHub file webpage URL to download URL.
+            Example:
+              https://github.com/SlicerMorph/terms-and-colors/blob/main/JaimiGrayTetrapodSkulls.csv
+            is automatically converted to
+              https://raw.githubusercontent.com/SlicerMorph/terms-and-colors/refs/heads/main/JaimiGrayTetrapodSkulls.csv
+            """
+            import urllib.parse as urlparse
+            parsedUrl = urlparse.urlparse(url)
+            if parsedUrl.scheme != "https" or parsedUrl.netloc != "github.com":
+                return url
+            pathParts = parsedUrl.path.split("/")
+            if len(pathParts) <= 4:
+                return url
+            organization = pathParts[1]
+            repository = pathParts[2]
+            rootFolder = pathParts[3]
+            filePath = "/".join(pathParts[4:])
+            if rootFolder != "blob":
+                return url
+            parsedUrl = parsedUrl._replace(netloc="raw.githubusercontent.com")
+            parsedUrl = parsedUrl._replace(path="/".join([organization, repository, "refs", "heads"]) + "/" + filePath)
+            return parsedUrl.geturl()
+
+        def dropboxDownloadUrlRewriteRule(url):
+            """Rewrite Dropbox shared link to direct download link.
+            Example:
+              https://www.dropbox.com/s/abcd1234efgh5678/myfile.nrrd
+            is automatically converted to
+              https://dl.dropbox.com/s/abcd1234efgh5678/myfile.nrrd
+            """
+            import urllib.parse as urlparse
+            parsedUrl = urlparse.urlparse(url)
+            if parsedUrl.scheme != "https" or parsedUrl.netloc != "www.dropbox.com":
+                return url
+            parsedUrl = parsedUrl._replace(netloc="dl.dropbox.com")
+            return parsedUrl.geturl()
+
+        self.registerUrlRewriteRule("GitHubFileWebpage", githubFileWebpageUrlRewriteRule)
+        self.registerUrlRewriteRule("DropboxDownloadLink", dropboxDownloadUrlRewriteRule)
+
+    def downloadFileIntoCache(self, uri, name, checksum=None, forceDownload=False):
+        """Given a uri and a filename, download the data into
+        a file of the given name in the scene's cache.
+        If checksum is provided then it is used to decide if the file has to be downloaded again.
+        If checksum is not provided then the file is not downloaded again unless forceDownload is True.
         """
         destFolderPath = slicer.mrmlScene.GetCacheManager().GetRemoteCacheDirectory()
 
@@ -639,18 +790,18 @@ class SampleDataLogic:
                 self.logMessage(_("Failed to create cache folder {path}").format(path=destFolderPath), logging.ERROR)
             if not os.access(destFolderPath, os.W_OK):
                 self.logMessage(_("Cache folder {path} is not writable").format(path=destFolderPath), logging.ERROR)
-        return self.downloadFile(uri, destFolderPath, name, checksum)
+        return self.downloadFile(uri, destFolderPath, name, checksum, forceDownload=forceDownload)
 
     def downloadSourceIntoCache(self, source):
         """Download all files for the given source and return a
         list of file paths for the results
         """
         filePaths = []
-        for uri, fileName, checksum in zip(source.uris, source.fileNames, source.checksums):
+        for uri, fileName, checksum in zip(source.uris, source.fileNames, source.checksums, strict=False):
             filePaths.append(self.downloadFileIntoCache(uri, fileName, checksum))
         return filePaths
 
-    def downloadFromSource(self, source, maximumAttemptsCount=3):
+    def downloadFromSource(self, source, maximumAttemptsCount=3, forceDownload=False):
         """Given an instance of SampleDataSource, downloads the associated data and
         load them into Slicer if it applies.
 
@@ -665,6 +816,8 @@ class SampleDataLogic:
 
         If no ``nodeNames`` and no ``fileTypes`` are specified or if ``loadFiles`` are all False,
         returns the list of all downloaded filepaths.
+
+        If ``forceDownload`` is True then existing files are downloaded again (if no hash is provided).
         """
 
         # Input may contain urls without associated node names, which correspond to additional data files
@@ -673,8 +826,32 @@ class SampleDataLogic:
         resultNodes = []
         resultFilePaths = []
 
+        # If some node names are defined and some are left empty then we assume that it is intentional
+        # (e.g., you only want to load the image.nhdr file and not the image.raw file).
+        # In this case default node names are not generated.
+        generateDefaultNodeNames = all(n is None for n in source.nodeNames)
+
         for uri, fileName, nodeName, checksum, loadFile, loadFileType in zip(
-            source.uris, source.fileNames, source.nodeNames, source.checksums, source.loadFiles, source.loadFileTypes):
+            source.uris, source.fileNames, source.nodeNames, source.checksums, source.loadFiles, source.loadFileTypes, strict=False):
+
+            if nodeName is None or fileName is None:
+                # Determine file basename and extension from URL or path
+                import urllib
+                import uuid
+                if fileName is not None:
+                    basename, ext = os.path.splitext(os.path.basename(fileName))
+                else:
+                    p = urllib.parse.urlparse(uri)
+                    basename, ext = os.path.splitext(os.path.basename(p.path))
+
+                # Generate default node name (we only need this if we want to load the file into the scene and no node name is provided)
+                if (nodeName is None) and (loadFile is not False) and generateDefaultNodeNames:
+                    nodeName = basename
+
+                # Generate default file name (we always need this, even for just downloading)
+                if fileName is None:
+                    # Generate a unique filename to avoid overwriting existing file with the same name
+                    fileName = f"{nodeName if nodeName else basename}-{uuid.uuid4().hex}{ext}"
 
             current_source = SampleDataSource(
                 uris=uri,
@@ -689,12 +866,11 @@ class SampleDataLogic:
 
                 # Download
                 try:
-                    filePath = self.downloadFileIntoCache(uri, fileName, checksum)
+                    filePath = self.downloadFileIntoCache(uri, fileName, checksum, forceDownload=forceDownload)
                 except ValueError:
                     self.logMessage(_("Download failed (attempt {current} of {total})...").format(
                         current=attemptsCount + 1, total=maximumAttemptsCount), logging.ERROR)
                     continue
-                resultFilePaths.append(filePath)
 
                 # Special behavior (how `loadFileType` is used and what is returned in `resultNodes` ) is implemented
                 # for scene and zip file loading, for preserving backward compatible behavior.
@@ -740,6 +916,7 @@ class SampleDataLogic:
                         break
                 else:
                     # no need to load node
+                    resultFilePaths.append(filePath)
                     break
 
                 # Failed. Clean up downloaded file (it might have been a partial download)
@@ -776,7 +953,7 @@ class SampleDataLogic:
         return None
 
     def downloadFromURL(self, uris=None, fileNames=None, nodeNames=None, checksums=None, loadFiles=None,
-                        customDownloader=None, loadFileTypes=None, loadFileProperties={}):
+                        customDownloader=None, loadFileTypes=None, loadFileProperties={}, forceDownload=False):
         """Download and optionally load data into the application.
 
         :param uris: Download URL(s).
@@ -806,11 +983,14 @@ class SampleDataLogic:
         The ``loadFileProperties`` are common for all files. If different properties
         need to be associated with files of different types, downloadFromURL must
         be called for each.
+
+        If ``forceDownload`` is True then existing files are downloaded again (if no hash is provided).
         """
-        return self.downloadFromSource(SampleDataSource(
+        source = SampleDataSource(
             uris=uris, fileNames=fileNames, nodeNames=nodeNames, loadFiles=loadFiles,
             loadFileTypes=loadFileTypes, loadFileProperties=loadFileProperties, checksums=checksums,
-        ))
+            customDownloader=customDownloader)
+        return self.downloadFromSource(source, forceDownload=forceDownload)
 
     def downloadSample(self, sampleName):
         """For a given sample name this will search the available sources
@@ -890,17 +1070,35 @@ class SampleDataLogic:
                             sizeCompleted=humanSizeSoFar, percentCompleted=percent, sizeTotal=humanSizeTotal) + "</i>")
             self.downloadPercent = percent
 
-    def downloadFile(self, uri, destFolderPath, name, checksum=None):
+    @staticmethod
+    def rewriteUrl(url):
+        """Apply all registered URL rewrite rules to the given URL."""
+
+        try:
+            slicer.modules.sampleDataUrlRewriteRules
+        except AttributeError:
+            # No rules are registered
+            return url
+
+        for rule in slicer.modules.sampleDataUrlRewriteRules.values():
+            url = rule(url)
+        return url
+
+    def downloadFile(self, uri, destFolderPath, name, checksum=None, forceDownload=False):
         """
-        :param uri: Download URL.
+        :param uri: Download URL. It is rewritten using registered URL rewrite rules before download.
         :param destFolderPath: Folder to download the file into.
         :param name: File name that will be downloaded.
         :param checksum: Checksum formatted as ``<algo>:<digest>`` to verify the downloaded file. For example, ``SHA256:cc211f0dfd9a05ca3841ce1141b292898b2dd2d3f08286affadf823a7e58df93``.
+        :param forceDownload: If True then the file is always downloaded even if it already exists in the destination folder.
         """
+
+        uri = self.rewriteUrl(uri)
+
         self.downloadPercent = 0
         filePath = destFolderPath + "/" + name
         (algo, digest) = extractAlgoAndDigest(checksum)
-        if not os.path.exists(filePath) or os.stat(filePath).st_size == 0:
+        if forceDownload or not os.path.exists(filePath) or os.stat(filePath).st_size == 0:
             import urllib.request, urllib.parse, urllib.error
 
             self.logMessage(_("Requesting download {name} from {uri} ...").format(name=name, uri=uri))
@@ -939,29 +1137,33 @@ class SampleDataLogic:
         return filePath
 
     def loadScene(self, uri, fileProperties={}):
-        self.logMessage("<b>" + _("Requesting load {uri}").format(uri=uri) + "</b>")
-        fileProperties["fileName"] = uri
-        success = slicer.app.coreIOManager().loadNodes("SceneFile", fileProperties)
-        if not success:
-            self.logMessage("\t" + _("Load failed!"), logging.ERROR)
-            return False
-        self.logMessage("<b>" + _("Load finished") + "</b><p></p>")
-        return True
+        """Returns True is scene loading was successful, False if failed."""
+        loadedNode = self.loadNode(uri, None, "SceneFile", fileProperties)
+        success = loadedNode is not None
+        return success
 
     def loadNode(self, uri, name, fileType=None, fileProperties={}):
+        """Returns the first loaded node (or the scene if the reader did not provide a specific node) on success.
+        Returns None if failed.
+        """
         self.logMessage("<b>" + _("Requesting load {name} from {uri} ...").format(name=name, uri=uri) + "</b>")
 
         fileProperties["fileName"] = uri
-        fileProperties["name"] = name
+        if name:
+            fileProperties["name"] = name
         if not fileType:
             fileType = slicer.app.coreIOManager().fileType(fileProperties["fileName"])
         firstLoadedNode = None
         loadedNodes = vtk.vtkCollection()
         success = slicer.app.coreIOManager().loadNodes(fileType, fileProperties, loadedNodes)
-
-        if not success or loadedNodes.GetNumberOfItems() < 1:
-            self.logMessage("\t" + _("Load failed!"), logging.ERROR)
-            return None
+        if not success:
+            if loadedNodes.GetNumberOfItems() < 1:
+                self.logMessage("\t" + _("Load failed!"), logging.ERROR)
+                return None
+            else:
+                # Loading did not fail, because some nodes were loaded, proceed with a warning
+                self.logMessage(_("Error was reported while loading {count} nodes from {path}").format(
+                                count=loadedNodes.GetNumberOfItems(), path=uri), logging.WARNING)
 
         self.logMessage("<b>" + _("Load finished") + "</b><p></p>")
 
@@ -976,7 +1178,13 @@ class SampleDataLogic:
             slicer.mrmlScene.RemoveNode(storageNode)
             loadedNode.SetAndObserveStorageNodeID(None)
 
-        return loadedNodes.GetItemAsObject(0)
+        firstLoadedNode = loadedNodes.GetItemAsObject(0)
+        if firstLoadedNode:
+            return firstLoadedNode
+        else:
+            # If a reader does not report loading of any specific node (it may happen for example with a scene reader)
+            # then return the scene to distinguish from a load error.
+            return slicer.mrmlScene
 
 
 class SampleDataTest(ScriptedLoadableModuleTest):
@@ -1033,7 +1241,7 @@ class SampleDataTest(ScriptedLoadableModuleTest):
         sceneMTime = slicer.mrmlScene.GetMTime()
         filePaths = logic.downloadFromSource(SampleDataSource(
             uris=TESTING_DATA_URL + "SHA256/cc211f0dfd9a05ca3841ce1141b292898b2dd2d3f08286affadf823a7e58df93",
-            fileNames="MR-head.nrrd"))
+            fileNames="MR-head.nrrd", loadFiles=False))
         self.assertEqual(len(filePaths), 1)
         self.assertTrue(os.path.exists(filePaths[0]))
         self.assertTrue(os.path.isfile(filePaths[0]))
@@ -1043,7 +1251,8 @@ class SampleDataTest(ScriptedLoadableModuleTest):
         filePaths = logic.downloadFromSource(SampleDataSource(
             uris=[TESTING_DATA_URL + "SHA256/cc211f0dfd9a05ca3841ce1141b292898b2dd2d3f08286affadf823a7e58df93",
                   TESTING_DATA_URL + "SHA256/4507b664690840abb6cb9af2d919377ffc4ef75b167cb6fd0f747befdb12e38e"],
-            fileNames=["MR-head.nrrd", "CT-chest.nrrd"]))
+            fileNames=["MR-head.nrrd", "CT-chest.nrrd"],
+            loadFiles=[False, False]))
         self.assertEqual(len(filePaths), 2)
         self.assertTrue(os.path.exists(filePaths[0]))
         self.assertTrue(os.path.isfile(filePaths[0]))
@@ -1056,7 +1265,8 @@ class SampleDataTest(ScriptedLoadableModuleTest):
         sceneMTime = slicer.mrmlScene.GetMTime()
         filePaths = logic.downloadFromSource(SampleDataSource(
             uris=TESTING_DATA_URL + "SHA256/b902f635ef2059cd3b4ba854c000b388e4a9e817a651f28be05c22511a317ec7",
-            fileNames="TinyPatient_Seg.zip"))
+            fileNames="TinyPatient_Seg.zip",
+            loadFileTypes="ZipFile"))
         self.assertEqual(len(filePaths), 1)
         self.assertTrue(os.path.exists(filePaths[0]))
         self.assertTrue(os.path.isdir(filePaths[0]))
@@ -1065,12 +1275,11 @@ class SampleDataTest(ScriptedLoadableModuleTest):
     def test_downloadFromSource_loadMRBFile(self):
         logic = SampleDataLogic()
         sceneMTime = slicer.mrmlScene.GetMTime()
-        filePaths = logic.downloadFromSource(SampleDataSource(
+        nodes = logic.downloadFromSource(SampleDataSource(
             uris=TESTING_DATA_URL + "SHA256/5a1c78c3347f77970b1a29e718bfa10e5376214692d55a7320af94b9d8d592b8",
             loadFiles=True, fileNames="slicer4minute.mrb"))
-        self.assertEqual(len(filePaths), 1)
-        self.assertTrue(os.path.exists(filePaths[0]))
-        self.assertTrue(os.path.isfile(filePaths[0]))
+        self.assertEqual(len(nodes), 1)
+        self.assertIsInstance(nodes[0], slicer.vtkMRMLCameraNode)
         self.assertTrue(sceneMTime < slicer.mrmlScene.GetMTime())
 
     def test_downloadFromSource_loadMRMLFile(self):
@@ -1084,11 +1293,10 @@ class SampleDataTest(ScriptedLoadableModuleTest):
       """).strip())
         tempFile.close()
         sceneMTime = slicer.mrmlScene.GetMTime()
-        filePaths = logic.downloadFromSource(SampleDataSource(
+        nodes = logic.downloadFromSource(SampleDataSource(
             uris=self.path2uri(tempFile.fileName()), loadFiles=True, fileNames="scene.mrml"))
-        self.assertEqual(len(filePaths), 1)
-        self.assertTrue(os.path.exists(filePaths[0]))
-        self.assertTrue(os.path.isfile(filePaths[0]))
+        self.assertEqual(len(nodes), 1)
+        self.assertIsInstance(nodes[0], slicer.vtkMRMLScene)
         self.assertTrue(sceneMTime < slicer.mrmlScene.GetMTime())
 
     def test_downloadFromSource_downloadMRBFile(self):
@@ -1096,7 +1304,8 @@ class SampleDataTest(ScriptedLoadableModuleTest):
         sceneMTime = slicer.mrmlScene.GetMTime()
         filePaths = logic.downloadFromSource(SampleDataSource(
             uris=TESTING_DATA_URL + "SHA256/5a1c78c3347f77970b1a29e718bfa10e5376214692d55a7320af94b9d8d592b8",
-            fileNames="slicer4minute.mrb"))
+            fileNames="slicer4minute.mrb",
+            loadFileTypes="SceneFile"))
         self.assertEqual(len(filePaths), 1)
         self.assertTrue(os.path.exists(filePaths[0]))
         self.assertTrue(os.path.isfile(filePaths[0]))
@@ -1114,7 +1323,7 @@ class SampleDataTest(ScriptedLoadableModuleTest):
         tempFile.close()
         sceneMTime = slicer.mrmlScene.GetMTime()
         filePaths = logic.downloadFromSource(SampleDataSource(
-            uris=self.path2uri(tempFile.fileName()), fileNames="scene.mrml"))
+            uris=self.path2uri(tempFile.fileName()), fileNames="scene.mrml", loadFileTypes="SceneFile"))
         self.assertEqual(len(filePaths), 1)
         self.assertTrue(os.path.exists(filePaths[0]))
         self.assertTrue(os.path.isfile(filePaths[0]))
@@ -1128,15 +1337,24 @@ class SampleDataTest(ScriptedLoadableModuleTest):
         self.assertEqual(len(nodes), 1)
         self.assertEqual(nodes[0], slicer.mrmlScene.GetFirstNodeByName("MRHead"))
 
+    def test_downloadFromSource_loadNodeWithoutNodeName(self):
+        logic = SampleDataLogic()
+        nodes = logic.downloadFromSource(SampleDataSource(
+            uris=TESTING_DATA_URL + "MD5/39b01631b7b38232a220007230624c8e",
+            fileNames="MR-head.nrrd"))
+        self.assertEqual(len(nodes), 1)
+        self.assertEqual(nodes[0], slicer.mrmlScene.GetFirstNodeByName("MR-head"))
+
     def test_downloadFromSource_loadNodeFromMultipleFiles(self):
         logic = SampleDataLogic()
         nodes = logic.downloadFromSource(SampleDataSource(
-            uris=[TESTING_DATA_URL + "SHA256/d785837276758ddd9d21d76a3694e7fd866505a05bc305793517774c117cb38d",
-                  TESTING_DATA_URL + "SHA256/67564aa42c7e2eec5c3fd68afb5a910e9eab837b61da780933716a3b922e50fe"],
-            fileNames=["DTIVolume.raw.gz", "DTIVolume.nhdr"],
-            nodeNames=[None, "DTIVolume"]))
+            uris=[TESTING_DATA_URL + "SHA256/bbfd8dd1914e9d7af09df3f6e254374064f6993a37552cc587581623a520a11f",
+                  TESTING_DATA_URL + "SHA256/33825585b01a506e532934581a7bddd9de9e7b898e24adfed5454ffc6dfe48ea"],
+            fileNames=["MRHeadResampled.raw.gz", "MRHeadResampled.nhdr"],
+            nodeNames=[None, "MRHeadResampled"],
+            loadFiles=[False, True]))
         self.assertEqual(len(nodes), 1)
-        self.assertEqual(nodes[0], slicer.mrmlScene.GetFirstNodeByName("DTIVolume"))
+        self.assertEqual(nodes[0], slicer.mrmlScene.GetFirstNodeByName("MRHeadResampled"))
 
     def test_downloadFromSource_loadNodesWithLoadFileFalse(self):
         logic = SampleDataLogic()
@@ -1161,6 +1379,16 @@ class SampleDataTest(ScriptedLoadableModuleTest):
         self.assertEqual(len(nodes), 2)
         self.assertEqual(nodes[0], slicer.mrmlScene.GetFirstNodeByName("MRHead"))
         self.assertEqual(nodes[1], slicer.mrmlScene.GetFirstNodeByName("CTChest"))
+
+    def test_downloadFromSource_loadNodesWithoutNodeNames(self):
+        logic = SampleDataLogic()
+        nodes = logic.downloadFromSource(SampleDataSource(
+            uris=[TESTING_DATA_URL + "SHA256/cc211f0dfd9a05ca3841ce1141b292898b2dd2d3f08286affadf823a7e58df93",
+                  TESTING_DATA_URL + "SHA256/4507b664690840abb6cb9af2d919377ffc4ef75b167cb6fd0f747befdb12e38e"],
+            fileNames=["MR-head.nrrd", "CT-chest.nrrd"]))
+        self.assertEqual(len(nodes), 2)
+        self.assertEqual(nodes[0], slicer.mrmlScene.GetFirstNodeByName("MR-head"))
+        self.assertEqual(nodes[1], slicer.mrmlScene.GetFirstNodeByName("CT-chest"))
 
     def test_sampleDataSourcesByCategory(self):
         self.assertTrue(len(SampleDataLogic.sampleDataSourcesByCategory()) > 0)

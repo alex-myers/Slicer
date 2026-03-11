@@ -29,13 +29,15 @@ or http://www.slicer.org/copyright/copyright.txt for details.
 class VTK_MRML_EXPORT vtkCodedEntry : public vtkObject
 {
 public:
-
-  static vtkCodedEntry *New();
+  static vtkCodedEntry* New();
   vtkTypeMacro(vtkCodedEntry, vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent) override;
 
   /// Reset state of object
   virtual void Initialize();
+
+  /// All fields are empty
+  virtual bool IsEmpty();
 
   /// Copy one type into another
   virtual void Copy(vtkCodedEntry* aEntry);
@@ -87,6 +89,9 @@ public:
   /// \return true on success
   bool SetFromString(const std::string& content);
 
+  /// Returns true if the two coded entries have the same content
+  static bool AreEqual(vtkCodedEntry* entry1, vtkCodedEntry* entry2);
+
 protected:
   vtkCodedEntry();
   ~vtkCodedEntry() override;
@@ -94,9 +99,9 @@ protected:
   void operator=(const vtkCodedEntry&);
 
 protected:
-  char* CodeValue{nullptr};
-  char* CodingSchemeDesignator{nullptr};
-  char* CodeMeaning{nullptr};
+  char* CodeValue{ nullptr };
+  char* CodingSchemeDesignator{ nullptr };
+  char* CodeMeaning{ nullptr };
 };
 
 #endif

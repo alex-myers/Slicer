@@ -31,14 +31,13 @@
 #include <vtkSmartPointer.h>
 
 // --------------------------------------------------------------------------
-class qMRMLLabelComboBoxTester: public QObject
+class qMRMLLabelComboBoxTester : public QObject
 {
   Q_OBJECT
 private:
-
   vtkSmartPointer<vtkMRMLColorTableNode> ColorTableNode;
 
-  qMRMLLabelComboBox * LabelComboBox;
+  qMRMLLabelComboBox* LabelComboBox;
 
 private slots:
   void init();
@@ -165,4 +164,4 @@ void qMRMLLabelComboBoxTester::testSetColorNameVisible()
 
 // ----------------------------------------------------------------------------
 CTK_TEST_MAIN(qMRMLLabelComboBoxTest)
-#include "moc_qMRMLLabelComboBoxTest.cxx"
+#include "qMRMLLabelComboBoxTest.moc"

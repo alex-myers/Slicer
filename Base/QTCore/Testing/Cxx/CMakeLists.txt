@@ -88,33 +88,12 @@ if(BUILD_TESTING)
     EXTRA_INCLUDE vtkMRMLDebugLeaksMacro.h
     )
 
-  set(KIT_TEST_GENERATE_MOC_SRCS
-    qSlicerSslTest.cxx
-    )
-
-  if(Slicer_BUILD_EXTENSIONMANAGER_SUPPORT)
-    list(APPEND KIT_TEST_GENERATE_MOC_SRCS
-      qSlicerExtensionsManagerModelTest.cxx
-      qSlicerPersistentCookieJarTest.cxx
-      )
-  endif()
-
-  if(Slicer_BUILD_APPLICATIONUPDATE_SUPPORT)
-  list(APPEND KIT_TEST_GENERATE_MOC_SRCS
-    qSlicerApplicationUpdateManagerTest.cxx
-    )
-  endif()
-
-  if(Slicer_USE_PYTHONQT)
-    list(APPEND KIT_TEST_GENERATE_MOC_SRCS
-      qSlicerCorePythonManagerWithoutApplicationTest.cxx
-      )
-  endif()
-
   set(KIT_TEST_TARGET_LIBRARIES ${KIT})
-    QT5_GENERATE_MOCS(${KIT_TEST_GENERATE_MOC_SRCS})
-    QT5_ADD_RESOURCES(Tests ${resources_dir}/${KIT}Testing.qrc)
-    list(APPEND KIT_TEST_TARGET_LIBRARIES Qt5::Test)
+    list(APPEND KIT_TEST_TARGET_LIBRARIES Qt${CTK_QT_VERSION}::Test)
+
+  list(APPEND Tests
+    ${resources_dir}/${KIT}Testing.qrc
+    )
 
   if(Slicer_USE_PYTHONQT)
   list(APPEND KIT_TEST_TARGET_LIBRARIES
@@ -127,15 +106,25 @@ if(BUILD_TESTING)
   set_target_properties(${KIT}CxxTests PROPERTIES LABELS ${KIT})
   set_target_properties(${KIT}CxxTests PROPERTIES FOLDER "Core-Base")
 
+  # Configure CMake Qt automatic code generation
+  set_target_properties(${KIT}CxxTests PROPERTIES
+    AUTOMOC ON
+    AUTORCC ON
+    )
+
   #
   # Add Tests
   #
 
   # Remark: qSlicerModuleFactoryManager class is tested within Applications/SlicerApp/Testing
 
+  #-----------------------------------------------------------------------------
+  # Temporary test directory for file writing
+  set(TEMP "${CMAKE_BINARY_DIR}/Testing/Temporary")
+
   simple_test( qSlicerCoreApplicationTest1)
   set_property(TEST qSlicerCoreApplicationTest1 PROPERTY LABELS ${LIBRARY_NAME})
-  simple_test( qSlicerCoreIOManagerTest1 )
+  simple_test( qSlicerCoreIOManagerTest1 ${TEMP})
   set_property(TEST qSlicerCoreIOManagerTest1 PROPERTY LABELS ${LIBRARY_NAME})
   simple_test( qSlicerAbstractCoreModuleTest1 )
   simple_test( qSlicerLoadableModuleFactoryTest1 )

@@ -28,6 +28,7 @@ macro(slicerMacroBuildAppLibrary)
     EXPORT_DIRECTIVE
     FOLDER
     APPLICATION_NAME
+    APPLICATION_DISPLAY_NAME
     DESCRIPTION_SUMMARY
     DESCRIPTION_FILE
     )
@@ -138,23 +139,6 @@ macro(slicerMacroBuildAppLibrary)
   set(dynamicHeaders
     "${dynamicHeaders};${CMAKE_CURRENT_BINARY_DIR}/${MY_EXPORT_HEADER_PREFIX}Export.h")
 
-  #-----------------------------------------------------------------------------
-  # Sources
-  # --------------------------------------------------------------------------
-    set(_moc_options OPTIONS -DSlicer_HAVE_QT5)
-    QT5_WRAP_CPP(SLICERAPPLIB_MOC_OUTPUT ${SLICERAPPLIB_MOC_SRCS} ${_moc_options})
-    QT5_WRAP_UI(SLICERAPPLIB_UI_CXX ${SLICERAPPLIB_UI_SRCS})
-    if(DEFINED SLICERAPPLIB_RESOURCES)
-      QT5_ADD_RESOURCES(SLICERAPPLIB_QRC_SRCS ${SLICERAPPLIB_RESOURCES})
-    endif()
-
-  set_source_files_properties(
-    ${SLICERAPPLIB_UI_CXX}
-    ${SLICERAPPLIB_MOC_OUTPUT}
-    ${SLICERAPPLIB_QRC_SRCS}
-    WRAP_EXCLUDE
-    )
-
   # --------------------------------------------------------------------------
   # Source groups
   # --------------------------------------------------------------------------
@@ -165,9 +149,6 @@ macro(slicerMacroBuildAppLibrary)
   )
 
   source_group("Generated" FILES
-    ${SLICERAPPLIB_UI_CXX}
-    ${SLICERAPPLIB_MOC_OUTPUT}
-    ${SLICERAPPLIB_QRC_SRCS}
     ${dynamicHeaders}
   )
 
@@ -200,11 +181,33 @@ macro(slicerMacroBuildAppLibrary)
   # --------------------------------------------------------------------------
   add_library(${lib_name}
     ${SLICERAPPLIB_SRCS}
-    ${SLICERAPPLIB_MOC_OUTPUT}
-    ${SLICERAPPLIB_UI_CXX}
-    ${SLICERAPPLIB_QRC_SRCS}
+    ${SLICERAPPLIB_RESOURCES}
     ${QM_OUTPUT_FILES}
     )
+
+  target_compile_definitions(${lib_name} PRIVATE
+    $<$<BOOL:${Qt5_VERSION_MAJOR}>:Slicer_HAVE_QT5>
+    $<$<BOOL:${Qt6_VERSION_MAJOR}>:Slicer_HAVE_QT6>
+    )
+
+  # Configure CMake Qt automatic code generation
+  set(uic_search_paths)
+  foreach(ui_src IN LISTS SLICERAPPLIB_UI_SRCS)
+    if(NOT IS_ABSOLUTE ${ui_src})
+      set(ui_src "${CMAKE_CURRENT_SOURCE_DIR}/${ui_src}")
+    endif()
+    get_filename_component(ui_path ${ui_src} PATH)
+    list(APPEND uic_search_paths ${ui_path})
+  endforeach()
+  list(REMOVE_DUPLICATES uic_search_paths)
+
+  set_target_properties(${lib_name} PROPERTIES
+    AUTOMOC ON
+    AUTORCC ON
+    AUTOUIC ON
+    AUTOUIC_SEARCH_PATHS "${uic_search_paths}"
+    )
+
   set_target_properties(${lib_name} PROPERTIES LABELS ${lib_name})
 
   # Apply user-defined properties to the library target.
@@ -276,6 +279,7 @@ macro(slicerMacroBuildApplication)
     NAME
     FOLDER
     APPLICATION_NAME
+    APPLICATION_DISPLAY_NAME
 
     DEFAULT_SETTINGS_FILE
     SPLASHSCREEN_ENABLED
@@ -357,6 +361,7 @@ macro(slicerMacroBuildApplication)
   endif()
 
   _set_app_property("APPLICATION_NAME")
+  _set_app_property("APPLICATION_DISPLAY_NAME")
 
   macro(_set_path_var varname)
     if(NOT IS_ABSOLUTE ${SLICERAPP_${varname}})
@@ -698,10 +703,13 @@ macro(slicerMacroBuildApplication)
       include(SlicerBlockCTKAppLauncherSettings)
 
       if(SLICERAPP_SPLASHSCREEN_ENABLED)
+        # Application launcher splashscreen is shown until the application is started (and writes something to its output)
+        # or SPLASHSCREEN_HIDE_DELAY_MS time is elapsed - whichever comes first.
+        # 3 minutes (180000ms) should be sufficient to get the application started on all platforms.
         set(_launcher_splashscreen_args
           SPLASH_IMAGE_PATH ${SLICERAPP_LAUNCHER_SPLASHSCREEN_FILE}
           SPLASH_IMAGE_INSTALL_SUBDIR ${Slicer_BIN_DIR}
-          SPLASHSCREEN_HIDE_DELAY_MS 3000
+          SPLASHSCREEN_HIDE_DELAY_MS 180000
           )
         set(_launcher_application_default_arguments "${SLICERAPP_APPLICATION_DEFAULT_ARGUMENTS}")
       else()

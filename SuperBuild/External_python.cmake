@@ -51,8 +51,10 @@ if((NOT DEFINED PYTHON_INCLUDE_DIR
 
   set(python_SOURCE_DIR "${CMAKE_BINARY_DIR}/Python-${Slicer_REQUIRED_PYTHON_VERSION}")
 
-  set(_download_3.9.10_url "https://www.python.org/ftp/python/3.9.10/Python-3.9.10.tgz")
-  set(_download_3.9.10_md5 "1440acb71471e2394befdb30b1a958d1")
+  # Python version update notes:
+  # - When updating to Python >= 3.13, remove explicit setting of ENABLE_NIS to OFF below.
+  set(_download_3.12.10_url "https://www.python.org/ftp/python/3.12.10/Python-3.12.10.tgz")
+  set(_download_3.12.10_md5 "35c03f014408e26e2b06d576c19cac54")
 
   set(EXTERNAL_PROJECT_OPTIONAL_ARGS)
   if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24")
@@ -123,6 +125,15 @@ if((NOT DEFINED PYTHON_INCLUDE_DIR
       )
   endif()
 
+  if(UNIX)
+    # Disable "nis" module deprecated since version 3.11 and removed in version 3.13.
+    # Explicitly disabling the module in Python 3.12 allows to simplify the distribution of Slicer
+    # by removing the dependencies "tirpc" and "nsl" libraries.
+    list(APPEND EXTERNAL_PROJECT_OPTIONAL_CMAKE_CACHE_ARGS
+      -DENABLE_NIS:BOOL=OFF
+      )
+  endif()
+
   ExternalProject_SetIfNotDefined(
     Slicer_${proj}_GIT_REPOSITORY
     "${EP_GIT_PROTOCOL}://github.com/python-cmake-buildsystem/python-cmake-buildsystem.git"
@@ -131,7 +142,7 @@ if((NOT DEFINED PYTHON_INCLUDE_DIR
 
   ExternalProject_SetIfNotDefined(
     Slicer_${proj}_GIT_TAG
-    "bb45aa7a4cfc7a5a93bc490c6158f702d1a2226f"
+    "5d8959631a7b647cf79cca62fabe1c1024b56247"
     QUIET
     )
 
@@ -268,6 +279,46 @@ if((NOT DEFINED PYTHON_INCLUDE_DIR
         ExternalProject_Message(${proj} "${_msg} - yes")
       else()
         ExternalProject_Message(${proj} "${_msg} - no")
+      endif()
+    endif()
+
+    if(UNIX AND NOT APPLE)
+      if(NOT DEFINED PYTHON_CONFIGURE_MANYLINUX_MODULE)
+        set(PYTHON_CONFIGURE_MANYLINUX_MODULE ON)
+      endif()
+      set(PYTHON_MANYLINUX_MODULE_FILEPATH "${python_DIR}/${PYTHON_STDLIB_SUBDIR}/_manylinux.py")
+      set(_msg "Configure _manylinux module")
+      ExternalProject_Message(${proj} "${_msg}")
+      if(PYTHON_CONFIGURE_MANYLINUX_MODULE)
+        ExternalProject_Add_Step(${proj} configure_manylinux_module
+          COMMAND ${CMAKE_COMMAND}
+            -DPYTHON_CONFIGURE_MANYLINUX_MODULE:BOOL=${PYTHON_CONFIGURE_MANYLINUX_MODULE}
+            -DPYTHON_MANYLINUX_MODULE_FILEPATH:FILEPATH=${PYTHON_MANYLINUX_MODULE_FILEPATH}
+            -P ${Slicer_SOURCE_DIR}/SuperBuild/python_configure_manylinux_module.cmake
+          BYPRODUCTS ${PYTHON_MANYLINUX_MODULE_FILEPATH}
+          DEPENDEES install
+          )
+        ExternalProject_Message(${proj} "${_msg} - yes")
+      else()
+        ExternalProject_Message(${proj} "${_msg} - no")
+
+        # If configuration of _manylinux module is disabled, by default
+        # existing copy of the module will be removed so that installation
+        # of python packages is not inadverdently impacted.
+        if(NOT DEFINED PYTHON_REMOVE_MANYLINUX_MODULE_IF_EXISTS)
+          set(PYTHON_REMOVE_MANYLINUX_MODULE_IF_EXISTS ON)
+        endif()
+        set(_msg "Remove _manylinux module if already configured")
+        ExternalProject_Message(${proj} "${_msg}")
+        if(PYTHON_REMOVE_MANYLINUX_MODULE_IF_EXISTS)
+          ExternalProject_Add_Step(${proj} remove_manylinux_module
+            COMMAND ${CMAKE_COMMAND} -E remove -f ${PYTHON_MANYLINUX_MODULE_FILEPATH}
+            DEPENDEES install
+            )
+          ExternalProject_Message(${proj} "${_msg} - yes")
+        else()
+          ExternalProject_Message(${proj} "${_msg} - no")
+        endif()
       endif()
     endif()
   endif()

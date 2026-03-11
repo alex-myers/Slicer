@@ -30,15 +30,16 @@
 
 // MRML includes
 #include <vtkMRMLScene.h>
-#include <vtkMRMLSceneViewNode.h>
 #include <vtkMRMLMarkupsJsonStorageNode.h>
 #include <vtkMRMLMarkupsFiducialStorageNode.h>
 #include <vtkMRMLStorableNode.h>
 #include <vtkMRMLStorageNode.h>
 
 // VTK includes
-#include <vtkStdString.h>
 #include <vtkStringArray.h>
+
+// STD includes
+#include <string>
 
 //----------------------------------------------------------------------------
 qSlicerMarkupsWriter::qSlicerMarkupsWriter(QObject* parentObject)
@@ -50,7 +51,7 @@ qSlicerMarkupsWriter::qSlicerMarkupsWriter(QObject* parentObject)
 qSlicerMarkupsWriter::~qSlicerMarkupsWriter() = default;
 
 //----------------------------------------------------------------------------
-QStringList qSlicerMarkupsWriter::extensions(vtkObject* vtkNotUsed(object))const
+QStringList qSlicerMarkupsWriter::extensions(vtkObject* vtkNotUsed(object)) const
 {
   QStringList supportedExtensions;
 
@@ -58,7 +59,7 @@ QStringList qSlicerMarkupsWriter::extensions(vtkObject* vtkNotUsed(object))const
   const int formatCount = jsonStorageNode->GetSupportedWriteFileTypes()->GetNumberOfValues();
   for (int formatIt = 0; formatIt < formatCount; ++formatIt)
   {
-    vtkStdString format = jsonStorageNode->GetSupportedWriteFileTypes()->GetValue(formatIt);
+    std::string format = jsonStorageNode->GetSupportedWriteFileTypes()->GetValue(formatIt);
     supportedExtensions << QString::fromStdString(format);
   }
 
@@ -66,7 +67,7 @@ QStringList qSlicerMarkupsWriter::extensions(vtkObject* vtkNotUsed(object))const
   const int fidsFormatCount = fcsvStorageNode->GetSupportedWriteFileTypes()->GetNumberOfValues();
   for (int formatIt = 0; formatIt < fidsFormatCount; ++formatIt)
   {
-    vtkStdString format = fcsvStorageNode->GetSupportedWriteFileTypes()->GetValue(formatIt);
+    std::string format = fcsvStorageNode->GetSupportedWriteFileTypes()->GetValue(formatIt);
     supportedExtensions << QString::fromStdString(format);
   }
 

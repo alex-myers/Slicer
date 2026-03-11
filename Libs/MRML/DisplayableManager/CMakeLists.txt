@@ -1,7 +1,7 @@
 project(MRMLDisplayableManager)
 
 #-----------------------------------------------------------------------------
-cmake_minimum_required(VERSION 3.16.3...3.19.7 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.20.6...3.22.6 FATAL_ERROR)
 #-----------------------------------------------------------------------------
 
 # --------------------------------------------------------------------------
@@ -75,6 +75,7 @@ set(DisplayableManager_SRCS
   vtkMRMLModelDisplayableManager.cxx
   vtkMRMLViewDisplayableManager.cxx
   vtkMRMLThreeDReformatDisplayableManager.cxx
+  vtkMRMLThreeDSliceEdgeDisplayableManager.cxx
 
   # DisplayableManager associated with SliceView
   vtkMRMLCrosshairDisplayableManager.cxx
@@ -94,8 +95,6 @@ set(KIT_SRCS
   vtkMRMLDisplayableManagerGroup.cxx
   vtkMRMLDisplayableManagerFactory.cxx
 
-  vtkMRMLInteractionEventData.cxx
-
   # ThreeDView factory and DisplayableManager
   vtkMRMLAbstractThreeDViewDisplayableManager.cxx
   vtkMRMLThreeDViewDisplayableManagerFactory.cxx
@@ -114,15 +113,13 @@ set(KIT_SRCS
   vtkMRMLCameraWidget.cxx
   vtkMRMLInteractionWidget.cxx
   vtkMRMLInteractionWidgetRepresentation.cxx
+  vtkMRMLSliceEdgeWidgetRepresentation.cxx
   vtkMRMLSliceIntersectionWidget.cxx
   vtkMRMLSliceIntersectionRepresentation2D.cxx
   vtkMRMLSliceIntersectionInteractionRepresentation.cxx
   vtkMRMLSliceIntersectionInteractionRepresentationHelper.cxx
   vtkMRMLRubberBandWidgetRepresentation.cxx
   vtkMRMLWindowLevelWidget.cxx
-
-  # Proxy classes
-  vtkMRMLLightBoxRendererManagerProxy.cxx
   )
 
 set_source_files_properties(
@@ -193,6 +190,22 @@ endif()
 if(Slicer_LIBRARY_PROPERTIES)
   set_target_properties(${lib_name} PROPERTIES ${Slicer_LIBRARY_PROPERTIES})
 endif()
+
+# --------------------------------------------------------------------------
+# Generate export header
+# --------------------------------------------------------------------------
+include(GenerateExportHeader)
+set(autoinit_code [[
+#if defined(MRMLDisplayableManager_AUTOINIT)
+# include <vtkAutoInit.h>
+VTK_AUTOINIT(MRMLDisplayableManager)
+#endif
+]])
+generate_export_header(${lib_name}
+  EXPORT_FILE_NAME ${CMAKE_CURRENT_BINARY_DIR}/vtkMRMLDisplayableManagerExport.h
+  EXPORT_MACRO_NAME VTK_MRML_DISPLAYABLEMANAGER_EXPORT
+  CUSTOM_CONTENT_FROM_VARIABLE autoinit_code
+)
 
 # --------------------------------------------------------------------------
 # Folder

@@ -71,7 +71,7 @@ public:
   static QString executableExtension();
 
   /// This function returns ".dll. on windows, ".so" on linux and ".dylib" on Mac
-  //static QString libraryExtension();
+  // static QString libraryExtension();
 
   /// Extract module name given a library name
   /// For example:
@@ -173,7 +173,6 @@ public:
   /// Return \a true if the \a inputPath ends with \a path
   static bool pathEndsWith(const QString& inputPath, const QString& path);
 
-
   /// Set permissions of \a path. If \a path is a directory, permissions will be set to all its descendant.
   /// While recursively traversing the tree structure, if \a path or one of its descendant
   /// is a file, \a filePermissions will be set otherwise \a directoryPermissions will be set.
@@ -181,9 +180,7 @@ public:
   /// traversing will be aborted and the permission already set won't be reverted.
   /// \return \c true on success, \c false otherwise.
   /// \sa QFile::setPermissions()
-  static bool setPermissionsRecursively(const QString &path,
-                                        QFile::Permissions directoryPermissions,
-                                        QFile::Permissions filePermissions);
+  static bool setPermissionsRecursively(const QString& path, QFile::Permissions directoryPermissions, QFile::Permissions filePermissions);
 
   /// \brief Return an updated \a text where Slicer wiki URL version is replaced
   /// with the provided one. It is now deprecated as the Slicer wiki is no longer
@@ -231,11 +228,15 @@ public:
   ///   generate their versioned links (for example, using qSlicerCoreApplication::documentationVersion()).
   static QString replaceDocumentationUrlVersion(const QString& text, const QString& hostname, const QString& version);
 
+  /// Safely convert a char pointer to QString.
+  /// It does the same as QString::fromUtf8 but it does not crash when the input is a null pointer.
+  /// If the input is a null pointer then an empty QString is returned.
+  static QString safeQStringFromUtf8Ptr(const char* cString);
+
 private:
   /// Not implemented
   qSlicerUtils() = default;
   virtual ~qSlicerUtils() = default;
-
 };
 
 #endif

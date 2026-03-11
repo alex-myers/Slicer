@@ -1,7 +1,7 @@
 project(RemoteIO)
 
 #-----------------------------------------------------------------------------
-cmake_minimum_required(VERSION 3.16.3...3.19.7 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.20.6...3.22.6 FATAL_ERROR)
 #-----------------------------------------------------------------------------
 
 # --------------------------------------------------------------------------
@@ -56,15 +56,6 @@ set(include_dirs
 include_directories(${include_dirs})
 
 # --------------------------------------------------------------------------
-# Configure headers
-# --------------------------------------------------------------------------
-set(configure_header_file vtkRemoteIOConfigure.h)
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/${configure_header_file}.in
-  ${CMAKE_CURRENT_BINARY_DIR}/${configure_header_file}
-  )
-
-# --------------------------------------------------------------------------
 # Install headers
 # --------------------------------------------------------------------------
 if(NOT DEFINED ${PROJECT_NAME}_INSTALL_NO_DEVELOPMENT)
@@ -92,10 +83,22 @@ set(srcs ${RemoteIO_SRCS})
 
 add_library(${lib_name} ${srcs})
 
+# Define CURL_STATICLIB when linking against static curl on Windows
+if(WIN32)
+  target_compile_definitions(${lib_name} PRIVATE CURL_STATICLIB)
+endif()
+
 set(libs
   ${CURL_LIBRARIES}
   MRMLCore
   )
+if(WIN32)
+  list(APPEND libs
+    # For curl
+    iphlpapi  # for if_nametoindex
+    ws2_32  # for Windows sockets
+    )
+endif()
 if(Slicer_USE_PYTHONQT_WITH_OPENSSL)
   list(APPEND libs
     ${OPENSSL_LIBRARIES}
@@ -107,6 +110,15 @@ target_link_libraries(${lib_name} ${libs})
 if(Slicer_LIBRARY_PROPERTIES)
   set_target_properties(${lib_name} PROPERTIES ${Slicer_LIBRARY_PROPERTIES})
 endif()
+
+# --------------------------------------------------------------------------
+# Generate export header
+# --------------------------------------------------------------------------
+include(GenerateExportHeader)
+generate_export_header(${lib_name}
+  EXPORT_FILE_NAME ${CMAKE_CURRENT_BINARY_DIR}/vtkRemoteIOExport.h
+  EXPORT_MACRO_NAME VTK_RemoteIO_EXPORT
+)
 
 # --------------------------------------------------------------------------
 # Folder

@@ -35,11 +35,16 @@
 
 // Terminologies includes
 #include "qSlicerTerminologyItemDelegate.h"
+#include "qSlicerTerminologySelectorDialog.h"
+#include "qSlicerTerminologyNavigatorWidget.h"
+
+#include "vtkSlicerTerminologiesModuleLogic.h"
+#include "vtkSlicerTerminologyEntry.h"
 
 // MRML includes
-#include <vtkMRMLScene.h>
 #include <vtkMRMLLabelMapVolumeNode.h>
 #include <vtkMRMLModelNode.h>
+#include <vtkMRMLScene.h>
 #include <vtkMRMLSliceLogic.h>
 #include <vtkMRMLSliceNode.h>
 
@@ -52,6 +57,9 @@
 #include <qMRMLItemDelegate.h>
 #include <qMRMLSliceWidget.h>
 
+// CTK includes
+#include <ctkColorDialog.h>
+
 // VTK includes
 #include <vtkWeakPointer.h>
 
@@ -63,6 +71,7 @@
 #include <QMenu>
 #include <QMessageBox>
 #include <QModelIndex>
+#include <QSettings>
 #include <QStringList>
 #include <QTimer>
 #include <QToolButton>
@@ -84,10 +93,7 @@ struct SegmentListFilterParameters
   const char* TextFilterKey = "text";
   const char* StatusFilterKey = "status";
 
-  SegmentListFilterParameters()
-  {
-    this->init();
-  }
+  SegmentListFilterParameters() { this->init(); }
 
   void init()
   {
@@ -143,7 +149,7 @@ struct SegmentListFilterParameters
       {
         this->TextFilter = value;
       }
-      else if(key == this->StatusFilterKey)
+      else if (key == this->StatusFilterKey)
       {
         QStringList statusFilters = value.split(this->ValueSeparator);
         for (QString statusString : statusFilters)
@@ -161,12 +167,13 @@ struct SegmentListFilterParameters
 };
 
 //-----------------------------------------------------------------------------
-class qMRMLSegmentsTableViewPrivate: public Ui_qMRMLSegmentsTableView
+class qMRMLSegmentsTableViewPrivate : public Ui_qMRMLSegmentsTableView
 {
   Q_DECLARE_PUBLIC(qMRMLSegmentsTableView);
 
 protected:
   qMRMLSegmentsTableView* const q_ptr;
+
 public:
   qMRMLSegmentsTableViewPrivate(qMRMLSegmentsTableView& object);
   void init();
@@ -179,41 +186,46 @@ public:
   vtkWeakPointer<vtkMRMLSegmentationNode> SegmentationNode;
 
   /// Flag determining whether the long-press per-view segment visibility options are available
-  bool AdvancedSegmentVisibility;
+  bool AdvancedSegmentVisibility{ false };
 
   /// Currently, if we are requesting segment display information from the
   /// segmentation display node,  the display node may emit modification events.
   /// We make sure these events do not interrupt the update process by setting
   /// IsUpdatingWidgetFromMRML to true when an update is already in progress.
-  bool IsUpdatingWidgetFromMRML;
+  bool IsUpdatingWidgetFromMRML{ false };
 
-  bool IsFilterBarVisible;
+  bool IsFilterBarVisible{ false };
 
-  qMRMLSegmentsModel* Model;
-  qMRMLSortFilterSegmentsProxyModel* SortFilterModel;
+  qMRMLSegmentsModel* Model{ nullptr };
+  qMRMLSortFilterSegmentsProxyModel* SortFilterModel{ nullptr };
+
+  qSlicerTerminologyItemDelegate* TerminologyItemDelegate{ nullptr };
 
   QIcon StatusIcons[vtkSlicerSegmentationsModuleLogic::LastStatus];
   QPushButton* ShowStatusButtons[vtkSlicerSegmentationsModuleLogic::LastStatus];
   QTimer FilterParameterChangedTimer;
 
-  bool JumpToSelectedSegmentEnabled;
+  bool JumpToSelectedSegmentEnabled{ false };
 
   /// When the model is being reset, the blocking state and selected segment IDs are stored here.
-  bool WasBlockingTableSignalsBeforeReset;
+  bool WasBlockingTableSignalsBeforeReset{ false };
   QStringList SelectedSegmentIDsBeforeReset;
+
+  /// The settings key used to specify whether standard terminologies are used for name and color.
+  QString UseTerminologySelectorSettingsKey{ "Segmentations/UseTerminologySelector" };
+
+  /// Counter for the number of times the user specifies custom name. Offer not using terminology if used often.
+  unsigned int NonStandardTerminologySelectedCounter{ 0 };
+
+  bool TerminologySelectorOptionVisible{ true };
+  /// Use terminology selector if UseTerminologySelectorSettingsKey is empty
+  bool NoSettingsUseTerminologySelector{ false };
+  bool TerminologySelectorAutoDisable{ true };
 };
 
 //-----------------------------------------------------------------------------
 qMRMLSegmentsTableViewPrivate::qMRMLSegmentsTableViewPrivate(qMRMLSegmentsTableView& object)
   : q_ptr(&object)
-  , SegmentationNode(nullptr)
-  , AdvancedSegmentVisibility(false)
-  , IsUpdatingWidgetFromMRML(false)
-  , IsFilterBarVisible(false)
-  , Model(nullptr)
-  , SortFilterModel(nullptr)
-  , JumpToSelectedSegmentEnabled(false)
-  , WasBlockingTableSignalsBeforeReset(false)
 {
   for (int status = 0; status < vtkSlicerSegmentationsModuleLogic::LastStatus; ++status)
   {
@@ -253,9 +265,7 @@ void qMRMLSegmentsTableViewPrivate::init()
         this->ShowStatusButtons[status] = this->ShowFlaggedButton;
         this->StatusIcons[status] = QIcon(":Icons/Flagged.png");
         break;
-      default:
-        this->ShowStatusButtons[status] = nullptr;
-        this->StatusIcons[status] = QIcon();
+      default: this->ShowStatusButtons[status] = nullptr; this->StatusIcons[status] = QIcon();
     }
     if (this->ShowStatusButtons[status])
     {
@@ -293,6 +303,7 @@ void qMRMLSegmentsTableViewPrivate::init()
   QObject::connect(this->Model, &QAbstractItemModel::modelAboutToBeReset, q, &qMRMLSegmentsTableView::modelAboutToBeReset);
   QObject::connect(this->Model, &QAbstractItemModel::modelReset, q, &qMRMLSegmentsTableView::modelReset);
   QObject::connect(this->SegmentsTable, &QTableView::clicked, q, &qMRMLSegmentsTableView::onSegmentsTableClicked);
+  QObject::connect(this->SegmentsTable, &QTableView::doubleClicked, q, &qMRMLSegmentsTableView::onSegmentsTableDoubleClicked);
   QObject::connect(this->FilterLineEdit, &ctkSearchBox::textEdited, this->SortFilterModel, &qMRMLSortFilterSegmentsProxyModel::setTextFilter);
   for (QPushButton* button : this->ShowStatusButtons)
   {
@@ -305,7 +316,11 @@ void qMRMLSegmentsTableViewPrivate::init()
   QObject::connect(this->SortFilterModel, &qMRMLSortFilterSegmentsProxyModel::filterModified, q, &qMRMLSegmentsTableView::onSegmentsFilterModified);
 
   // Set item delegate to handle color and opacity changes
-  this->SegmentsTable->setItemDelegateForColumn(this->Model->colorColumn(), new qSlicerTerminologyItemDelegate(this->SegmentsTable));
+  this->TerminologyItemDelegate = new qSlicerTerminologyItemDelegate(this->SegmentsTable);
+  this->TerminologyItemDelegate->setUseDecorationRole(false);
+  this->TerminologyItemDelegate->setUseTerminologySelectorCallback([q] { return q->useTerminologySelector(); });
+  this->TerminologyItemDelegate->setUserSetCustomNameOrColorCallback([q] { return q->userSetCustomNameOrColor(); });
+  this->SegmentsTable->setItemDelegateForColumn(this->Model->nameColumn(), this->TerminologyItemDelegate);
   this->SegmentsTable->setItemDelegateForColumn(this->Model->opacityColumn(), new qMRMLItemDelegate(this->SegmentsTable));
   this->SegmentsTable->installEventFilter(q);
 }
@@ -319,6 +334,18 @@ void qMRMLSegmentsTableViewPrivate::setMessage(const QString& message)
 
 //-----------------------------------------------------------------------------
 // qMRMLSegmentsTableView methods
+
+CTK_GET_CPP(qMRMLSegmentsTableView, bool, jumpToSelectedSegmentEnabled, JumpToSelectedSegmentEnabled);
+CTK_SET_CPP(qMRMLSegmentsTableView, bool, setJumpToSelectedSegmentEnabled, JumpToSelectedSegmentEnabled);
+
+CTK_GET_CPP(qMRMLSegmentsTableView, QString, useTerminologySelectorSettingsKey, UseTerminologySelectorSettingsKey);
+CTK_SET_CPP(qMRMLSegmentsTableView, QString, setUseTerminologySelectorSettingsKey, UseTerminologySelectorSettingsKey);
+
+CTK_GET_CPP(qMRMLSegmentsTableView, bool, terminologySelectorOptionVisible, TerminologySelectorOptionVisible);
+CTK_SET_CPP(qMRMLSegmentsTableView, bool, setTerminologySelectorOptionVisible, TerminologySelectorOptionVisible);
+
+CTK_GET_CPP(qMRMLSegmentsTableView, bool, terminologySelectorAutoDisable, TerminologySelectorAutoDisable);
+CTK_SET_CPP(qMRMLSegmentsTableView, bool, setTerminologySelectorAutoDisable, TerminologySelectorAutoDisable);
 
 //-----------------------------------------------------------------------------
 qMRMLSegmentsTableView::qMRMLSegmentsTableView(QWidget* _parent)
@@ -342,12 +369,9 @@ void qMRMLSegmentsTableView::setSegmentationNode(vtkMRMLNode* node)
   d->Model->setSegmentationNode(d->SegmentationNode);
 
   // Connect segment added/removed and display modified events to population of the table
-  qvtkReconnect(d->SegmentationNode, segmentationNode, vtkSegmentation::SegmentAdded,
-    this, SLOT(onSegmentAddedOrRemoved()));
-  qvtkReconnect(d->SegmentationNode, segmentationNode, vtkSegmentation::SegmentRemoved,
-    this, SLOT(onSegmentAddedOrRemoved()));
-  qvtkReconnect(d->SegmentationNode, segmentationNode, vtkCommand::ModifiedEvent,
-    this, SLOT(updateWidgetFromMRML()));
+  qvtkReconnect(d->SegmentationNode, segmentationNode, vtkSegmentation::SegmentAdded, this, SLOT(onSegmentAddedOrRemoved()));
+  qvtkReconnect(d->SegmentationNode, segmentationNode, vtkSegmentation::SegmentRemoved, this, SLOT(onSegmentAddedOrRemoved()));
+  qvtkReconnect(d->SegmentationNode, segmentationNode, vtkCommand::ModifiedEvent, this, SLOT(updateWidgetFromMRML()));
   this->onSegmentAddedOrRemoved();
   this->updateWidgetFromMRML();
 }
@@ -433,21 +457,19 @@ void qMRMLSegmentsTableView::onSegmentsTableClicked(const QModelIndex& modelInde
     return;
   }
 
-  vtkSegment* segment = d->SegmentationNode->GetSegmentation()->GetSegment(segmentId.toStdString());
   if (modelIndex.column() == d->Model->visibilityColumn())
   {
-    // Set all visibility types to segment referenced by button toggled
-    int visible = !item->data(qMRMLSegmentsModel::VisibilityRole).toInt();
-    this->setSegmentVisibility(segmentId, visible, -1, -1, -1);
+    // Toggle segment visibility
+    bool visible = (item->data(qMRMLSegmentsModel::VisibilityRole).toInt() != 0);
+    this->setSegmentVisibility(segmentId, !visible, -1, -1, -1);
   }
   else if (modelIndex.column() == d->Model->statusColumn())
   {
+    vtkSegment* segment = d->SegmentationNode->GetSegmentation()->GetSegment(segmentId.toStdString());
     int status = vtkSlicerSegmentationsModuleLogic::GetSegmentStatus(segment);
     switch (status)
     {
-      case vtkSlicerSegmentationsModuleLogic::SegmentStatus::Flagged:
-        status = vtkSlicerSegmentationsModuleLogic::SegmentStatus::Completed;
-        break;
+      case vtkSlicerSegmentationsModuleLogic::SegmentStatus::Flagged: status = vtkSlicerSegmentationsModuleLogic::SegmentStatus::Completed; break;
       default:
         ++status;
         if (status >= vtkSlicerSegmentationsModuleLogic::SegmentStatus::LastStatus)
@@ -458,6 +480,149 @@ void qMRMLSegmentsTableView::onSegmentsTableClicked(const QModelIndex& modelInde
     }
     vtkSlicerSegmentationsModuleLogic::SetSegmentStatus(segment, status);
   }
+}
+
+//-----------------------------------------------------------------------------
+void qMRMLSegmentsTableView::onSegmentsTableDoubleClicked(const QModelIndex& modelIndex)
+{
+  Q_D(qMRMLSegmentsTableView);
+  QString segmentId = d->SortFilterModel->segmentIDFromIndex(modelIndex);
+  QStandardItem* item = d->Model->itemFromSegmentID(segmentId);
+  if (!d->SegmentationNode || !item)
+  {
+    return;
+  }
+
+  Qt::ItemFlags flags = item->flags();
+  if (!flags.testFlag(Qt::ItemIsSelectable))
+  {
+    return;
+  }
+
+  vtkSegment* segment = d->SegmentationNode->GetSegmentation()->GetSegment(segmentId.toStdString());
+  if (modelIndex.column() == d->Model->colorColumn())
+  {
+    if (this->useTerminologySelector())
+    {
+      vtkSlicerTerminologiesModuleLogic* terminologiesLogic = vtkSlicerTerminologiesModuleLogic::SafeDownCast(qSlicerCoreApplication::application()->moduleLogic("Terminologies"));
+      if (!terminologiesLogic)
+      {
+        return;
+      }
+
+      // Get terminology from segment. Do not check success, as an empty terminology is also a valid starting point
+      vtkNew<vtkSlicerTerminologyEntry> terminologyEntry;
+      std::string serializedTerminology = segment->GetTerminology();
+      if (!serializedTerminology.empty())
+      {
+        terminologiesLogic->DeserializeTerminologyEntry(serializedTerminology, terminologyEntry);
+      }
+
+      // Get current metadata to show in the terminology popup from the name item (which contains the terminology metadata)
+      QModelIndex nameIndex = modelIndex.siblingAtColumn(d->Model->nameColumn());
+      QString name = modelIndex.model()->data(nameIndex, qSlicerTerminologyItemDelegate::NameRole).toString();
+      bool nameAutoGenerated = modelIndex.model()->data(nameIndex, qSlicerTerminologyItemDelegate::NameAutoGeneratedRole).toBool();
+      QColor color = modelIndex.model()->data(nameIndex, qSlicerTerminologyItemDelegate::ColorRole).value<QColor>();
+      bool colorAutoGenerated = modelIndex.model()->data(nameIndex, qSlicerTerminologyItemDelegate::ColorAutoGeneratedRole).toBool();
+      QColor generatedColor = modelIndex.model()->data(nameIndex, qSlicerTerminologyItemDelegate::GeneratedColorRole).value<QColor>();
+
+      qSlicerTerminologyNavigatorWidget::TerminologyInfoBundle terminologyInfo(terminologyEntry, name, nameAutoGenerated, color, colorAutoGenerated, generatedColor);
+
+      bool usedCustomNameOrColor = (terminologyInfo.NameAutoGenerated == false || terminologyInfo.ColorAutoGenerated == false);
+
+      if (qSlicerTerminologySelectorDialog::getTerminology(terminologyInfo, d->SegmentsTable))
+      {
+        // Set selection in terminology popup as segment metadata
+        segment->SetName(terminologyInfo.Name.toUtf8().constData());
+        segment->SetNameAutoGenerated(terminologyInfo.NameAutoGenerated);
+        segment->SetColor(terminologyInfo.Color.redF(), terminologyInfo.Color.greenF(), terminologyInfo.Color.blueF());
+        segment->SetColorAutoGenerated(terminologyInfo.ColorAutoGenerated);
+        segment->SetTerminology(terminologiesLogic->SerializeTerminologyEntry(terminologyInfo.GetTerminologyEntry()));
+
+        bool nowUsingCustomNameOrColor = (terminologyInfo.NameAutoGenerated == false || terminologyInfo.ColorAutoGenerated == false);
+        if (nowUsingCustomNameOrColor && !usedCustomNameOrColor)
+        {
+          // When terminology is selected from color table, the name and color are always set as custom (not auto-generated).
+          // Do not report these as the user selected custom name or color.
+          bool isTerminology = true;
+          if (terminologyInfo.GetTerminologyEntry())
+          {
+            const char* contextName = terminologyInfo.GetTerminologyEntry()->GetTerminologyContextName();
+            if (contextName)
+            {
+              isTerminology = terminologiesLogic->IsTerminologyContextLoaded(contextName);
+            }
+          }
+          if (isTerminology)
+          {
+            // not selected from color table, therefore the user manually set name or color
+            this->userSetCustomNameOrColor();
+          }
+        }
+      }
+    }
+    else
+    {
+      QColor color = modelIndex.model()->data(modelIndex, Qt::DecorationRole).value<QColor>();
+      QColor newColor = ctkColorDialog::getColor(color, d->SegmentsTable, tr("Choose new segment color"));
+      if (newColor.isValid()) // Do not set color if user cancelled
+      {
+        segment->SetColor(newColor.redF(), newColor.greenF(), newColor.blueF());
+      }
+    }
+  }
+}
+
+//---------------------------------------------------------------------------
+bool qMRMLSegmentsTableView::userSetCustomNameOrColor()
+{
+  Q_D(qMRMLSegmentsTableView);
+
+  // user manually changed to custom name or color
+  if (!this->terminologySelectorAutoDisable() || !this->useTerminologySelector())
+  {
+    return false;
+  }
+
+  d->NonStandardTerminologySelectedCounter++;
+
+  // Ask user about using standard terminologies if they have specified custom names equal to a threshold.
+  // Only ask at the threshold so that it is not asked every time after that if the user chose keeping terminologies.
+  if (d->NonStandardTerminologySelectedCounter == 5)
+  {
+    QMessageBox* messageBox = new QMessageBox(QMessageBox::Warning,
+                                              tr("Stop using terminologies?"),
+                                              tr("You frequently enter custom name or color. How do you prefer setting name and color next time?"),
+                                              QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel,
+                                              this);
+    QAbstractButton* switchToDirectEditingButton = messageBox->button(QMessageBox::Yes);
+    QAbstractButton* keepTerminologySelectorButton = messageBox->button(QMessageBox::No);
+    QAbstractButton* askMeLaterButton = messageBox->button(QMessageBox::Cancel);
+    switchToDirectEditingButton->setText(tr("Switch to direct editing"));
+    keepTerminologySelectorButton->setText(tr("Keep using terminology selector"));
+    askMeLaterButton->setText(tr("Ask me later"));
+    messageBox->exec();
+    if (messageBox->clickedButton() == switchToDirectEditingButton)
+    {
+      // Change application setting to not use standard terminologies
+      this->setUseTerminologySelector(false);
+      // Disable asking again
+      this->setTerminologySelectorAutoDisable(false);
+    }
+    else if (messageBox->clickedButton() == keepTerminologySelectorButton)
+    {
+      // Disable asking again
+      this->setTerminologySelectorAutoDisable(false);
+    }
+    else if (messageBox->clickedButton() == askMeLaterButton)
+    {
+      // Reset counter, will ask again
+      d->NonStandardTerminologySelectedCounter = 0;
+    }
+    messageBox->deleteLater();
+  }
+
+  return true;
 }
 
 //---------------------------------------------------------------------------
@@ -533,7 +698,7 @@ vtkMRMLNode* qMRMLSegmentsTableView::segmentationNode()
 }
 
 //--------------------------------------------------------------------------
-qMRMLSortFilterSegmentsProxyModel* qMRMLSegmentsTableView::sortFilterProxyModel()const
+qMRMLSortFilterSegmentsProxyModel* qMRMLSegmentsTableView::sortFilterProxyModel() const
 {
   Q_D(const qMRMLSegmentsTableView);
   if (!d->SortFilterModel)
@@ -545,7 +710,7 @@ qMRMLSortFilterSegmentsProxyModel* qMRMLSegmentsTableView::sortFilterProxyModel(
 }
 
 //--------------------------------------------------------------------------
-qMRMLSegmentsModel* qMRMLSegmentsTableView::model()const
+qMRMLSegmentsModel* qMRMLSegmentsTableView::model() const
 {
   Q_D(const qMRMLSegmentsTableView);
   if (!d->Model)
@@ -564,7 +729,7 @@ QTableView* qMRMLSegmentsTableView::tableWidget()
 }
 
 //-----------------------------------------------------------------------------
-void qMRMLSegmentsTableView::onSegmentSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
+void qMRMLSegmentsTableView::onSegmentSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected)
 {
   Q_D(qMRMLSegmentsTableView);
   if (d->JumpToSelectedSegmentEnabled)
@@ -618,6 +783,15 @@ void qMRMLSegmentsTableView::onVisibility2DOutlineActionToggled(bool visible)
 }
 
 //-----------------------------------------------------------------------------
+void qMRMLSegmentsTableView::onUseTerminologyActionToggled(bool useTerminology)
+{
+  Q_D(qMRMLSegmentsTableView);
+
+  // Change setting value so that table view knows whether the terminology popup is needed to shown on double click
+  QSettings().setValue(d->UseTerminologySelectorSettingsKey, useTerminology);
+}
+
+//-----------------------------------------------------------------------------
 void qMRMLSegmentsTableView::setSegmentVisibility(QObject* senderObject, int visible, int visible3D, int visible2DFill, int visible2DOutline)
 {
   Q_D(qMRMLSegmentsTableView);
@@ -643,8 +817,7 @@ void qMRMLSegmentsTableView::setSegmentVisibility(QString segmentId, int visible
     return;
   }
 
-  vtkMRMLSegmentationDisplayNode* displayNode = vtkMRMLSegmentationDisplayNode::SafeDownCast(
-    d->SegmentationNode->GetDisplayNode() );
+  vtkMRMLSegmentationDisplayNode* displayNode = vtkMRMLSegmentationDisplayNode::SafeDownCast(d->SegmentationNode->GetDisplayNode());
   if (!displayNode)
   {
     qCritical() << Q_FUNC_INFO << ": No display node for segmentation!";
@@ -783,15 +956,17 @@ bool qMRMLSegmentsTableView::eventFilter(QObject* target, QEvent* event)
     // widget in the tab order)
     if (event->type() == QEvent::KeyPress)
     {
-      QKeyEvent* keyEvent = static_cast<QKeyEvent *>(event);
+      // type is already checked, so we can use static_cast instead of dynamic_cast for efficiency
+      QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
       QAbstractItemModel* model = d->SegmentsTable->model();
       QModelIndex currentIndex = d->SegmentsTable->currentIndex();
 
-      if (model && (
-        (keyEvent->key() == Qt::Key_Left && currentIndex.column() == 0)
-        || (keyEvent->key() == Qt::Key_Up && currentIndex.row() == 0)
-        || (keyEvent->key() == Qt::Key_Right && currentIndex.column() == model->columnCount() - 1)
-        || (keyEvent->key() == Qt::Key_Down && currentIndex.row() == model->rowCount() - 1)))
+      if (model
+          && (                                                                                         //
+            (keyEvent->key() == Qt::Key_Left && currentIndex.column() == 0)                            //
+            || (keyEvent->key() == Qt::Key_Up && currentIndex.row() == 0)                              //
+            || (keyEvent->key() == Qt::Key_Right && currentIndex.column() == model->columnCount() - 1) //
+            || (keyEvent->key() == Qt::Key_Down && currentIndex.row() == model->rowCount() - 1)))
       {
         return true;
       }
@@ -801,9 +976,7 @@ bool qMRMLSegmentsTableView::eventFilter(QObject* target, QEvent* event)
 }
 
 //------------------------------------------------------------------------------
-void qMRMLSegmentsTableView::endProcessing()
-{
-}
+void qMRMLSegmentsTableView::endProcessing() {}
 
 //------------------------------------------------------------------------------
 void qMRMLSegmentsTableView::setSelectionMode(int mode)
@@ -1012,6 +1185,10 @@ void qMRMLSegmentsTableView::contextMenuEvent(QContextMenuEvent* event)
 
   if (selectedSegmentIDs.size() > 0)
   {
+    QAction* toggleSelectedAction = new QAction(tr("Toggle selected segments visibility"), this);
+    QObject::connect(toggleSelectedAction, SIGNAL(triggered()), this, SLOT(toggleSelectedSegmentsVisibility()));
+    contextMenu->addAction(toggleSelectedAction);
+
     QAction* showOnlySelectedAction = new QAction(tr("Show only selected segments"), this);
     QObject::connect(showOnlySelectedAction, SIGNAL(triggered()), this, SLOT(showOnlySelectedSegments()));
     contextMenu->addAction(showOnlySelectedAction);
@@ -1103,6 +1280,16 @@ void qMRMLSegmentsTableView::contextMenuEvent(QContextMenuEvent* event)
     QAction* clearSelectedSegmentAction = new QAction(tr("Clear selected segments"), this);
     QObject::connect(clearSelectedSegmentAction, SIGNAL(triggered()), this, SLOT(clearSelectedSegments()));
     contextMenu->addAction(clearSelectedSegmentAction);
+  }
+
+  if (this->terminologySelectorOptionVisible())
+  {
+    contextMenu->addSeparator();
+    QAction* useTerminologyAction = new QAction(tr("Use standard terminology for name and color selection"), this);
+    useTerminologyAction->setCheckable(true);
+    useTerminologyAction->setChecked(QSettings().value(d->UseTerminologySelectorSettingsKey).toBool());
+    QObject::connect(useTerminologyAction, SIGNAL(triggered(bool)), this, SLOT(onUseTerminologyActionToggled(bool)));
+    contextMenu->addAction(useTerminologyAction);
   }
 
   contextMenu->popup(event->globalPos());
@@ -1202,8 +1389,7 @@ void qMRMLSegmentsTableView::showOnlySelectedSegments()
     qCritical() << Q_FUNC_INFO << ": No current segmentation node";
     return;
   }
-  vtkMRMLSegmentationDisplayNode* displayNode = vtkMRMLSegmentationDisplayNode::SafeDownCast(
-    d->SegmentationNode->GetDisplayNode() );
+  vtkMRMLSegmentationDisplayNode* displayNode = vtkMRMLSegmentationDisplayNode::SafeDownCast(d->SegmentationNode->GetDisplayNode());
   if (!displayNode)
   {
     qCritical() << Q_FUNC_INFO << ": No display node for segmentation " << d->SegmentationNode->GetName();
@@ -1243,6 +1429,45 @@ void qMRMLSegmentsTableView::showOnlySelectedSegments()
 }
 
 //------------------------------------------------------------------------------
+void qMRMLSegmentsTableView::toggleSelectedSegmentsVisibility()
+{
+  QStringList selectedSegmentIDs = this->selectedSegmentIDs();
+  if (selectedSegmentIDs.size() == 0)
+  {
+    qWarning() << Q_FUNC_INFO << ": No segment selected";
+    return;
+  }
+
+  Q_D(qMRMLSegmentsTableView);
+  if (!d->SegmentationNode)
+  {
+    qCritical() << Q_FUNC_INFO << ": No current segmentation node";
+    return;
+  }
+  vtkMRMLSegmentationDisplayNode* displayNode = vtkMRMLSegmentationDisplayNode::SafeDownCast(d->SegmentationNode->GetDisplayNode());
+  if (!displayNode)
+  {
+    qCritical() << Q_FUNC_INFO << ": No display node for segmentation " << d->SegmentationNode->GetName();
+    return;
+  }
+
+  vtkSegmentation* segmentation = d->SegmentationNode->GetSegmentation();
+  if (!segmentation)
+  {
+    qCritical() << Q_FUNC_INFO << ": No segmentation";
+    return;
+  }
+
+  // Toggle visibility of the selected segments
+  MRMLNodeModifyBlocker blocker(displayNode);
+  for (const QString& segmentID : selectedSegmentIDs)
+  {
+    bool currentVisibility = displayNode->GetSegmentVisibility(segmentID.toStdString());
+    displayNode->SetSegmentVisibility(segmentID.toStdString(), !currentVisibility);
+  }
+}
+
+//------------------------------------------------------------------------------
 void qMRMLSegmentsTableView::jumpSlices()
 {
   QStringList selectedSegmentIDs = this->selectedSegmentIDs();
@@ -1271,7 +1496,7 @@ void qMRMLSegmentsTableView::jumpSlices()
     // application is closing
     return;
   }
-  foreach(QString sliceViewName, layoutManager->sliceViewNames())
+  for (const QString& sliceViewName : layoutManager->sliceViewNames())
   {
     // Check if segmentation is visible in this view
     qMRMLSliceWidget* sliceWidget = layoutManager->sliceWidget(sliceViewName);
@@ -1329,7 +1554,7 @@ void qMRMLSegmentsTableView::moveSelectedSegmentsUp()
 
   QModelIndexList segmentModelIndices;
   QList<int> selectedRows;
-  foreach (QString segmentID, selectedSegmentIDs)
+  for (const QString& segmentID : selectedSegmentIDs)
   {
     QModelIndex index = d->SortFilterModel->indexFromSegmentID(segmentID);
     segmentModelIndices << index;
@@ -1373,7 +1598,7 @@ void qMRMLSegmentsTableView::moveSelectedSegmentsDown()
 
   QModelIndexList segmentModelIndices;
   QList<int> selectedRows;
-  foreach(QString segmentID, selectedSegmentIDs)
+  for (const QString& segmentID : selectedSegmentIDs)
   {
     QModelIndex index = d->SortFilterModel->indexFromSegmentID(segmentID);
     segmentModelIndices << index;
@@ -1411,14 +1636,14 @@ void qMRMLSegmentsTableView::setHideSegments(const QStringList& segmentIDs)
 }
 
 // --------------------------------------------------------------------------
-QStringList qMRMLSegmentsTableView::hideSegments()const
+QStringList qMRMLSegmentsTableView::hideSegments() const
 {
   Q_D(const qMRMLSegmentsTableView);
   return d->SortFilterModel->hideSegments();
 }
 
 // --------------------------------------------------------------------------
-QStringList qMRMLSegmentsTableView::displayedSegmentIDs()const
+QStringList qMRMLSegmentsTableView::displayedSegmentIDs() const
 {
   Q_D(const qMRMLSegmentsTableView);
 
@@ -1428,20 +1653,6 @@ QStringList qMRMLSegmentsTableView::displayedSegmentIDs()const
     displayedSegmentIDs << d->SortFilterModel->segmentIDFromIndex(d->SortFilterModel->index(row, 0));
   }
   return displayedSegmentIDs;
-}
-
-// --------------------------------------------------------------------------
-void qMRMLSegmentsTableView::setJumpToSelectedSegmentEnabled(bool enable)
-{
-  Q_D(qMRMLSegmentsTableView);
-  d->JumpToSelectedSegmentEnabled = enable;
-}
-
-// --------------------------------------------------------------------------
-bool qMRMLSegmentsTableView::jumpToSelectedSegmentEnabled()const
-{
-  Q_D(const qMRMLSegmentsTableView);
-  return d->JumpToSelectedSegmentEnabled;
 }
 
 // --------------------------------------------------------------------------
@@ -1459,4 +1670,26 @@ void qMRMLSegmentsTableView::modelReset()
   d->SegmentsTable->blockSignals(d->WasBlockingTableSignalsBeforeReset);
   this->setSelectedSegmentIDs(d->SelectedSegmentIDsBeforeReset);
   d->SelectedSegmentIDsBeforeReset.clear();
+}
+
+// --------------------------------------------------------------------------
+void qMRMLSegmentsTableView::setUseTerminologySelector(bool useTerminologySelector)
+{
+  Q_D(qMRMLSegmentsTableView);
+  d->NoSettingsUseTerminologySelector = useTerminologySelector;
+  QSettings().setValue(d->UseTerminologySelectorSettingsKey, useTerminologySelector);
+}
+
+// --------------------------------------------------------------------------
+bool qMRMLSegmentsTableView::useTerminologySelector() const
+{
+  Q_D(const qMRMLSegmentsTableView);
+  if (d->UseTerminologySelectorSettingsKey.isEmpty())
+  {
+    return d->NoSettingsUseTerminologySelector;
+  }
+  else
+  {
+    return QSettings().value(d->UseTerminologySelectorSettingsKey, true).toBool();
+  }
 }

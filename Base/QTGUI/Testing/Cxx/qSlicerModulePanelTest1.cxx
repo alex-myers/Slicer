@@ -26,8 +26,9 @@
 #include "qSlicerModulePanel.h"
 
 // STD includes
+#include <iostream>
 
-int qSlicerModulePanelTest1(int argc, char * argv[] )
+int qSlicerModulePanelTest1(int argc, char* argv[])
 {
   qSlicerApplication app(argc, argv);
 

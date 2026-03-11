@@ -20,13 +20,6 @@
 #pragma warning ( disable : 4275 )
 #endif
 
-#cmakedefine CMAKE_WORDS_BIGENDIAN
-#ifdef CMAKE_WORDS_BIGENDIAN
-  #define WORDS_BIGENDIAN
-#else
-  #define WORDS_LITTLEENDIAN
-#endif
-
 #cmakedefine BUILD_SHARED_LIBS
 #ifndef BUILD_SHARED_LIBS
 #define VTKSLICER_STATIC
@@ -39,10 +32,13 @@
 #cmakedefine Slicer_USE_NUMPY
 #cmakedefine Slicer_USE_PYTHONQT
 #cmakedefine Slicer_USE_PYTHONQT_WITH_OPENSSL
+#cmakedefine Slicer_USE_DCMTK_WITH_OPENSSL
 #cmakedefine Slicer_USE_QtTesting
 #cmakedefine Slicer_USE_OPENTRACKER
 
+#ifndef Slicer_HAVE_QT5
 #cmakedefine Slicer_HAVE_QT5
+#endif
 #cmakedefine Slicer_HAVE_WEBKIT_SUPPORT
 
 #define VTKSLICER_CONFIGURATION_TYPES "@CMAKE_CONFIGURATION_TYPES@"
@@ -50,6 +46,7 @@
 #cmakedefine Slicer_BUILD_WIN32_CONSOLE_LAUNCHER
 
 #define Slicer_MAIN_PROJECT_APPLICATION_NAME "@Slicer_MAIN_PROJECT_APPLICATION_NAME@"
+#define Slicer_MAIN_PROJECT_APPLICATION_DISPLAY_NAME "@Slicer_MAIN_PROJECT_APPLICATION_DISPLAY_NAME@"
 #define Slicer_BIN_DIR "@Slicer_BIN_DIR@"
 #define Slicer_LIB_DIR "@Slicer_LIB_DIR@"
 #define Slicer_INCLUDE_DIR "@Slicer_INCLUDE_DIR@"
@@ -71,11 +68,15 @@
 #cmakedefine Slicer_BUILD_DICOM_SUPPORT
 #cmakedefine Slicer_BUILD_DIFFUSION_SUPPORT
 #cmakedefine Slicer_BUILD_I18N_SUPPORT
+#cmakedefine Slicer_BUILD_USAGE_LOGGING_SUPPORT
 #cmakedefine Slicer_BUILD_MULTIMEDIA_SUPPORT
 #cmakedefine Slicer_BUILD_PARAMETERSERIALIZER_SUPPORT
 #cmakedefine Slicer_BUILD_WEBENGINE_SUPPORT
 
-#cmakedefine Slicer_BUILD_CLI_SUPPORT
+// CLI support is always enabled and cannot be disabled.
+// This variable is retained only for backward compatibility with dependent projects (e.g., Slicer extensions).
+// For more details, see: https://github.com/Slicer/Slicer/issues/8477
+#define Slicer_BUILD_CLI_SUPPORT
 #cmakedefine Slicer_BUILD_CLI
 #define Slicer_CLIMODULES_SUBDIR "@Slicer_CLIMODULES_SUBDIR@"
 #define Slicer_CLIMODULES_BIN_DIR "@Slicer_CLIMODULES_BIN_DIR@"
@@ -114,10 +115,6 @@
 // in Slicer extension.
 #define Slicer_THIRDPARTY_BIN_DIR "@Slicer_THIRDPARTY_BIN_DIR@"
 #define Slicer_THIRDPARTY_LIB_DIR "@Slicer_THIRDPARTY_LIB_DIR@"
-
-#cmakedefine Slicer_VTK_RENDERING_USE_OpenGL_BACKEND
-#cmakedefine Slicer_VTK_RENDERING_USE_OpenGL2_BACKEND
-#cmakedefine Slicer_VTK_USE_QVTKOPENGLWIDGET
 
 // Library sub-directory - The following macros define directories only valid for a given build tree.
 #define VTK_DIR "@VTK_DIR@"

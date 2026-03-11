@@ -34,13 +34,12 @@
 #include <iostream>
 
 // ----------------------------------------------------------------------------
-class qSlicerApplicationUpdateManagerTester: public QObject
+class qSlicerApplicationUpdateManagerTester : public QObject
 {
   Q_OBJECT
   typedef qSlicerApplicationUpdateManagerTester Self;
 
 private:
-
   bool prepareJson(const QString& jsonFile);
 
   bool resetTmp();
@@ -88,7 +87,7 @@ bool qSlicerApplicationUpdateManagerTester::resetTmp()
   ctk::removeDirRecursively(tmp.filePath(this->TemporaryDirName));
   tmp.mkdir(this->TemporaryDirName);
   tmp.cd(this->TemporaryDirName);
-  this->Tmp = tmp;
+  this->Tmp.setPath(tmp.path());
   return this->Tmp.exists();
 }
 
@@ -99,16 +98,13 @@ void qSlicerApplicationUpdateManagerTester::initTestCase()
 
   QVERIFY(QDir::temp().exists());
 
-  this->TemporaryDirName =
-      QString("qSlicerApplicationUpdateManagerTester.%1").arg(QTime::currentTime().toString("hhmmsszzz"));
+  this->TemporaryDirName = QString("qSlicerApplicationUpdateManagerTester.%1").arg(QTime::currentTime().toString("hhmmsszzz"));
 
   QSettings().clear();
 }
 
 // ----------------------------------------------------------------------------
-void qSlicerApplicationUpdateManagerTester::init()
-{
-}
+void qSlicerApplicationUpdateManagerTester::init() {}
 
 // ----------------------------------------------------------------------------
 void qSlicerApplicationUpdateManagerTester::cleanup()
@@ -122,7 +118,7 @@ void qSlicerApplicationUpdateManagerTester::cleanupTestCase()
   if (this->Tmp != QDir::current() && this->Tmp.exists())
   {
     ctk::removeDirRecursively(this->Tmp.absolutePath());
-    this->Tmp = QDir();
+    this->Tmp.setPath(QString());
   }
   QFile::remove(QSettings().fileName());
 }
@@ -163,8 +159,7 @@ void qSlicerApplicationUpdateManagerTester::testUpdateCheck()
   QFETCH(QString, expectedLatestReleaseVersion);
   QFETCH(QString, expectedLatestReleaseRevision);
 
-  QVERIFY2(this->prepareJson(jsonFile),
-           QString("Failed to prepare json file: %1").arg(jsonFile).toUtf8());
+  QVERIFY2(this->prepareJson(jsonFile), QString("Failed to prepare json file: %1").arg(jsonFile).toUtf8());
 
   QSettings().setValue("ApplicationUpdate/ServerUrl", QUrl::fromLocalFile(this->Tmp.absolutePath()));
 
@@ -212,4 +207,4 @@ int qSlicerApplicationUpdateManagerTest(int argc, char* argv[])
   qSlicerApplicationUpdateManagerTester tc;
   return QTest::qExec(&tc, argc, argv);
 }
-#include "moc_qSlicerApplicationUpdateManagerTest.cxx"
+#include "qSlicerApplicationUpdateManagerTest.moc"

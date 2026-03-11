@@ -1,6 +1,6 @@
 set(KIT ${PROJECT_NAME})
 
-set(EXTRA_INCLUDE "vtkMRMLDebugLeaksMacro.h\"\n\#include \"vtkTestingOutputWindow.h")
+set(EXTRA_INCLUDE "vtkMRMLDebugLeaksMacro.h\"\n\#include <iostream>\n\#include \"vtkTestingOutputWindow.h")
 set(CMAKE_TESTDRIVER_BEFORE_TESTMAIN "DEBUG_LEAKS_ENABLE_EXIT_ERROR();\nTESTING_OUTPUT_ASSERT_WARNINGS_ERRORS(0);" )
 set(CMAKE_TESTDRIVER_AFTER_TESTMAIN "TESTING_OUTPUT_ASSERT_WARNINGS_ERRORS(0);" )
 
@@ -65,13 +65,6 @@ create_test_sourcelist(Tests ${KIT}CxxTests.cxx
   vtkMRMLSceneTest1.cxx
   vtkMRMLSceneTest2.cxx
   vtkMRMLSceneDefaultNodeTest.cxx
-  # Disabled scene view tests for now - they will be fixed in upcoming commit
-  # vtkMRMLSceneViewNodeImportSceneTest.cxx
-  # vtkMRMLSceneViewNodeEventsTest.cxx
-  # vtkMRMLSceneViewNodeRestoreSceneTest.cxx
-  # vtkMRMLSceneViewNodeStoreSceneTest.cxx
-  vtkMRMLSceneViewNodeTest1.cxx
-  vtkMRMLSceneViewStorageNodeTest1.cxx
   vtkMRMLScriptedModuleNodeTest1.cxx
   vtkMRMLSegmentationStorageNodeTest1.cxx
   vtkMRMLSelectionNodeTest1.cxx
@@ -93,13 +86,18 @@ create_test_sourcelist(Tests ${KIT}CxxTests.cxx
   vtkMRMLTransformableNodeOnNodeReferenceAddTest.cxx
   vtkMRMLTransformDisplayNodeTest1.cxx
   vtkMRMLTransformNodeTest1.cxx
+  vtkMRMLTransformSequenceStorageNodeTest1.cxx
+  vtkMRMLSequenceNodeAttributesTest.cxx
   vtkMRMLTransformStorageNodeTest1.cxx
+  vtkMRMLTransformStorageNodeTest2.cxx
+  vtkMRMLTransformStorageNodeTest3.cxx
   vtkMRMLTransformableNodeTest1.cxx
   vtkMRMLUnitNodeTest1.cxx
   vtkMRMLVectorVolumeDisplayNodeTest1.cxx
   vtkMRMLVectorVolumeNodeTest1.cxx
   vtkMRMLViewNodeTest1.cxx
   vtkMRMLVolumeArchetypeStorageNodeTest1.cxx
+  vtkMRMLVolumeSequenceStorageNodeTest1.cxx
   vtkMRMLVolumeDisplayNodeTest1.cxx
   vtkMRMLVolumeHeaderlessStorageNodeTest1.cxx
   vtkMRMLVolumeNodeEventsTest.cxx
@@ -129,8 +127,8 @@ simple_test( vtkMRMLBSplineTransformNodeTest1 )
 simple_test( vtkMRMLCameraNodeTest1 )
 simple_test( vtkMRMLClipModelsNodeTest1 )
 simple_test( vtkMRMLColorNodeTest1 )
-simple_test( vtkMRMLColorTableNodeTest1 ${TEMP})
-simple_test( vtkMRMLColorTableStorageNodeTest1 )
+simple_test( vtkMRMLColorTableNodeTest1 ${TEMP} ${CMAKE_CURRENT_SOURCE_DIR}/TestData)
+simple_test( vtkMRMLColorTableStorageNodeTest1 ${CMAKE_CURRENT_SOURCE_DIR}/NonLinearTransformScene.mrml)
 simple_test( vtkMRMLCoreTestingUtilitiesTest )
 simple_test( vtkMRMLCrosshairNodeTest1 )
 simple_test( vtkMRMLdGEMRICProceduralColorNodeTest1 )
@@ -183,13 +181,6 @@ simple_test( vtkMRMLSceneImportIDModelHierarchyParentIDConflictTest )
 simple_test( vtkMRMLSceneIDTest )
 simple_test( vtkMRMLSceneTest1 )
 simple_test( vtkMRMLSceneDefaultNodeTest )
-# Disabled scene view tests for now - they will be fixed in upcoming commit
-# simple_test( vtkMRMLSceneViewNodeImportSceneTest )
-# simple_test( vtkMRMLSceneViewNodeEventsTest )
-# simple_test( vtkMRMLSceneViewNodeRestoreSceneTest )
-# simple_test( vtkMRMLSceneViewNodeStoreSceneTest )
-simple_test( vtkMRMLSceneViewNodeTest1 )
-simple_test( vtkMRMLSceneViewStorageNodeTest1 )
 simple_test( vtkMRMLSegmentationStorageNodeTest1
   DATA{${INPUT}/ITKSnapSegmentation.nii.gz}
   DATA{${INPUT}/OldSlicerSegmentation.seg.nrrd}
@@ -214,12 +205,26 @@ simple_test( vtkMRMLTransformableNodeOnNodeReferenceAddTest )
 simple_test( vtkMRMLTransformableNodeTest1 )
 simple_test( vtkMRMLTransformDisplayNodeTest1 )
 simple_test( vtkMRMLTransformNodeTest1 )
-simple_test( vtkMRMLTransformStorageNodeTest1 )
+simple_test( vtkMRMLTransformStorageNodeTest1 ${TEMP})
+simple_test( vtkMRMLTransformStorageNodeTest2 ${TEMP})
+simple_test( vtkMRMLTransformStorageNodeTest3 ${TEMP})
 simple_test( vtkMRMLUnitNodeTest1 )
 simple_test( vtkMRMLVectorVolumeDisplayNodeTest1 )
 simple_test( vtkMRMLVectorVolumeNodeTest1 )
 simple_test( vtkMRMLViewNodeTest1 )
 simple_test( vtkMRMLVolumeArchetypeStorageNodeTest1  ${TEMP})
+simple_test( vtkMRMLVolumeSequenceStorageNodeTest1
+  ${TEMP}
+  DATA{${INPUT}/Volumes-DomainList.seq.nrrd}
+  DATA{${INPUT}/Volumes-ColorDomainList.seq.nrrd}
+  DATA{${INPUT}/Volumes-ListDomain-NonStandard.seq.nrrd}
+  DATA{${INPUT}/Volumes-VectorDomain-NonStandard.seq.nrrd}
+  DATA{${INPUT}/Volumes-CharVectorDomain-NonStandard.seq.nrrd}
+  DATA{${INPUT}/Volumes-DomainListColor-NonStandard.seq.nrrd}
+  DATA{${INPUT}/Transforms-VectorDomainList.seq.nrrd}
+  DATA{${INPUT}/Volumes-ListDomainListColor-Unsupported.seq.nrrd}
+)
+simple_test( vtkMRMLSequenceNodeAttributesTest ${TEMP})
 simple_test( vtkMRMLVolumeDisplayNodeTest1 )
 simple_test( vtkMRMLVolumeHeaderlessStorageNodeTest1 )
 simple_test( vtkMRMLVolumeNodeEventsTest )
@@ -267,6 +272,7 @@ set( ScenesToTest
   vol_and_cube.mrml|DATA{${INPUT}/fixed.nrrd,cube.vtk}
   vol.mrml|DATA{${INPUT}/fixed.nrrd}
   volScene.mrml|DATA{${INPUT}/fixed.nrrd,moving.nrrd}
+  backward_compat_light_box_scene.mrml
   )
 
 foreach(SceneToTest ${ScenesToTest})

@@ -14,9 +14,12 @@
 #include "vtkMRMLScene.h"
 #include "vtkMRMLScriptedModuleNode.h"
 
+// STD includes
+#include <iostream>
+
 int TestScriptedModuleParameterSaveLoadSpecialCharacters();
 
-int vtkMRMLScriptedModuleNodeTest1(int , char * [] )
+int vtkMRMLScriptedModuleNodeTest1(int, char*[])
 {
   vtkNew<vtkMRMLScriptedModuleNode> node1;
   EXERCISE_ALL_BASIC_MRML_METHODS(node1.GetPointer());

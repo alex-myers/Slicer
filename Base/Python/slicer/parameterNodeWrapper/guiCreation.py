@@ -7,6 +7,8 @@ import abc
 import dataclasses
 import enum
 import pathlib
+import types
+import typing
 
 import ctk
 import qt
@@ -84,6 +86,9 @@ def _processGuiCreator(classtype):
 
 def createGui(datatype) -> qt.QWidget:
     """Creates the most appropriate widget to represent the given, possibly annotated, data type."""
+    if hasattr(types, "UnionType") and isinstance(datatype, types.UnionType):
+        datatype = typing.Union[tuple(typing.get_args(datatype))]
+
     values = [(creator.representationValue(datatype), creator) for creator in _registeredGuiCreators]
     best = max(values, key=lambda v: v[0])
     if best[0] > 0:
@@ -169,7 +174,7 @@ class FloatGuiCreator(GuiCreator):
         maximum = findFirstAnnotation(annotations, Maximum)
         withinRange = findFirstAnnotation(annotations, WithinRange)
 
-        if withinRange is not None or minimum is not None and maximum is not None:
+        if withinRange is not None or (minimum is not None and maximum is not None):
             # fully bounded, slider widget
             return ctk.ctkSliderWidget()
         else:

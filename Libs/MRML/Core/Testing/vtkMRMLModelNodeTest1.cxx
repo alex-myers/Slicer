@@ -21,13 +21,16 @@
 #include <vtkSphereSource.h>
 #include <vtkUnstructuredGrid.h>
 
+// STD includes
+#include <iostream>
+
 //---------------------------------------------------------------------------
 int ExerciseBasicMethods();
 int TestActiveScalars();
 int TestGetSetMesh();
 
 //---------------------------------------------------------------------------
-int vtkMRMLModelNodeTest1(int , char * [] )
+int vtkMRMLModelNodeTest1(int, char*[])
 {
   CHECK_EXIT_SUCCESS(ExerciseBasicMethods());
   CHECK_EXIT_SUCCESS(TestActiveScalars());
@@ -65,8 +68,8 @@ int TestActiveScalars()
   node1->SetActivePointScalars("testingArray", attribute);
   node1->SetActiveCellScalars("testingArray2", attribute);
 
-  const char *name = node1->GetActivePointScalarName(vtkDataSetAttributes::SCALARS);
-  std::cout << "Active point scalars name = " << (name  == nullptr ? "null" : name) << std::endl;
+  const char* name = node1->GetActivePointScalarName(vtkDataSetAttributes::SCALARS);
+  std::cout << "Active point scalars name = " << (name == nullptr ? "null" : name) << std::endl;
   name = node1->GetActiveCellScalarName(vtkDataSetAttributes::SCALARS);
   std::cout << "Active cell scalars name = " << (name == nullptr ? "null" : name) << std::endl;
   node1->RemoveScalars("testingArray");

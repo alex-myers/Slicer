@@ -49,36 +49,41 @@ class qMRMLSceneModel;
 class qMRMLNodeComboBoxPrivate
 {
   Q_DECLARE_PUBLIC(qMRMLNodeComboBox);
+
 protected:
   qMRMLNodeComboBox* const q_ptr;
   virtual void setModel(QAbstractItemModel* model);
+
 public:
   qMRMLNodeComboBoxPrivate(qMRMLNodeComboBox& object);
   virtual ~qMRMLNodeComboBoxPrivate();
   virtual void init(QAbstractItemModel* model);
 
-  vtkMRMLNode* mrmlNode(int row)const;
-  vtkMRMLNode* mrmlNodeFromIndex(const QModelIndex& index)const;
-  QModelIndexList indexesFromMRMLNodeID(const QString& nodeID)const;
+  vtkMRMLNode* mrmlNode(int row) const;
+  vtkMRMLNode* mrmlNodeFromIndex(const QModelIndex& index) const;
+  QModelIndexList indexesFromMRMLNodeID(const QString& nodeID) const;
+
+  // This assumes that the caller has already updated RequestedNodeID and RequestedNode.
+  void setCurrentNodeIDInternal(const QString& nodeID);
 
   void updateDefaultText();
   void updateNoneItem(bool resetRootIndex = true);
   void updateActionItems(bool resetRootIndex = true);
   void updateDelegate(bool force = false);
 
-  bool hasPostItem(const QString& name)const;
+  bool hasPostItem(const QString& name) const;
 
   static void onMRMLSceneEvent(vtkObject* vtk_obj, unsigned long event, void* client_data, void* call_data);
 
-  QComboBox*        ComboBox;
+  QComboBox* ComboBox;
   qMRMLNodeFactory* MRMLNodeFactory;
-  qMRMLSceneModel*  MRMLSceneModel;
-  bool              NoneEnabled;
-  bool              AddEnabled;
-  bool              RemoveEnabled;
-  bool              EditEnabled;
-  bool              RenameEnabled;
-  QString           InteractionNodeSingletonTag;
+  qMRMLSceneModel* MRMLSceneModel;
+  bool NoneEnabled;
+  bool AddEnabled;
+  bool RemoveEnabled;
+  bool EditEnabled;
+  bool RenameEnabled;
+  QString InteractionNodeSingletonTag;
 
   vtkWeakPointer<vtkMRMLScene> MRMLScene;
   vtkSmartPointer<vtkCallbackCommand> CallBack;
@@ -88,6 +93,7 @@ public:
   bool SelectNodeUponCreation;
   QString NoneDisplay;
   bool AutoDefaultText;
+  bool SceneSwitchingInProgress{ false };
 
   // Store requested node or ID if setCurrentNode(ID) is called before a scene was set.
   QString RequestedNodeID;

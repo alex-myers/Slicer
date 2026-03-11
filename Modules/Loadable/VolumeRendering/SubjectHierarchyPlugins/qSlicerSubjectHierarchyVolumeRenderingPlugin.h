@@ -49,7 +49,7 @@ public:
 
   /// Get visibility context menu item actions to add to tree view.
   /// These item visibility context menu actions can be shown in the implementations of \sa showVisibilityContextMenuActionsForItem
-  QList<QAction*> visibilityContextMenuActions()const override;
+  QList<QAction*> visibilityContextMenuActions() const override;
 
   /// Show visibility context menu actions valid for a given subject hierarchy item.
   /// \param itemID Subject Hierarchy item to show the visibility context menu items for
@@ -63,18 +63,20 @@ public:
 
   /// Show/hide volume rendering in a view.
   /// If viewNode is nullptr then it is displayed in all 3D views in the current layout.
-  Q_INVOKABLE bool showVolumeRendering(bool show, vtkIdType itemID, vtkMRMLViewNode* viewNode=nullptr);
+  Q_INVOKABLE bool showVolumeRendering(bool show, vtkIdType itemID, vtkMRMLViewNode* viewNode = nullptr);
 
 protected slots:
   /// Toggle volume rendering option for current volume item
   void toggleVolumeRenderingForCurrentItem(bool);
   /// Switch to Volume Rendering module and select current volume item
   void showVolumeRenderingOptionsForCurrentItem();
+  /// Toggle synchronization with slice views for current volume item
+  void synchronizeWithSliceViewsForCurrentItem(bool);
 
 protected:
   QScopedPointer<qSlicerSubjectHierarchyVolumeRenderingPluginPrivate> d_ptr;
 
-  void resetFieldOfView(vtkMRMLDisplayNode* displayNode, vtkMRMLViewNode* viewNode=nullptr);
+  void resetFieldOfView(vtkMRMLDisplayNode* displayNode, vtkMRMLViewNode* viewNode = nullptr);
 
 private:
   Q_DECLARE_PRIVATE(qSlicerSubjectHierarchyVolumeRenderingPlugin);

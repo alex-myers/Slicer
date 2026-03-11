@@ -6,25 +6,22 @@ This module is extensible such that users can add new widgets and datatypes from
 import abc
 import dataclasses
 import enum
-import pathlib
 import logging
-from typing import Union
+import pathlib
+import types
+import typing
+from itertools import pairwise
 
 import ctk
 import qt
-
 import slicer
-from . import parameterPack as pack
-from .types import FloatRange
-from . import validators
-from .util import (
-    findFirstAnnotation,
-    getNodeTypes,
-    isNodeOrUnionOfNodes,
-    splitAnnotations,
-    unannotatedType,
-)
 
+from . import parameterPack as pack
+from . import validators
+from . import Default
+from .types import FloatRange
+from .util import (findFirstAnnotation, getNodeTypes, isNodeOrUnionOfNodes,
+                   splitAnnotations, unannotatedType)
 
 __all__ = [
     "createGuiConnector",
@@ -50,7 +47,7 @@ class Decimals:
 class SingleStep:
     """Annotation for Qt's setSingleStep methods for spinboxes and sliders."""
 
-    value: Union[float, int]
+    value: float | int
 
 
 class GuiConnector(abc.ABC):
@@ -131,11 +128,23 @@ def createGuiConnector(widget, datatype) -> GuiConnector:
     Creates an appropriate GuiConnector for the given widget object and possibly annotated datatype.
     Raises a RuntimeError if no appropriate GuiConnector is found.
     """
+    if hasattr(types, "UnionType") and isinstance(datatype, types.UnionType):
+        # Convert types.UnionType to typing.Union for connector compatibility
+        datatype = typing.Union[tuple(typing.get_args(datatype))]
+
     for possibleConnectorType in _registeredGuiConnectors:
         if possibleConnectorType.canRepresent(widget, datatype):
             return possibleConnectorType.create(widget, datatype)
-    raise RuntimeError(f"Unable to create GUI connector from datatype '{datatype}' to widget type '{type(widget)}'")
 
+    # Get a list of all source files where GUI connectors are defined
+    import inspect
+    guiConnectorFilePaths = set()
+    for guiConnector in _registeredGuiConnectors:
+        guiConnectorFilePaths.add(inspect.getfile(guiConnector))
+
+    raise RuntimeError(f"Unable to create GUI connector from datatype '{datatype}' to widget type '{type(widget)}'."
+                        " To determine which data types can be connected to which widget types, please check 'canRepresent' methods in 'GuiConnector' classes"
+                       f" in these files: {', '.join(guiConnectorFilePaths)}")
 
 def parameterNodeGuiConnector(classtype=None):
     """Class decorator to register a new parameter node gui connector."""
@@ -153,7 +162,7 @@ def parameterNodeGuiConnector(classtype=None):
 class QCheckBoxToBoolConnector(GuiConnector):
     @staticmethod
     def canRepresent(widget, datatype) -> bool:
-        return unannotatedType(datatype) == bool and type(widget) == qt.QCheckBox
+        return unannotatedType(datatype) == bool and type(widget) in (qt.QCheckBox, ctk.ctkCheckBox)
 
     @staticmethod
     def create(widget, datatype):
@@ -162,7 +171,7 @@ class QCheckBoxToBoolConnector(GuiConnector):
             return QCheckBoxToBoolConnector(widget)
         return None
 
-    def __init__(self, widget: qt.QCheckBox):
+    def __init__(self, widget):
         super().__init__()
         self._widget: qt.QCheckBox = widget
 
@@ -172,7 +181,7 @@ class QCheckBoxToBoolConnector(GuiConnector):
     def _disconnect(self):
         self._widget.stateChanged.disconnect(self.changed)
 
-    def widget(self) -> qt.QCheckBox:
+    def widget(self) -> qt.QWidget:
         return self._widget
 
     def read(self) -> bool:
@@ -219,6 +228,51 @@ class QCheckablePushButtonToBoolConnector(GuiConnector):
 
 
 @parameterNodeGuiConnector
+class ctkCheckablePushButtonToBoolConnector(GuiConnector):
+    @staticmethod
+    def canRepresent(widget, datatype) -> bool:
+        return unannotatedType(datatype) == bool and type(widget) == ctk.ctkCheckablePushButton
+
+    @staticmethod
+    def create(widget, datatype):
+        if ctkCheckablePushButtonToBoolConnector.canRepresent(widget, datatype):
+            # no annotations are handled
+            return ctkCheckablePushButtonToBoolConnector(widget)
+        return None
+
+    def __init__(self, widget: ctk.ctkCheckablePushButton):
+        super().__init__()
+        self._widget: ctk.ctkCheckablePushButton = widget
+        if not self._widget.checkBoxControlsButtonToggleState:
+            # standard Qt-like checkable button - if the checkbox is checked then button becomes a toggle button
+            if not self._widget.checkable:
+                logging.warn(f"Making push button checkable for conversion to bool: button {self._widget}, parent {self._widget.parent}")
+                self._widget.checkable = True
+
+    def _connect(self):
+        self._widget.toggled.connect(self.changed)
+
+    def _disconnect(self):
+        self._widget.toggled.disconnect(self.changed)
+
+    def widget(self) -> ctk.ctkCheckablePushButton:
+        return self._widget
+
+    def read(self) -> bool:
+        return self._widget.checked
+
+    def write(self, value: bool) -> None:
+        if self._widget.checkBoxControlsButtonToggleState:
+            if value:
+                self._widget.checkable = True
+                self._widget.checked = True
+            else:
+                self._widget.checkable = False
+        else:
+            self._widget.checked = value
+
+
+@parameterNodeGuiConnector
 class QSliderOrSpinBoxToIntConnector(GuiConnector):
     @staticmethod
     def canRepresent(widget, datatype) -> bool:
@@ -247,7 +301,7 @@ class QSliderOrSpinBoxToIntConnector(GuiConnector):
         minimum = findFirstAnnotation(annotations, validators.Minimum)
         maximum = findFirstAnnotation(annotations, validators.Maximum)
 
-        isBounded = withinRange is not None or minimum is not None and maximum is not None
+        isBounded = withinRange is not None or (minimum is not None and maximum is not None)
 
         if isinstance(widget, qt.QSlider) and not isBounded:
             raise RuntimeError("Cannot have a connection to QSlider where the int type is unbounded.")
@@ -283,27 +337,34 @@ class QSliderOrSpinBoxToIntConnector(GuiConnector):
 
 
 @parameterNodeGuiConnector
-class QDoubleSpinBoxCtkSliderWidgetToFloatConnector(GuiConnector):
+class QDoubleSpinBoxCtkSliderWidgetToFloatIntConnector(GuiConnector):
     @staticmethod
     def canRepresent(widget, datatype) -> bool:
-        return unannotatedType(datatype) == float and type(widget) in (
+        return (unannotatedType(datatype) in (float, int)) and (type(widget) in (
             qt.QDoubleSpinBox, ctk.ctkSliderWidget, slicer.qMRMLSliderWidget,
-        )
+            ctk.ctkDoubleSlider, ctk.ctkDoubleSpinBox, slicer.qMRMLSpinBox,
+        ))
 
     @staticmethod
     def create(widget, datatype):
-        if QDoubleSpinBoxCtkSliderWidgetToFloatConnector.canRepresent(widget, datatype):
-            annotations = splitAnnotations(datatype)[1]
-            return QDoubleSpinBoxCtkSliderWidgetToFloatConnector(widget, annotations)
+        if QDoubleSpinBoxCtkSliderWidgetToFloatIntConnector.canRepresent(widget, datatype):
+            return QDoubleSpinBoxCtkSliderWidgetToFloatIntConnector(widget, datatype)
         return None
 
-    def __init__(self, widget, annotations):
+    def __init__(self, widget, datatype):
         super().__init__()
         self._widget = widget
 
-        decimals = findFirstAnnotation(annotations, Decimals)
-        if decimals is not None:
-            self._widget.decimals = decimals.value
+        actualtype, annotations = splitAnnotations(datatype)
+        self._isInteger = (actualtype == int)
+
+        if not isinstance(widget, ctk.ctkDoubleSlider):
+            if self._isInteger:
+                self._widget.decimals = 0
+            else:
+                decimals = findFirstAnnotation(annotations, Decimals)
+                if decimals is not None:
+                    self._widget.decimals = decimals.value
 
         singleStep = findFirstAnnotation(annotations, SingleStep)
         if singleStep is not None:
@@ -313,9 +374,9 @@ class QDoubleSpinBoxCtkSliderWidgetToFloatConnector(GuiConnector):
         minimum = findFirstAnnotation(annotations, validators.Minimum)
         maximum = findFirstAnnotation(annotations, validators.Maximum)
 
-        isBounded = withinRange is not None or minimum is not None and maximum is not None
+        isBounded = withinRange is not None or (minimum is not None and maximum is not None)
 
-        if (isinstance(widget, ctk.ctkSliderWidget) or isinstance(widget, slicer.qMRMLSliderWidget)) and not isBounded:
+        if type(widget) in (ctk.ctkSliderWidget, slicer.qMRMLSliderWidget) and not isBounded:
             raise RuntimeError("Cannot have a connection to ctkSliderWidget where the float types is unbounded.")
 
         if withinRange is not None:
@@ -340,18 +401,24 @@ class QDoubleSpinBoxCtkSliderWidgetToFloatConnector(GuiConnector):
     def widget(self):
         return self._widget
 
-    def read(self) -> float:
-        return self._widget.value
+    def read(self) -> float | int:
+        if self._isInteger:
+            return int(self._widget.value)
+        else:
+            return self._widget.value
 
-    def write(self, value: float) -> None:
-        self._widget.value = value
+    def write(self, value: float | int) -> None:
+        if self._isInteger:
+            self._widget.value = int(value)
+        else:
+            self._widget.value = value
 
 
 @parameterNodeGuiConnector
 class QComboBoxToStringableConnector(GuiConnector):
     @staticmethod
     def canRepresent(widget, datatype) -> bool:
-        return type(widget) == qt.QComboBox and unannotatedType(datatype) in (
+        return type(widget) in (qt.QComboBox, ctk.ctkComboBox) and unannotatedType(datatype) in (
             int, float, str, bool,
         )
 
@@ -365,9 +432,9 @@ class QComboBoxToStringableConnector(GuiConnector):
             return QComboBoxToStringableConnector(widget, choice.choices)
         return None
 
-    def __init__(self, widget: qt.QComboBox, choices):
+    def __init__(self, widget, choices):
         super().__init__()
-        self._widget: qt.QComboBox = widget
+        self._widget = widget
         self._choices = choices
 
         self._widget.clear()
@@ -380,7 +447,7 @@ class QComboBoxToStringableConnector(GuiConnector):
     def _disconnect(self):
         self._widget.currentIndexChanged.disconnect(self.changed)
 
-    def widget(self) -> qt.QComboBox:
+    def widget(self):
         return self._widget
 
     def read(self):
@@ -399,7 +466,7 @@ class QComboBoxToStringableConnector(GuiConnector):
 class QComboBoxToEnumConnector(GuiConnector):
     @staticmethod
     def canRepresent(widget, datatype) -> bool:
-        return type(widget) == qt.QComboBox and issubclass(unannotatedType(datatype), enum.Enum)
+        return type(widget) in (qt.QComboBox, ctk.ctkComboBox) and issubclass(unannotatedType(datatype), enum.Enum)
 
     @staticmethod
     def create(widget, datatype):
@@ -407,18 +474,21 @@ class QComboBoxToEnumConnector(GuiConnector):
             return QComboBoxToEnumConnector(widget, datatype)
         return None
 
-    def __init__(self, widget: qt.QComboBox, datatype: enum.Enum):
+    def __init__(self, widget, datatype: enum.Enum):
         super().__init__()
-        self._widget: qt.QComboBox = widget
+        self._widget = widget
 
         underlyingType = unannotatedType(datatype)
         labelFunc = getattr(underlyingType, "label", lambda x: x.name)
 
         self._labelToEnum = [(labelFunc(e), e) for e in underlyingType]
 
+        # We lose the selection when we clear out the items, so we need to save it
+        savedSelection = self.read()
         self._widget.clear()
         for label, _ in self._labelToEnum:
             self._widget.addItem(label)
+        self.write(savedSelection)
 
     def _connect(self):
         self._widget.currentIndexChanged.connect(self.changed)
@@ -426,7 +496,7 @@ class QComboBoxToEnumConnector(GuiConnector):
     def _disconnect(self):
         self._widget.currentIndexChanged.disconnect(self.changed)
 
-    def widget(self) -> qt.QComboBox:
+    def widget(self):
         return self._widget
 
     def read(self):
@@ -470,8 +540,45 @@ class QLineEditToStrConnector(GuiConnector):
         return self._widget.text
 
     def write(self, value: str) -> None:
-        self._widget.text = value
+        # Writing the text of a QLineEdit moves the cursor to the end.
+        # We tolerate that if the value is actually changing, but sometimes
+        # the value is written as a result of an update originating from
+        # the field, and then it is wrong.
+        if value != self._widget.text:
+            self._widget.text = value
 
+@parameterNodeGuiConnector
+class QLabelToStrConnector(GuiConnector):
+    @staticmethod
+    def canRepresent(widget, datatype) -> bool:
+        return type(widget) == qt.QLabel and unannotatedType(datatype) == str
+
+    @staticmethod
+    def create(widget, datatype):
+        if QLabelToStrConnector.canRepresent(widget, datatype):
+            return QLabelToStrConnector(widget)
+        return None
+
+    def __init__(self, widget: qt.QLabel):
+        super().__init__()
+        self._widget: qt.QLabel = widget
+
+    def _connect(self):
+        # QLabel doesn't have a textChanged signal, so we can't connect to it
+        pass
+
+    def _disconnect(self):
+        # QLabel doesn't have a textChanged signal, so we can't disconnect from it
+        pass
+
+    def widget(self) -> qt.QLabel:
+        return self._widget
+
+    def read(self) -> str:
+        return self._widget.text
+
+    def write(self, value: str) -> None:
+        self._widget.text = value
 
 @parameterNodeGuiConnector
 class QTextEditPlainTextToStrConnector(GuiConnector):
@@ -509,7 +616,7 @@ class QTextEditPlainTextToStrConnector(GuiConnector):
 class ctkRangeWidgetToRangeConnector(GuiConnector):
     @staticmethod
     def canRepresent(widget, datatype) -> bool:
-        return type(widget) == ctk.ctkRangeWidget and unannotatedType(datatype) == FloatRange
+        return type(widget) in (ctk.ctkRangeWidget, ctk.ctkDoubleRangeSlider, slicer.qMRMLRangeWidget) and unannotatedType(datatype) == FloatRange
 
     @staticmethod
     def create(widget, datatype):
@@ -517,14 +624,14 @@ class ctkRangeWidgetToRangeConnector(GuiConnector):
             return ctkRangeWidgetToRangeConnector(widget, datatype)
         return None
 
-    def __init__(self, widget: ctk.ctkRangeWidget, type_) -> None:
+    def __init__(self, widget, type_) -> None:
         super().__init__()
-        self._widget: ctk.ctkRangeWidget = widget
+        self._widget = widget
         self._type = type_
         annotations = splitAnnotations(self._type)[1]
 
         decimals = findFirstAnnotation(annotations, Decimals)
-        if decimals is not None:
+        if decimals is not None and not isinstance(widget, ctk.ctkDoubleRangeSlider):
             self._widget.decimals = decimals.value
 
         singleStep = findFirstAnnotation(annotations, SingleStep)
@@ -534,7 +641,15 @@ class ctkRangeWidgetToRangeConnector(GuiConnector):
         rangeBounds = findFirstAnnotation(annotations, validators.RangeBounds)
 
         if rangeBounds is None:
-            raise RuntimeError("Cannot have a connection to ctkRangeWidget where the float is unbounded. Add a RangeBounds annotation.")
+            raise RuntimeError("Cannot have a connection to a range widget where the float is unbounded. Add a RangeBounds annotation.")
+
+        default = findFirstAnnotation(annotations, Default)
+        if default is None:
+            try:
+                rangeBounds.validate(0)
+            except ValueError:
+                raise RuntimeError("When providing RangeBounds that does not cover the value 0 " +
+                                    "you also need to provide a Default() value to initialize the GUI")
 
         self._widget.setRange(rangeBounds.minimum, rangeBounds.maximum)
 
@@ -544,7 +659,7 @@ class ctkRangeWidgetToRangeConnector(GuiConnector):
     def _disconnect(self):
         self._widget.valuesChanged.disconnect(self.changed)
 
-    def widget(self) -> ctk.ctkRangeWidget:
+    def widget(self):
         return self._widget
 
     def read(self):
@@ -659,6 +774,39 @@ class qMRMLNodeComboBoxToNodeConnector(GuiConnector):
         self._widget.setCurrentNode(value)
 
 
+@parameterNodeGuiConnector
+class ctkColorPickerButtonToQColorConnector(GuiConnector):
+    @staticmethod
+    def canRepresent(widget, datatype) -> bool:
+        return type(widget) == ctk.ctkColorPickerButton and unannotatedType(datatype) == qt.QColor
+
+    @staticmethod
+    def create(widget, datatype):
+        if ctkColorPickerButtonToQColorConnector.canRepresent(widget, datatype):
+            return ctkColorPickerButtonToQColorConnector(widget, datatype)
+        return None
+
+    def __init__(self, widget: ctk.ctkColorPickerButton, datatype):
+        super().__init__()
+        self._widget: ctk.ctkColorPickerButton = widget
+        self._type = unannotatedType(datatype)
+
+    def _connect(self):
+        self._widget.colorChanged.connect(self.changed)
+
+    def _disconnect(self):
+        self._widget.colorChanged.disconnect(self.changed)
+
+    def widget(self) -> ctk.ctkColorPickerButton:
+        return self._widget
+
+    def read(self) -> qt.QColor:
+        return self._widget.color
+
+    def write(self, value : qt.QColor) -> None:
+        self._widget.color = value
+
+
 SlicerPackParameterNamePropertyName = "SlicerPackParameterName"
 
 
@@ -678,9 +826,9 @@ def _extractCorrectWidgets(widget):
     # Remove stacks that are completely contained within other stacks.
     # note: just doing `sorted(parentStacks, key=lambda x: id(x))` wasn't sorting it right
     ids = [[id(w) for w in ww] for ww in parentStacks]
-    parentStacks, _ = zip(*sorted(zip(parentStacks, ids), key=lambda w: w[1]))
+    parentStacks, _ = zip(*sorted(zip(parentStacks, ids, strict=True), key=lambda w: w[1]), strict=True)
 
-    leafParentStacks = [i for i, j in zip(parentStacks[:-1], parentStacks[1:]) if not i == j[:len(i)]] \
+    leafParentStacks = [i for i, j in pairwise(parentStacks) if not i == j[:len(i)]] \
         + [parentStacks[-1]]
     return leafParentStacks
 

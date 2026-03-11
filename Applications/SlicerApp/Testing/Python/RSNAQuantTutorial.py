@@ -185,7 +185,7 @@ class RSNAQuantTutorialTest(ScriptedLoadableModuleTest):
             self.delayDisplay("Ruler 1")
 
             # add ruler 2
-            rulerNode1 = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsLineNode")
+            rulerNode2 = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsLineNode")
             rulerNode2.SetName("d2")
             rulerNode2.AddControlPoint(-3.54455, 27.656, 13.1646)
             rulerNode2.AddControlPoint(-2.5319, 27.656, 47.5949)
@@ -223,6 +223,7 @@ class RSNAQuantTutorialTest(ScriptedLoadableModuleTest):
 
         extractPath = SampleData.downloadFromURL(
             fileNames="dataset3_PETCT.zip",
+            loadFileTypes="ZipFile",
             uris=TESTING_DATA_URL + "SHA256/11e81af3462076f4ca371b632e03ed435240042915c2daf07f80059b3f78f88d",
             checksums="SHA256:11e81af3462076f4ca371b632e03ed435240042915c2daf07f80059b3f78f88d")[0]
 

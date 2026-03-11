@@ -50,6 +50,7 @@
 #include <vtksys/SystemTools.hxx>
 
 // Teem includes
+#include "teem/nrrd.h"
 #include "teem/ten.h"
 
 vtkStandardNewMacro(vtkTeemNRRDReader);
@@ -72,7 +73,7 @@ vtkTeemNRRDReader::vtkTeemNRRDReader()
 //----------------------------------------------------------------------------
 vtkTeemNRRDReader::~vtkTeemNRRDReader()
 {
-  nrrdNuke(this->nrrd);
+  nrrdNuke(static_cast<Nrrd*>(this->nrrd));
   this->nrrd = nullptr;
 }
 
@@ -94,7 +95,7 @@ vtkMatrix4x4* vtkTeemNRRDReader::GetMeasurementFrameMatrix()
 const char* vtkTeemNRRDReader::GetHeaderKeys()
 {
   this->HeaderKeys.clear();
-  for (std::map<std::string,std::string>::iterator i = HeaderKeyValue.begin(); i != HeaderKeyValue.end(); i++)
+  for (std::map<std::string, std::string>::iterator i = HeaderKeyValue.begin(); i != HeaderKeyValue.end(); i++)
   {
     if (!this->HeaderKeys.empty())
     {
@@ -106,7 +107,7 @@ const char* vtkTeemNRRDReader::GetHeaderKeys()
 }
 
 //----------------------------------------------------------------------------
-const std::map<std::string,std::string> vtkTeemNRRDReader::GetHeaderKeysMap()
+const std::map<std::string, std::string> vtkTeemNRRDReader::GetHeaderKeysMap()
 {
   return this->HeaderKeyValue;
 }
@@ -115,17 +116,17 @@ const std::map<std::string,std::string> vtkTeemNRRDReader::GetHeaderKeysMap()
 const std::vector<std::string> vtkTeemNRRDReader::GetHeaderKeysVector()
 {
   std::vector<std::string> keys;
-  for (std::map<std::string,std::string>::iterator i = HeaderKeyValue.begin(); i != HeaderKeyValue.end(); i++)
+  for (std::map<std::string, std::string>::iterator i = HeaderKeyValue.begin(); i != HeaderKeyValue.end(); i++)
   {
-    keys.push_back( i->first );
+    keys.push_back(i->first);
   }
   return keys;
 }
 
 //----------------------------------------------------------------------------
-const char* vtkTeemNRRDReader::GetHeaderValue(const char *key)
+const char* vtkTeemNRRDReader::GetHeaderValue(const char* key)
 {
-  std::map<std::string,std::string>::iterator i = HeaderKeyValue.find(key);
+  std::map<std::string, std::string>::iterator i = HeaderKeyValue.find(key);
   if (i != HeaderKeyValue.end())
   {
     return (i->second.c_str());
@@ -164,17 +165,17 @@ int vtkTeemNRRDReader::CanReadFile(const char* filename)
   // recognized.
   if (!filename)
   {
-    vtkDebugMacro(<<"No filename specified.");
+    vtkDebugMacro(<< "No filename specified.");
     return false;
   }
 
   // We'll assume we can read from stdin (don't try to read the header though)
-  //if ( fname == "-" )
+  // if (fname == "-")
   //  {
   //  return true;
   //  }
 
-  std::string extension = vtksys::SystemTools::LowerCase( vtksys::SystemTools::GetFilenameLastExtension(filename) );
+  std::string extension = vtksys::SystemTools::LowerCase(vtksys::SystemTools::GetFilenameLastExtension(filename));
   if (extension != ".nrrd" && extension != ".nhdr")
   {
     vtkDebugMacro("The filename extension is not recognized");
@@ -189,8 +190,8 @@ int vtkTeemNRRDReader::CanReadFile(const char* filename)
     return false;
   }
 
-  char magic[5] = {'\0','\0','\0','\0','\0'};
-  inputStream.read(magic,4*sizeof(char));
+  char magic[5] = { '\0', '\0', '\0', '\0', '\0' };
+  inputStream.read(magic, 4 * sizeof(char));
 
   if (inputStream.eof())
   {
@@ -198,7 +199,7 @@ int vtkTeemNRRDReader::CanReadFile(const char* filename)
     return false;
   }
 
-  if (strcmp(magic,"NRRD")!=0)
+  if (strcmp(magic, "NRRD") != 0)
   {
     inputStream.close();
     return false;
@@ -208,7 +209,7 @@ int vtkTeemNRRDReader::CanReadFile(const char* filename)
 
   // Look into the file to avoid claiming the file is readable when it's actually not
   Nrrd* nrrdTemp = nrrdNew();
-  NrrdIoState *nio = nrrdIoStateNew();
+  NrrdIoState* nio = nrrdIoStateNew();
   // Tell nrrdLoad to read just the header, and none of the data
   nrrdIoStateSet(nio, nrrdIoStateSkipData, 1);
 
@@ -243,8 +244,10 @@ int vtkTeemNRRDReader::CanReadFile(const char* filename)
 }
 
 //----------------------------------------------------------------------------
-bool vtkTeemNRRDReader::GetPointType(Nrrd* nrrdTemp, int& pointDataType, int &numOfComponents)
+bool vtkTeemNRRDReader::GetPointType(void* _nrrdTemp, int& pointDataType, int& numOfComponents)
 {
+  auto* nrrdTemp = static_cast<Nrrd*>(_nrrdTemp);
+
   // vtkTeemNRRDReader only supports 3 or 4 dimensional image with scalar, vector,
   // normal or tensor data. Other dimensionality is considered a multicomponent scalar field.
 
@@ -258,7 +261,7 @@ bool vtkTeemNRRDReader::GetPointType(Nrrd* nrrdTemp, int& pointDataType, int &nu
   unsigned int rangeAxisNum = nrrdRangeAxesGet(nrrdTemp, rangeAxisIdx);
 
   // 3D volumes
-  if (nrrdTemp->dim  == 3)
+  if (nrrdTemp->dim == 3)
   {
     if (rangeAxisNum != 0)
     {
@@ -284,22 +287,22 @@ bool vtkTeemNRRDReader::GetPointType(Nrrd* nrrdTemp, int& pointDataType, int &nu
   // NOTE: it is the NRRD readers responsibility to make sure that
   // the size (# of components) associated with a specific kind is
   // matches the actual size of the axis.
-  if (rangeAxisKind == nrrdKindDomain
-    || rangeAxisKind == nrrdKindSpace
-    || rangeAxisKind == nrrdKindTime)
+  if (rangeAxisKind == nrrdKindDomain   //
+      || rangeAxisKind == nrrdKindSpace //
+      || rangeAxisKind == nrrdKindTime)
   {
     // Range axis kind seems more like a domain axis than a range axis.
     return false;
   }
 
-  if (rangeAxisKind == nrrdKindStub || rangeAxisKind == nrrdKindScalar || rangeAxisKind == nrrdKind3Color
-    || rangeAxisKind == nrrdKindRGBColor || rangeAxisKind == nrrdKind4Color || rangeAxisKind == nrrdKindRGBAColor
-    || rangeAxisKind == nrrdKindComplex || rangeAxisKind == nrrdKindHSVColor || rangeAxisKind == nrrdKindXYZColor
-    || rangeAxisKind == nrrdKindQuaternion || rangeAxisKind == nrrdKind2DSymMatrix || rangeAxisKind == nrrdKind2DMaskedSymMatrix
-    || rangeAxisKind == nrrdKind2DMatrix || rangeAxisKind == nrrdKind2DMaskedMatrix || rangeAxisKind == nrrdKind2Vector
-    || rangeAxisKind == nrrdKind4Vector || rangeAxisKind == nrrdKindList || rangeAxisKind == nrrdKindPoint
-    || rangeAxisKind == nrrdKind3Vector || rangeAxisKind == nrrdKind3Gradient || rangeAxisKind == nrrdKindVector
-    || rangeAxisKind == nrrdKindCovariantVector)
+  if (rangeAxisKind == nrrdKindStub || rangeAxisKind == nrrdKindScalar || rangeAxisKind == nrrdKind3Color                          //
+      || rangeAxisKind == nrrdKindRGBColor || rangeAxisKind == nrrdKind4Color || rangeAxisKind == nrrdKindRGBAColor                //
+      || rangeAxisKind == nrrdKindComplex || rangeAxisKind == nrrdKindHSVColor || rangeAxisKind == nrrdKindXYZColor                //
+      || rangeAxisKind == nrrdKindQuaternion || rangeAxisKind == nrrdKind2DSymMatrix || rangeAxisKind == nrrdKind2DMaskedSymMatrix //
+      || rangeAxisKind == nrrdKind2DMatrix || rangeAxisKind == nrrdKind2DMaskedMatrix || rangeAxisKind == nrrdKind2Vector          //
+      || rangeAxisKind == nrrdKind4Vector || rangeAxisKind == nrrdKindList || rangeAxisKind == nrrdKindPoint                       //
+      || rangeAxisKind == nrrdKind3Vector || rangeAxisKind == nrrdKind3Gradient || rangeAxisKind == nrrdKindVector                 //
+      || rangeAxisKind == nrrdKindCovariantVector)
   {
     pointDataType = vtkDataSetAttributes::SCALARS;
     numOfComponents = sizeAlongRangeAxis;
@@ -320,8 +323,9 @@ bool vtkTeemNRRDReader::GetPointType(Nrrd* nrrdTemp, int& pointDataType, int &nu
     return true;
   }
 
-  if (rangeAxisKind == nrrdKind3DMaskedSymMatrix || rangeAxisKind == nrrdKind3DSymMatrix
-    || rangeAxisKind == nrrdKind3DMatrix)
+  if (rangeAxisKind == nrrdKind3DMaskedSymMatrix //
+      || rangeAxisKind == nrrdKind3DSymMatrix    //
+      || rangeAxisKind == nrrdKind3DMatrix)
   {
     // NOTE: in case of nrrdKind3DMaskedSymMatrix and nrrdKind3DSymMatrix we will crop
     // out the mask in Read() below and expand the 6 values into 9,
@@ -360,17 +364,17 @@ void vtkTeemNRRDReader::ExecuteInformation()
   }
   this->CurrentFileName = this->GetFileName();
 
-  nrrdNuke(this->nrrd); // nuke and reallocate to reset the state
+  nrrdNuke(static_cast<Nrrd*>(this->nrrd)); // nuke and reallocate to reset the state
   this->nrrd = nrrdNew();
 
-  NrrdIoState *nio = nrrdIoStateNew();
+  NrrdIoState* nio = nrrdIoStateNew();
 
   // Tell nrrdLoad to read just the header, and none of the data
   nrrdIoStateSet(nio, nrrdIoStateSkipData, 1);
 
-  if (nrrdLoad(this->nrrd, this->GetFileName(), nio) != 0)
+  if (nrrdLoad(static_cast<Nrrd*>(this->nrrd), this->GetFileName(), nio) != 0)
   {
-    char *err = biffGetDone(NRRD);
+    char* err = biffGetDone(NRRD);
     vtkErrorMacro("Error reading " << this->GetFileName() << ": " << err);
     free(err); // err points to malloc'd data!!
     err = nullptr;
@@ -385,7 +389,7 @@ void vtkTeemNRRDReader::ExecuteInformation()
   this->MeasurementFrameMatrix->Identity();
   this->NRRDWorldToRasMatrix->Identity();
 
-  if (nrrdTypeBlock == this->nrrd->type)
+  if (nrrdTypeBlock == static_cast<Nrrd*>(this->nrrd)->type)
   {
     vtkErrorMacro("ReadImageInformation: Cannot currently handle nrrdTypeBlock");
     nio = nrrdIoStateNix(nio);
@@ -402,24 +406,24 @@ void vtkTeemNRRDReader::ExecuteInformation()
     this->SetDataByteOrderToBigEndian();
   }
 
-  //if ( nio->encoding == nrrdEncodingAscii )
-  //  {
-  //  this->SetFileTypeToASCII();
-  //  }
-  //else
-  //  {
-  //  this->SetFileTypeToBinary();
-  //  }
+  // if (nio->encoding == nrrdEncodingAscii)
+  //   {
+  //   this->SetFileTypeToASCII();
+  //   }
+  // else
+  //   {
+  //   this->SetFileTypeToBinary();
+  //   }
 
   // Set the number of image dimensions and bail if needed
   unsigned int domainAxisIdx[NRRD_DIM_MAX];
-  unsigned int domainAxisNum = nrrdDomainAxesGet(this->nrrd, domainAxisIdx);
-  if (this->nrrd->spaceDim && this->nrrd->spaceDim != domainAxisNum)
+  unsigned int domainAxisNum = nrrdDomainAxesGet(static_cast<Nrrd*>(this->nrrd), domainAxisIdx);
+  if (static_cast<Nrrd*>(this->nrrd)->spaceDim && static_cast<Nrrd*>(this->nrrd)->spaceDim != domainAxisNum)
   {
-    vtkErrorMacro("ReadImageInformation: this->nrrd's # independent axes ("
-      << domainAxisNum << ") doesn't match dimension of space"
-      " in which orientation is defined ("
-      << this->nrrd->spaceDim << "); not currently handled");
+    vtkErrorMacro("ReadImageInformation: this->nrrd's # independent axes (" << domainAxisNum
+                                                                            << ") doesn't match dimension of space"
+                                                                               " in which orientation is defined ("
+                                                                            << static_cast<Nrrd*>(this->nrrd)->spaceDim << "); not currently handled");
     nio = nrrdIoStateNix(nio);
     this->ReadStatus = 1;
     return;
@@ -427,7 +431,7 @@ void vtkTeemNRRDReader::ExecuteInformation()
 
   int pointDataType = -1;
   int numOfComponents = -1;
-  if (!vtkTeemNRRDReader::GetPointType(this->nrrd, pointDataType, numOfComponents))
+  if (!vtkTeemNRRDReader::GetPointType(static_cast<Nrrd*>(this->nrrd), pointDataType, numOfComponents))
   {
     vtkErrorMacro("ReadImageInformation: only 3 spatial dimension and 1 optional range axis is supported");
     nio = nrrdIoStateNix(nio);
@@ -438,8 +442,8 @@ void vtkTeemNRRDReader::ExecuteInformation()
   this->SetNumberOfComponents(numOfComponents);
 
   // Set type information
-  this->SetDataType(this->NrrdToVTKScalarType(this->nrrd->type));
-  this->SetDataScalarType(this->NrrdToVTKScalarType(this->nrrd->type));
+  this->SetDataType(this->NrrdToVTKScalarType(static_cast<Nrrd*>(this->nrrd)->type));
+  this->SetDataScalarType(this->NrrdToVTKScalarType(static_cast<Nrrd*>(this->nrrd)->type));
 
   // Set axis information
   int dataExtent[6] = { 0 };
@@ -457,16 +461,14 @@ void vtkTeemNRRDReader::ExecuteInformation()
   {
     unsigned int naxi = domainAxisIdx[axii];
     dataExtent[2 * axii] = 0;
-    dataExtent[2 * axii + 1] = static_cast<int>(this->nrrd->axis[naxi].size) - 1;
+    dataExtent[2 * axii + 1] = static_cast<int>(static_cast<Nrrd*>(this->nrrd)->axis[naxi].size) - 1;
 
     double spaceDir[NRRD_SPACE_DIM_MAX];
     double axisSpacing = 1.0;
-    int spacingStatus = nrrdSpacingCalculate(this->nrrd, naxi, &axisSpacing, spaceDir);
+    int spacingStatus = nrrdSpacingCalculate(static_cast<Nrrd*>(this->nrrd), naxi, &axisSpacing, spaceDir);
     switch (spacingStatus)
     {
-      case nrrdSpacingStatusNone:
-        spacing[axii] = 1.0;
-        break;
+      case nrrdSpacingStatusNone: spacing[axii] = 1.0; break;
       case nrrdSpacingStatusScalarNoSpace:
         spacing[axii] = axisSpacing;
         ijkToRasMatrix->SetElement(axii, axii, axisSpacing);
@@ -475,10 +477,10 @@ void vtkTeemNRRDReader::ExecuteInformation()
         if (AIR_EXISTS(axisSpacing))
         {
           // only set info if we have something to set
-          //this->SetSpacing(axii, axisSpacing);
+          // this->SetSpacing(axii, axisSpacing);
           spacing[axii] = axisSpacing;
 
-          switch (this->nrrd->space)
+          switch (static_cast<Nrrd*>(this->nrrd)->space)
           {
               // on read, convert non-RAS coords into RAS coords, when we can
             case nrrdSpaceRightAnteriorSuperior:
@@ -486,12 +488,12 @@ void vtkTeemNRRDReader::ExecuteInformation()
               this->NRRDWorldToRasMatrix->Identity();
               break;
             case nrrdSpaceLeftAnteriorSuperior:
-              spaceDir[0] *= -1;   // L -> R
+              spaceDir[0] *= -1; // L -> R
               this->NRRDWorldToRasMatrix->SetElement(0, 0, -1);
               break;
             case nrrdSpaceLeftPosteriorSuperior:
-              spaceDir[0] *= -1;   // L -> R
-              spaceDir[1] *= -1;   // P -> A
+              spaceDir[0] *= -1; // L -> R
+              spaceDir[1] *= -1; // P -> A
               this->NRRDWorldToRasMatrix->SetElement(0, 0, -1);
               this->NRRDWorldToRasMatrix->SetElement(1, 1, -1);
               break;
@@ -501,44 +503,40 @@ void vtkTeemNRRDReader::ExecuteInformation()
               break;
           }
 
-          for (int j = 0; (unsigned int)j < this->nrrd->spaceDim; j++)
+          for (int j = 0; (unsigned int)j < static_cast<Nrrd*>(this->nrrd)->spaceDim; j++)
           {
             ijkToRasMatrix->SetElement(j, axii, spaceDir[j] * axisSpacing);
           }
         }
         break;
       default:
-      case nrrdSpacingStatusUnknown:
-        vtkErrorMacro("ReadImageInformation: Error interpreting nrrd spacing (nrrdSpacingStatusUnknown)");
-        break;
-      case nrrdSpacingStatusScalarWithSpace:
-        vtkErrorMacro("ReadImageInformation: Error interpreting nrrd spacing (nrrdSpacingStatusScalarWithSpace)");
-        break;
+      case nrrdSpacingStatusUnknown: vtkErrorMacro("ReadImageInformation: Error interpreting nrrd spacing (nrrdSpacingStatusUnknown)"); break;
+      case nrrdSpacingStatusScalarWithSpace: vtkErrorMacro("ReadImageInformation: Error interpreting nrrd spacing (nrrdSpacingStatusScalarWithSpace)"); break;
     }
   }
 
   // Figure out origin
-  if (this->nrrd->spaceDim == 3)
+  if (static_cast<Nrrd*>(this->nrrd)->spaceDim == 3)
   {
-    if (AIR_EXISTS(this->nrrd->spaceOrigin[0]))
+    if (AIR_EXISTS(static_cast<Nrrd*>(this->nrrd)->spaceOrigin[0]))
     {
       // only set info if we have something to set
-      for (unsigned int saxi = 0; saxi < this->nrrd->spaceDim; saxi++)
+      for (unsigned int saxi = 0; saxi < static_cast<Nrrd*>(this->nrrd)->spaceDim; saxi++)
       {
-        origin[saxi] = this->nrrd->spaceOrigin[saxi];
+        origin[saxi] = static_cast<Nrrd*>(this->nrrd)->spaceOrigin[saxi];
       }
-      switch (this->nrrd->space)
+      switch (static_cast<Nrrd*>(this->nrrd)->space)
       {
           // convert non-RAS coords into RAS coords, when we can
         case nrrdSpaceRightAnteriorSuperior:
           // no change needed
           break;
         case nrrdSpaceLeftAnteriorSuperior:
-          origin[0] *= -1;   // L -> R
+          origin[0] *= -1; // L -> R
           break;
         case nrrdSpaceLeftPosteriorSuperior:
-          origin[0] *= -1;   // L -> R
-          origin[1] *= -1;   // P -> A
+          origin[0] *= -1; // L -> R
+          origin[1] *= -1; // P -> A
           break;
         default:
           // we're not coming from a space for which the conversion
@@ -550,7 +548,7 @@ void vtkTeemNRRDReader::ExecuteInformation()
   else
   {
     double spaceOrigin[NRRD_DIM_MAX];
-    int originStatus = nrrdOriginCalculate(this->nrrd, domainAxisIdx, domainAxisNum, nrrdCenterCell, spaceOrigin);
+    int originStatus = nrrdOriginCalculate(static_cast<Nrrd*>(this->nrrd), domainAxisIdx, domainAxisNum, nrrdCenterCell, spaceOrigin);
     for (unsigned int saxi = 0; saxi < domainAxisNum; saxi++)
     {
       switch (originStatus)
@@ -561,9 +559,7 @@ void vtkTeemNRRDReader::ExecuteInformation()
           // this->SetOrigin(saxi, 0.0);
           origin[saxi] = 0.0;
           break;
-        case nrrdOriginStatusOkay:
-          origin[saxi] = spaceOrigin[saxi];
-          break;
+        case nrrdOriginStatusOkay: origin[saxi] = spaceOrigin[saxi]; break;
         default:
         case nrrdOriginStatusUnknown:
         case nrrdOriginStatusDirection:
@@ -575,7 +571,7 @@ void vtkTeemNRRDReader::ExecuteInformation()
     }
   }
 
-  if (this->UseNativeOrigin && AIR_EXISTS(this->nrrd->spaceOrigin[0]))
+  if (this->UseNativeOrigin && AIR_EXISTS(static_cast<Nrrd*>(this->nrrd)->spaceOrigin[0]))
   {
     for (int i = 0; i < 3; i++)
     {
@@ -595,22 +591,22 @@ void vtkTeemNRRDReader::ExecuteInformation()
   this->RasToIjkMatrix->SetElement(3, 3, 1.0);
 
   this->SetDataSpacing(spacing);
-  //this->SetDataOrigin(origin);
+  // this->SetDataOrigin(origin);
   this->SetDataExtent(dataExtent);
 
   // Push extra key/value pair data into std::map
-  for (unsigned int i = 0; i < nrrdKeyValueSize(this->nrrd); i++)
+  for (unsigned int i = 0; i < nrrdKeyValueSize(static_cast<Nrrd*>(this->nrrd)); i++)
   {
-    char *key = nullptr;
-    char *val = nullptr;
-    nrrdKeyValueIndex(this->nrrd, &key, &val, i);
+    char* key = nullptr;
+    char* val = nullptr;
+    nrrdKeyValueIndex(static_cast<Nrrd*>(this->nrrd), &key, &val, i);
     HeaderKeyValue[std::string(key)] = std::string(val);
-    free(key);  // key and val point to malloc'd data!!
+    free(key); // key and val point to malloc'd data!!
     free(val);
   }
 
   const char* labels[NRRD_DIM_MAX] = { nullptr };
-  nrrdAxisInfoGet_nva(nrrd, nrrdAxisInfoLabel, labels);
+  nrrdAxisInfoGet_nva(static_cast<Nrrd*>(this->nrrd), nrrdAxisInfoLabel, labels);
   this->AxisLabels.clear();
   for (unsigned int axi = 0; axi < NRRD_DIM_MAX; axi++)
   {
@@ -621,7 +617,7 @@ void vtkTeemNRRDReader::ExecuteInformation()
   }
 
   const char* units[NRRD_DIM_MAX] = { nullptr };
-  nrrdAxisInfoGet_nva(nrrd, nrrdAxisInfoUnits, units);
+  nrrdAxisInfoGet_nva(static_cast<Nrrd*>(this->nrrd), nrrdAxisInfoUnits, units);
   this->AxisUnits.clear();
   for (unsigned int axi = 0; axi < NRRD_DIM_MAX; axi++)
   {
@@ -631,44 +627,44 @@ void vtkTeemNRRDReader::ExecuteInformation()
     }
   }
 
-  if (this->nrrd->space)
+  if (static_cast<Nrrd*>(this->nrrd)->space)
   {
-    HeaderKeyValue[std::string("space")] = std::string(airEnumStr(nrrdSpace, this->nrrd->space));
+    HeaderKeyValue[std::string("space")] = std::string(airEnumStr(nrrdSpace, static_cast<Nrrd*>(this->nrrd)->space));
   }
 
-  if (AIR_EXISTS(this->nrrd->measurementFrame[0][0]))
+  if (AIR_EXISTS(static_cast<Nrrd*>(this->nrrd)->measurementFrame[0][0]))
   {
     for (int i = 0; i < 3; i++)
     {
-      switch (this->nrrd->space)
+      switch (static_cast<Nrrd*>(this->nrrd)->space)
       {
         // WARNING: this->nrrd->measurementFrame[i][0:2] are the rows of the measurementFrame matrix
         // on read, convert non-RAS coords into RAS coords, when we can
         case nrrdSpaceRightAnteriorSuperior:
           // no change needed
-          this->MeasurementFrameMatrix->SetElement(0, i, this->nrrd->measurementFrame[i][0]);
-          this->MeasurementFrameMatrix->SetElement(1, i, this->nrrd->measurementFrame[i][1]);
-          this->MeasurementFrameMatrix->SetElement(2, i, this->nrrd->measurementFrame[i][2]);
+          this->MeasurementFrameMatrix->SetElement(0, i, static_cast<Nrrd*>(this->nrrd)->measurementFrame[i][0]);
+          this->MeasurementFrameMatrix->SetElement(1, i, static_cast<Nrrd*>(this->nrrd)->measurementFrame[i][1]);
+          this->MeasurementFrameMatrix->SetElement(2, i, static_cast<Nrrd*>(this->nrrd)->measurementFrame[i][2]);
           break;
         case nrrdSpaceLeftAnteriorSuperior:
           // L -> R
-          this->MeasurementFrameMatrix->SetElement(0, i, -this->nrrd->measurementFrame[i][0]);
-          this->MeasurementFrameMatrix->SetElement(1, i, this->nrrd->measurementFrame[i][1]);
-          this->MeasurementFrameMatrix->SetElement(2, i, this->nrrd->measurementFrame[i][2]);
+          this->MeasurementFrameMatrix->SetElement(0, i, -static_cast<Nrrd*>(this->nrrd)->measurementFrame[i][0]);
+          this->MeasurementFrameMatrix->SetElement(1, i, static_cast<Nrrd*>(this->nrrd)->measurementFrame[i][1]);
+          this->MeasurementFrameMatrix->SetElement(2, i, static_cast<Nrrd*>(this->nrrd)->measurementFrame[i][2]);
           break;
         case nrrdSpaceLeftPosteriorSuperior:
           // L -> R
           // P -> A
-          this->MeasurementFrameMatrix->SetElement(0, i, -this->nrrd->measurementFrame[i][0]);
-          this->MeasurementFrameMatrix->SetElement(1, i, -this->nrrd->measurementFrame[i][1]);
-          this->MeasurementFrameMatrix->SetElement(2, i, this->nrrd->measurementFrame[i][2]);
+          this->MeasurementFrameMatrix->SetElement(0, i, -static_cast<Nrrd*>(this->nrrd)->measurementFrame[i][0]);
+          this->MeasurementFrameMatrix->SetElement(1, i, -static_cast<Nrrd*>(this->nrrd)->measurementFrame[i][1]);
+          this->MeasurementFrameMatrix->SetElement(2, i, static_cast<Nrrd*>(this->nrrd)->measurementFrame[i][2]);
           break;
         default:
           // we're not coming from a space for which the conversion
           // to LPS is well-defined
-          this->MeasurementFrameMatrix->SetElement(0, i, this->nrrd->measurementFrame[i][0]);
-          this->MeasurementFrameMatrix->SetElement(1, i, this->nrrd->measurementFrame[i][1]);
-          this->MeasurementFrameMatrix->SetElement(2, i, this->nrrd->measurementFrame[i][2]);
+          this->MeasurementFrameMatrix->SetElement(0, i, static_cast<Nrrd*>(this->nrrd)->measurementFrame[i][0]);
+          this->MeasurementFrameMatrix->SetElement(1, i, static_cast<Nrrd*>(this->nrrd)->measurementFrame[i][1]);
+          this->MeasurementFrameMatrix->SetElement(2, i, static_cast<Nrrd*>(this->nrrd)->measurementFrame[i][2]);
           break;
       }
     }
@@ -679,9 +675,9 @@ void vtkTeemNRRDReader::ExecuteInformation()
 }
 
 //----------------------------------------------------------------------------
-vtkImageData *vtkTeemNRRDReader::AllocateOutputData(vtkDataObject *out, vtkInformation* outInfo)
+vtkImageData* vtkTeemNRRDReader::AllocateOutputData(vtkDataObject* out, vtkInformation* outInfo)
 {
-  vtkImageData *res = vtkImageData::SafeDownCast(out);
+  vtkImageData* res = vtkImageData::SafeDownCast(out);
   if (!res)
   {
     vtkWarningMacro("Call to AllocateOutputData with non vtkImageData output");
@@ -698,11 +694,10 @@ vtkImageData *vtkTeemNRRDReader::AllocateOutputData(vtkDataObject *out, vtkInfor
   this->AllocatePointData(res, outInfo);
 
   return res;
-
 }
 
 //----------------------------------------------------------------------------
-void vtkTeemNRRDReader::AllocatePointData(vtkImageData *out, vtkInformation* outInfo)
+void vtkTeemNRRDReader::AllocatePointData(vtkImageData* out, vtkInformation* outInfo)
 {
   // if the scalar type has not been set then we have a problem
   if (this->DataType == VTK_VOID)
@@ -715,32 +710,23 @@ void vtkTeemNRRDReader::AllocatePointData(vtkImageData *out, vtkInformation* out
   vtkSmartPointer<vtkDataArray> pd;
   switch (this->PointDataType)
   {
-    case vtkDataSetAttributes::SCALARS:
-      pd = out->GetPointData()->GetScalars();
-      break;
-    case vtkDataSetAttributes::VECTORS:
-      pd = out->GetPointData()->GetVectors();
-      break;
-    case vtkDataSetAttributes::NORMALS:
-      pd = out->GetPointData()->GetNormals();
-      break;
-    case vtkDataSetAttributes::TENSORS:
-      pd = out->GetPointData()->GetTensors();
-      break;
-    default:
-      vtkErrorMacro("Unknown PointData Type.");
-      return;
+    case vtkDataSetAttributes::SCALARS: pd = out->GetPointData()->GetScalars(); break;
+    case vtkDataSetAttributes::VECTORS: pd = out->GetPointData()->GetVectors(); break;
+    case vtkDataSetAttributes::NORMALS: pd = out->GetPointData()->GetNormals(); break;
+    case vtkDataSetAttributes::TENSORS: pd = out->GetPointData()->GetTensors(); break;
+    default: vtkErrorMacro("Unknown PointData Type."); return;
   }
 
   int extent[6] = { 0, -1, 0, -1, 0, -1 };
   out->GetExtent(extent);
 
-  if (pd && pd->GetDataType() == this->DataType
-    && pd->GetReferenceCount() == 1)
+  if (pd && pd->GetDataType() == this->DataType //
+      && pd->GetReferenceCount() == 1)
   {
     pd->SetNumberOfComponents(this->GetNumberOfComponents());
-    pd->SetNumberOfTuples(vtkIdType(extent[1] - extent[0] + 1)*
-      vtkIdType(extent[3] - extent[2] + 1)*
+    pd->SetNumberOfTuples(                   //
+      vtkIdType(extent[1] - extent[0] + 1) * //
+      vtkIdType(extent[3] - extent[2] + 1) * //
       vtkIdType(extent[5] - extent[4] + 1));
     // Since the execute method will be modifying the scalars
     // directly.
@@ -751,49 +737,26 @@ void vtkTeemNRRDReader::AllocatePointData(vtkImageData *out, vtkInformation* out
   // allocate the new scalars
   switch (this->DataType)
   {
-    case VTK_BIT:
-      pd = vtkSmartPointer<vtkBitArray>::New();
-      break;
-    case VTK_UNSIGNED_CHAR:
-      pd = vtkSmartPointer<vtkUnsignedCharArray>::New();
-      break;
-    case VTK_CHAR:
-      pd = vtkSmartPointer<vtkCharArray>::New();
-      break;
-    case VTK_UNSIGNED_SHORT:
-      pd = vtkSmartPointer<vtkUnsignedShortArray>::New();
-      break;
-    case VTK_SHORT:
-      pd = vtkSmartPointer<vtkShortArray>::New();
-      break;
-    case VTK_UNSIGNED_INT:
-      pd = vtkSmartPointer<vtkUnsignedIntArray>::New();
-      break;
-    case VTK_INT:
-      pd = vtkSmartPointer<vtkIntArray>::New();
-      break;
-    case VTK_UNSIGNED_LONG:
-      pd = vtkSmartPointer<vtkUnsignedLongArray>::New();
-      break;
-    case VTK_LONG:
-      pd = vtkSmartPointer<vtkLongArray>::New();
-      break;
-    case VTK_DOUBLE:
-      pd = vtkSmartPointer<vtkDoubleArray>::New();
-      break;
-    case VTK_FLOAT:
-      pd = vtkSmartPointer<vtkFloatArray>::New();
-      break;
-    default:
-      vtkErrorMacro("Could not allocate data type.");
-      return;
+    case VTK_BIT: pd = vtkSmartPointer<vtkBitArray>::New(); break;
+    case VTK_UNSIGNED_CHAR: pd = vtkSmartPointer<vtkUnsignedCharArray>::New(); break;
+    case VTK_CHAR: pd = vtkSmartPointer<vtkCharArray>::New(); break;
+    case VTK_UNSIGNED_SHORT: pd = vtkSmartPointer<vtkUnsignedShortArray>::New(); break;
+    case VTK_SHORT: pd = vtkSmartPointer<vtkShortArray>::New(); break;
+    case VTK_UNSIGNED_INT: pd = vtkSmartPointer<vtkUnsignedIntArray>::New(); break;
+    case VTK_INT: pd = vtkSmartPointer<vtkIntArray>::New(); break;
+    case VTK_UNSIGNED_LONG: pd = vtkSmartPointer<vtkUnsignedLongArray>::New(); break;
+    case VTK_LONG: pd = vtkSmartPointer<vtkLongArray>::New(); break;
+    case VTK_DOUBLE: pd = vtkSmartPointer<vtkDoubleArray>::New(); break;
+    case VTK_FLOAT: pd = vtkSmartPointer<vtkFloatArray>::New(); break;
+    default: vtkErrorMacro("Could not allocate data type."); return;
   }
   vtkDataObject::SetPointDataActiveScalarInfo(outInfo, this->DataType, this->GetNumberOfComponents());
   pd->SetNumberOfComponents(this->GetNumberOfComponents());
 
   // allocate enough memory
-  pd->SetNumberOfTuples(vtkIdType(extent[1] - extent[0] + 1)*
-    vtkIdType(extent[3] - extent[2] + 1)*
+  pd->SetNumberOfTuples(                   //
+    vtkIdType(extent[1] - extent[0] + 1) * //
+    vtkIdType(extent[3] - extent[2] + 1) * //
     vtkIdType(extent[5] - extent[4] + 1));
 
   switch (this->PointDataType)
@@ -802,26 +765,21 @@ void vtkTeemNRRDReader::AllocatePointData(vtkImageData *out, vtkInformation* out
       out->GetPointData()->SetScalars(pd);
       vtkDataObject::SetPointDataActiveScalarInfo(outInfo, this->DataType, this->GetNumberOfComponents());
       break;
-    case vtkDataSetAttributes::VECTORS:
-      out->GetPointData()->SetVectors(pd);
-      break;
-    case vtkDataSetAttributes::NORMALS:
-      out->GetPointData()->SetNormals(pd);
-      break;
-    case vtkDataSetAttributes::TENSORS:
-      out->GetPointData()->SetTensors(pd);
-      break;
-    default:
-      vtkErrorMacro("Unknown PointData Type.");
-      return;
+    case vtkDataSetAttributes::VECTORS: out->GetPointData()->SetVectors(pd); break;
+    case vtkDataSetAttributes::NORMALS: out->GetPointData()->SetNormals(pd); break;
+    case vtkDataSetAttributes::TENSORS: out->GetPointData()->SetTensors(pd); break;
+    default: vtkErrorMacro("Unknown PointData Type."); return;
   }
 }
 
 //----------------------------------------------------------------------------
-int vtkTeemNRRDReader::tenSpaceDirectionReduce(Nrrd *nout, const Nrrd *nin, double SD[9])
+int vtkTeemNRRDReader::tenSpaceDirectionReduce(void* _nout, const void* _nin, double SD[9])
 {
   char me[] = "tenSpaceDirectionReduce";
   char err[BUFSIZ];
+
+  auto* nout = static_cast<Nrrd*>(_nout);
+  const auto* nin = static_cast<const Nrrd*>(_nin);
 
   if (!(nout && nin))
   {
@@ -837,8 +795,7 @@ int vtkTeemNRRDReader::tenSpaceDirectionReduce(Nrrd *nout, const Nrrd *nin, doub
   }
   if (nin->spaceDim != 3)
   {
-    sprintf(err, "%s: input this->nrrd needs 3-D (not %u-D) space dimension",
-            me, nin->spaceDim);
+    sprintf(err, "%s: input this->nrrd needs 3-D (not %u-D) space dimension", me, nin->spaceDim);
     biffAdd(TEN, err);
     return 1;
   }
@@ -850,7 +807,7 @@ int vtkTeemNRRDReader::tenSpaceDirectionReduce(Nrrd *nout, const Nrrd *nin, doub
   }
 
   double SDT[9];
-  //ELL_3M_INV(SD, SDINV, det);
+  // ELL_3M_INV(SD, SDINV, det);
   ELL_3M_TRANSPOSE(SDT, SD);
 
   if (nout != nin)
@@ -870,8 +827,8 @@ int vtkTeemNRRDReader::tenSpaceDirectionReduce(Nrrd *nout, const Nrrd *nin, doub
   {
     case VTK_FLOAT:
     {
-      float *tdata = (float*)(nout->data);
-      for (size_t ii=0; ii<nn; ii++)
+      float* tdata = (float*)(nout->data);
+      for (size_t ii = 0; ii < nn; ii++)
       {
         TEN_T2M(tenMeasr, tdata);
         ell_3m_mul_d(tenSlice, SD, tenMeasr);
@@ -880,11 +837,11 @@ int vtkTeemNRRDReader::tenSpaceDirectionReduce(Nrrd *nout, const Nrrd *nin, doub
         tdata += 7;
       }
     }
-      break;
+    break;
     case VTK_DOUBLE:
     {
-      double *tdata = (double*)(nout->data);
-      for (size_t ii = 0; ii<nn; ii++)
+      double* tdata = (double*)(nout->data);
+      for (size_t ii = 0; ii < nn; ii++)
       {
         TEN_T2M(tenMeasr, tdata);
         ell_3m_mul_d(tenSlice, SD, tenMeasr);
@@ -893,29 +850,27 @@ int vtkTeemNRRDReader::tenSpaceDirectionReduce(Nrrd *nout, const Nrrd *nin, doub
         tdata += 7;
       }
     }
-      break;
-    default:
-      return 1;
+    break;
+    default: return 1;
   }
 
   return 0;
 }
 
-
 //----------------------------------------------------------------------------
 // This function reads a data from a file.  The data extent/axes
 // are assumed to be the same as the file extent/order.
-void vtkTeemNRRDReader::ExecuteDataWithInformation(vtkDataObject *output, vtkInformation* outInfo)
+void vtkTeemNRRDReader::ExecuteDataWithInformation(vtkDataObject* output, vtkInformation* outInfo)
 {
   if (this->GetOutputInformation(0))
   {
-    this->GetOutputInformation(0)->Set(
-      vtkStreamingDemandDrivenPipeline::UPDATE_EXTENT(),
-      this->GetOutputInformation(0)->Get(
-        vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT()), 6);
+    this->GetOutputInformation(0)->Set(                                                     //
+      vtkStreamingDemandDrivenPipeline::UPDATE_EXTENT(),                                    //
+      this->GetOutputInformation(0)->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT()), //
+      6);
   }
 
-  vtkImageData *imageData = this->AllocateOutputData(output, outInfo);
+  vtkImageData* imageData = this->AllocateOutputData(output, outInfo);
 
   if (this->GetFileName() == nullptr)
   {
@@ -925,30 +880,30 @@ void vtkTeemNRRDReader::ExecuteDataWithInformation(vtkDataObject *output, vtkInf
 
   // Read in the this->nrrd.  Yes, this means that the header is being read
   // twice: once by ExecuteInformation, and once here
-  if ( nrrdLoad(this->nrrd, this->GetFileName(), nullptr) != 0 )
+  if (nrrdLoad(static_cast<Nrrd*>(this->nrrd), this->GetFileName(), nullptr) != 0)
   {
-    char *err =  biffGetDone(NRRD); // would be nice to free(err)
+    char* err = biffGetDone(NRRD); // would be nice to free(err)
     vtkErrorMacro("Read: Error reading " << this->GetFileName() << ":\n" << err);
     return;
   }
 
-  if (this->nrrd->data == nullptr)
+  if (static_cast<Nrrd*>(this->nrrd)->data == nullptr)
   {
     vtkErrorMacro(<< "data is null.");
     return;
   }
 
-  void *ptr = nullptr;
-  switch(this->PointDataType)
+  void* ptr = nullptr;
+  switch (this->PointDataType)
   {
     case vtkDataSetAttributes::SCALARS:
       imageData->GetPointData()->GetScalars()->SetName(this->DataArrayName.c_str());
-      //get pointer
+      // get pointer
       ptr = imageData->GetPointData()->GetScalars()->GetVoidPointer(0);
       break;
     case vtkDataSetAttributes::VECTORS:
       imageData->GetPointData()->GetVectors()->SetName(this->DataArrayName.c_str());
-      //get pointer
+      // get pointer
       ptr = imageData->GetPointData()->GetVectors()->GetVoidPointer(0);
       break;
     case vtkDataSetAttributes::NORMALS:
@@ -963,7 +918,7 @@ void vtkTeemNRRDReader::ExecuteDataWithInformation(vtkDataObject *output, vtkInf
   this->ComputeDataIncrements();
 
   unsigned int rangeAxisIdx[NRRD_DIM_MAX] = { 0 };
-  unsigned int rangeAxisNum = nrrdRangeAxesGet(this->nrrd, rangeAxisIdx);
+  unsigned int rangeAxisNum = nrrdRangeAxesGet(static_cast<Nrrd*>(this->nrrd), rangeAxisIdx);
   if (rangeAxisNum > 1)
   {
     vtkErrorMacro("Read: handling more than one non-scalar axis not currently handled");
@@ -974,19 +929,19 @@ void vtkTeemNRRDReader::ExecuteDataWithInformation(vtkDataObject *output, vtkInf
     // the range (dependent variable) is not on the fastest axis,
     // so we have to permute axes to put it there, since that is
     // how we set things up in ReadImageInformation() above
-    Nrrd *ntmp = nrrdNew();
+    Nrrd* ntmp = nrrdNew();
     unsigned int axmap[NRRD_DIM_MAX] = { 0 };
     axmap[0] = rangeAxisIdx[0];
-    for (unsigned int axi = 1; axi < this->nrrd->dim; axi++)
+    for (unsigned int axi = 1; axi < static_cast<Nrrd*>(this->nrrd)->dim; axi++)
     {
       axmap[axi] = axi - (axi <= rangeAxisIdx[0]);
     }
     // The memory size of the input and output of nrrdAxesPermute is
-    // the same; the existing this->nrrd->data is re-used.
-    if (nrrdCopy(ntmp, this->nrrd)
-      || nrrdAxesPermute(this->nrrd, ntmp, axmap))
+    // the same; the existing this->nrrd->data is reused.
+    if (nrrdCopy(ntmp, static_cast<Nrrd*>(this->nrrd)) //
+        || nrrdAxesPermute(static_cast<Nrrd*>(this->nrrd), ntmp, axmap))
     {
-      char *err = biffGetDone(NRRD); // would be nice to free(err)
+      char* err = biffGetDone(NRRD); // would be nice to free(err)
       vtkErrorMacro("Read: Error permuting independent axis in " << this->GetFileName() << ":\n" << err);
       return;
     }
@@ -995,36 +950,33 @@ void vtkTeemNRRDReader::ExecuteDataWithInformation(vtkDataObject *output, vtkInf
   }
 
   // "the famous y-flip": we always flip along the second domain axis
-  //Nrrd *nflip = nrrdNew();
-  //nrrdCopy(nflip, this->nrrd);
-  //unsigned int domainAxisNum, domainAxisIdx[NRRD_DIM_MAX];
-  //domainAxisNum = nrrdDomainAxesGet(this->nrrd, domainAxisIdx);
-  //nrrdFlip(this->nrrd, nflip, domainAxisIdx[1]);
-  //nrrdNuke(nflip);
+  // Nrrd *nflip = nrrdNew();
+  // nrrdCopy(nflip, static_cast<Nrrd*>(this->nrrd));
+  // unsigned int domainAxisNum, domainAxisIdx[NRRD_DIM_MAX];
+  // domainAxisNum = nrrdDomainAxesGet(static_cast<Nrrd*>(this->nrrd), domainAxisIdx);
+  // nrrdFlip(static_cast<Nrrd*>(this->nrrd), nflip, domainAxisIdx[1]);
+  // nrrdNuke(nflip);
 
   // Now we have to get the data back into the given VTK data pointer
   // In any case, the logic here has the luxury of assuming that the
   // *single* non-scalar axis is the *first* (fastest) axis.
 
-  if (nrrdKind3DMaskedSymMatrix == this->nrrd->axis[0].kind
-    || nrrdKind3DSymMatrix == this->nrrd->axis[0].kind)
+  if (nrrdKind3DMaskedSymMatrix == static_cast<Nrrd*>(this->nrrd)->axis[0].kind //
+      || nrrdKind3DSymMatrix == static_cast<Nrrd*>(this->nrrd)->axis[0].kind)
   {
-    if (nrrdKind3DSymMatrix == this->nrrd->axis[0].kind)
+    if (nrrdKind3DSymMatrix == static_cast<Nrrd*>(this->nrrd)->axis[0].kind)
     {
       // we pad on a constant value 1 mask, then
-      Nrrd *ntmp = nrrdNew();
+      Nrrd* ntmp = nrrdNew();
       ptrdiff_t minIdx[4] = { -1, 0, 0, 0 };
-      ptrdiff_t maxIdx[4] =
+      ptrdiff_t maxIdx[4] = { static_cast<ptrdiff_t>(static_cast<Nrrd*>(this->nrrd)->axis[0].size - 1),
+                              static_cast<ptrdiff_t>(static_cast<Nrrd*>(this->nrrd)->axis[1].size - 1),
+                              static_cast<ptrdiff_t>(static_cast<Nrrd*>(this->nrrd)->axis[2].size - 1),
+                              static_cast<ptrdiff_t>(static_cast<Nrrd*>(this->nrrd)->axis[3].size - 1) };
+      if (nrrdCopy(ntmp, static_cast<Nrrd*>(this->nrrd)) //
+          || nrrdPad_nva(static_cast<Nrrd*>(this->nrrd), ntmp, minIdx, maxIdx, nrrdBoundaryPad, 1.0))
       {
-        static_cast<ptrdiff_t>(this->nrrd->axis[0].size - 1),
-        static_cast<ptrdiff_t>(this->nrrd->axis[1].size - 1),
-        static_cast<ptrdiff_t>(this->nrrd->axis[2].size - 1),
-        static_cast<ptrdiff_t>(this->nrrd->axis[3].size - 1)
-      };
-      if (nrrdCopy(ntmp, this->nrrd)
-        || nrrdPad_nva(this->nrrd, ntmp, minIdx, maxIdx, nrrdBoundaryPad, 1.0))
-      {
-        char *err = biffGetDone(NRRD); // would be nice to free(err)
+        char* err = biffGetDone(NRRD); // would be nice to free(err)
         vtkErrorMacro("Read: Error padding on conf mask in " << this->GetFileName() << ":\n" << err);
         return;
       }
@@ -1033,10 +985,10 @@ void vtkTeemNRRDReader::ExecuteDataWithInformation(vtkDataObject *output, vtkInf
     vtkDebugMacro("Kind: Masked Sym Matrix");
     // Call tendExpand(nout,nin,scale,threshold)
     // Set up threshold to -1 to avoid this
-    Nrrd *ntmp = nrrdNew();
+    Nrrd* ntmp = nrrdNew();
     int errorCode = 0;
-    const char *key = NRRD;
-    errorCode |= nrrdCopy(ntmp, this->nrrd);
+    const char* key = NRRD;
+    errorCode |= nrrdCopy(ntmp, static_cast<Nrrd*>(this->nrrd));
     if (!errorCode)
     {
       key = TEN;
@@ -1082,17 +1034,17 @@ void vtkTeemNRRDReader::ExecuteDataWithInformation(vtkDataObject *output, vtkInf
     }
     if (!errorCode)
     {
-      errorCode |= tenExpand(this->nrrd, ntmp, 1, -1);
+      errorCode |= tenExpand(static_cast<Nrrd*>(this->nrrd), ntmp, 1, -1);
     }
     if (errorCode)
     {
-      char *err = biffGetDone(key); // would be nice to free(err)
+      char* err = biffGetDone(key); // would be nice to free(err)
       vtkErrorMacro("Read: Error copying, crapping or cropping:\n" << err);
       return;
     }
     nrrdNuke(ntmp);
   }
-  else if (nrrdKind3DMatrix == this->nrrd->axis[0].kind)
+  else if (nrrdKind3DMatrix == static_cast<Nrrd*>(this->nrrd)->axis[0].kind)
   {
     // alas, there is no Teem/ten function for reducing the
     // measurement frame of a non-symmetric matrix, but it would
@@ -1101,15 +1053,68 @@ void vtkTeemNRRDReader::ExecuteDataWithInformation(vtkDataObject *output, vtkInf
 
   if (ptr)
   {
-    memcpy(ptr, this->nrrd->data, nrrdElementSize(this->nrrd)*nrrdElementNumber(this->nrrd));
+    memcpy(ptr, static_cast<Nrrd*>(this->nrrd)->data, nrrdElementSize(static_cast<Nrrd*>(this->nrrd)) * nrrdElementNumber(static_cast<Nrrd*>(this->nrrd)));
   }
 
   // release the memory while keeping the struct
-  nrrdEmpty(this->nrrd);
+  nrrdEmpty(static_cast<Nrrd*>(this->nrrd));
+}
+
+//----------------------------------------------------------------------------
+int vtkTeemNRRDReader::NrrdToVTKScalarType(const int nrrdPixelType) const
+{
+  switch (nrrdPixelType)
+  {
+    default:
+    case nrrdTypeDefault: return VTK_VOID; break;
+    case nrrdTypeChar: return VTK_CHAR; break;
+    case nrrdTypeUChar: return VTK_UNSIGNED_CHAR; break;
+    case nrrdTypeShort: return VTK_SHORT; break;
+    case nrrdTypeUShort:
+      return VTK_UNSIGNED_SHORT;
+      break;
+      ///    case nrrdTypeLLong:
+      ///      return LONG ;
+      ///      break;
+      ///    case nrrdTypeULong:
+      ///      return ULONG;
+      ///      break;
+    case nrrdTypeInt: return VTK_INT; break;
+    case nrrdTypeUInt: return VTK_UNSIGNED_INT; break;
+    case nrrdTypeFloat: return VTK_FLOAT; break;
+    case nrrdTypeDouble: return VTK_DOUBLE; break;
+    case nrrdTypeBlock: return -1; break;
+  }
+}
+
+//----------------------------------------------------------------------------
+int vtkTeemNRRDReader::VTKToNrrdPixelType(const int vtkPixelType) const
+{
+  switch (vtkPixelType)
+  {
+    default:
+    case VTK_VOID: return nrrdTypeDefault; break;
+    case VTK_CHAR: return nrrdTypeChar; break;
+    case VTK_UNSIGNED_CHAR: return nrrdTypeUChar; break;
+    case VTK_SHORT: return nrrdTypeShort; break;
+    case VTK_UNSIGNED_SHORT:
+      return nrrdTypeUShort;
+      break;
+      ///    case nrrdTypeLLong:
+      ///      return LONG ;
+      ///      break;
+      ///    case nrrdTypeULong:
+      ///      return ULONG;
+      ///      break;
+    case VTK_INT: return nrrdTypeInt; break;
+    case VTK_UNSIGNED_INT: return nrrdTypeUInt; break;
+    case VTK_FLOAT: return nrrdTypeFloat; break;
+    case VTK_DOUBLE: return nrrdTypeDouble; break;
+  }
 }
 
 //----------------------------------------------------------------------------
 void vtkTeemNRRDReader::PrintSelf(ostream& os, vtkIndent indent)
 {
-  this->Superclass::PrintSelf(os,indent);
+  this->Superclass::PrintSelf(os, indent);
 }

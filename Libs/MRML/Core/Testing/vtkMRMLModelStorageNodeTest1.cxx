@@ -24,12 +24,15 @@ Program:   3D Slicer
 
 #include <array>
 
+// STD includes
+#include <iostream>
+
 //---------------------------------------------------------------------------
 int TestReadWriteData(vtkMRMLScene* scene, const char* extension, vtkPointSet* mesh, int coordinateSystem, bool cellsMayBeSubdivided = false);
 void CreateVoxelMeshes(vtkUnstructuredGrid* ug, vtkPolyData* poly);
 
 //---------------------------------------------------------------------------
-int vtkMRMLModelStorageNodeTest1(int argc, char * argv[])
+int vtkMRMLModelStorageNodeTest1(int argc, char* argv[])
 {
   if (argc != 2)
   {
@@ -63,11 +66,9 @@ int vtkMRMLModelStorageNodeTest1(int argc, char * argv[])
 }
 
 //---------------------------------------------------------------------------
-int TestReadWriteData(vtkMRMLScene* scene, const char *extension, vtkPointSet *mesh, int coordinateSystem, bool cellsMayBeSubdivided/*=false*/)
+int TestReadWriteData(vtkMRMLScene* scene, const char* extension, vtkPointSet* mesh, int coordinateSystem, bool cellsMayBeSubdivided /*=false*/)
 {
-  std::string fileName = std::string(scene->GetRootDirectory()) +
-    std::string("/vtkMRMLModelNodeTest1") +
-    std::string(extension);
+  std::string fileName = std::string(scene->GetRootDirectory()) + std::string("/vtkMRMLModelNodeTest1") + std::string(extension);
 
   int numberOfPoints = mesh->GetNumberOfPoints();
   CHECK_BOOL(numberOfPoints > 0, true);
@@ -82,11 +83,8 @@ int TestReadWriteData(vtkMRMLScene* scene, const char *extension, vtkPointSet *m
   CHECK_NOT_NULL(scene->AddNode(modelNode.GetPointer()));
 
   bool isPoly = (modelNode->GetMeshType() == vtkMRMLModelNode::PolyDataMeshType);
-  std::cout << "Testing " << extension << " for "
-    << (isPoly ? "polydata" : "unstructured grid")
-    << " mesh"
-    << " in coordinate system: "
-    << vtkMRMLStorageNode::GetCoordinateSystemTypeAsString(coordinateSystem) << std::endl;
+  std::cout << "Testing " << extension << " for " << (isPoly ? "polydata" : "unstructured grid") << " mesh"
+            << " in coordinate system: " << vtkMRMLStorageNode::GetCoordinateSystemTypeAsString(coordinateSystem) << std::endl;
 
   // Add storage node
   modelNode->AddDefaultStorageNode();

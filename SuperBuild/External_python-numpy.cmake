@@ -31,20 +31,26 @@ if(NOT Slicer_USE_SYSTEM_${proj})
   file(WRITE ${requirements_file} [===[
   # [numpy]
   # Hashes correspond to the following packages:
-  #  - numpy-1.26.4-cp39-cp39-macosx_10_9_x86_64.whl
-  #  - numpy-1.26.4-cp39-cp39-macosx_11_0_arm64.whl
-  #  - numpy-1.26.4-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl
-  #  - numpy-1.26.4-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-  #  - numpy-1.26.4-cp39-cp39-musllinux_1_1_aarch64.whl
-  #  - numpy-1.26.4-cp39-cp39-musllinux_1_1_x86_64.whl
-  #  - numpy-1.26.4-cp39-cp39-win_amd64.whl
-  numpy==1.26.4 --hash=sha256:7349ab0fa0c429c82442a27a9673fc802ffdb7c7775fad780226cb234965e53c \
-                --hash=sha256:52b8b60467cd7dd1e9ed082188b4e6bb35aa5cdd01777621a1658910745b90be \
-                --hash=sha256:d5241e0a80d808d70546c697135da2c613f30e28251ff8307eb72ba696945764 \
-                --hash=sha256:f870204a840a60da0b12273ef34f7051e98c3b5961b61b0c2c1be6dfd64fbcd3 \
-                --hash=sha256:679b0076f67ecc0138fd2ede3a8fd196dddc2ad3254069bcb9faf9a79b1cebcd \
-                --hash=sha256:47711010ad8555514b434df65f7d7b076bb8261df1ca9bb78f53d3b2db02e95c \
-                --hash=sha256:3373d5d70a5fe74a2c1bb6d2cfd9609ecf686d47a2d7b1d37a8f3b6bf6003aea
+  #  - numpy-2.3.4-cp312-cp312-macosx_10_13_x86_64.whl
+  #  - numpy-2.3.4-cp312-cp312-macosx_11_0_arm64.whl
+  #  - numpy-2.3.4-cp312-cp312-macosx_14_0_arm64.whl
+  #  - numpy-2.3.4-cp312-cp312-macosx_14_0_x86_64.whl
+  #  - numpy-2.3.4-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl
+  #  - numpy-2.3.4-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
+  #  - numpy-2.3.4-cp312-cp312-musllinux_1_2_aarch64.whl
+  #  - numpy-2.3.4-cp312-cp312-musllinux_1_2_x86_64.whl
+  #  - numpy-2.3.4-cp312-cp312-win_amd64.whl
+  #  - numpy-2.3.4-cp312-cp312-win_arm64.whl
+  numpy==2.3.4 --hash=sha256:ef1b5a3e808bc40827b5fa2c8196151a4c5abe110e1726949d7abddfe5c7ae11 \
+               --hash=sha256:c2f91f496a87235c6aaf6d3f3d89b17dba64996abadccb289f48456cff931ca9 \
+               --hash=sha256:f77e5b3d3da652b474cc80a14084927a5e86a5eccf54ca8ca5cbd697bf7f2667 \
+               --hash=sha256:8ab1c5f5ee40d6e01cbe96de5863e39b215a4d24e7d007cad56c7184fdf4aeef \
+               --hash=sha256:77b84453f3adcb994ddbd0d1c5d11db2d6bda1a2b7fd5ac5bd4649d6f5dc682e \
+               --hash=sha256:4121c5beb58a7f9e6dfdee612cb24f4df5cd4db6e8261d7f4d7450a997a65d6a \
+               --hash=sha256:65611ecbb00ac9846efe04db15cbe6186f562f6bb7e5e05f077e53a599225d16 \
+               --hash=sha256:dabc42f9c6577bcc13001b8810d300fe814b4cfbe8a92c873f269484594f9786 \
+               --hash=sha256:985f1e46358f06c2a09921e8921e2c98168ed4ae12ccd6e5e87a4f1857923f32 \
+               --hash=sha256:4635239814149e06e2cb9db3dd584b2fa64316c96f10656983b8026a82e6e4db
   # [/numpy]
   ]===])
 

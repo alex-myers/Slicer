@@ -18,23 +18,23 @@
 #ifndef __qSlicerScalarVolumeDisplayWidgetPlugin_h
 #define __qSlicerScalarVolumeDisplayWidgetPlugin_h
 
+#include <QObject>
 #include "qSlicerVolumesModuleWidgetsAbstractPlugin.h"
 
-class Q_SLICER_MODULE_VOLUMES_WIDGETS_PLUGINS_EXPORT
-qSlicerScalarVolumeDisplayWidgetPlugin
-  : public QObject, public qSlicerVolumesModuleWidgetsAbstractPlugin
+class Q_SLICER_MODULE_VOLUMES_WIDGETS_PLUGINS_EXPORT qSlicerScalarVolumeDisplayWidgetPlugin
+  : public QObject
+  , public qSlicerVolumesModuleWidgetsAbstractPlugin
 {
   Q_OBJECT
 
 public:
-  qSlicerScalarVolumeDisplayWidgetPlugin(QObject *_parent = nullptr);
+  qSlicerScalarVolumeDisplayWidgetPlugin(QObject* _parent = nullptr);
 
-  QWidget *createWidget(QWidget *_parent) override;
+  QWidget* createWidget(QWidget* _parent) override;
   QString domXml() const override;
   QString includeFile() const override;
   bool isContainer() const override;
   QString name() const override;
-
 };
 
 #endif

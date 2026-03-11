@@ -30,7 +30,7 @@
 #include <map>
 #include <vector>
 
-#include "vtkSegmentationCoreConfigure.h"
+#include "vtkSegmentationCoreExport.h"
 
 class vtkCallbackCommand;
 class vtkDataObject;
@@ -103,7 +103,7 @@ protected:
   vtkSegmentationHistory();
   ~vtkSegmentationHistory() override;
 
-  typedef std::map<std::string, vtkSmartPointer<vtkSegment> > SegmentsMap;
+  typedef std::map<std::string, vtkSmartPointer<vtkSegment>> SegmentsMap;
 
   struct SegmentationState
   {

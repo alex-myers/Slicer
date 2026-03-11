@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16.3...3.19.7 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.20.6...3.22.6 FATAL_ERROR)
 # Two possible approaches to use this script:
 # (1) Copy and adapt to your specific configuration or (2) Use as it is by passing options
 # Either way, the script can be executed using ctest:
@@ -19,7 +19,7 @@ dashboard_set(Slicer_RELEASE_TYPE   "Experimental")   # (E)xperimental, (P)revie
 dashboard_set(WITH_PACKAGES         FALSE)            # Enable to generate packages
 dashboard_set(GIT_TAG               "main")         # Specify a tag for Stable release
 if(APPLE)
-  dashboard_set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0")
+  dashboard_set(CMAKE_OSX_DEPLOYMENT_TARGET "14.0")
 endif()
 dashboard_set(CTEST_CMAKE_GENERATOR "Unix Makefiles")
 dashboard_set(COMPILER              "g++-X.Y.Z")      # Used only to set the build name
@@ -35,7 +35,11 @@ dashboard_set(Slicer_BUILD_CLI    ON)
 dashboard_set(Slicer_USE_PYTHONQT ON)
 
 dashboard_set(QT_VERSION          "5.15.0")
-dashboard_set(Qt5_DIR             "${DASHBOARDS_DIR}/Support/Qt${QT_VERSION}/${QT_VERSION}/gcc_64/lib/cmake/Qt5")
+if(QT_VERSION VERSION_GREATER_EQUAL "6")
+  dashboard_set(Qt6_DIR             "${DASHBOARDS_DIR}/Support/Qt${QT_VERSION}/${QT_VERSION}/gcc_64/lib/cmake/Qt6")
+else()
+  dashboard_set(Qt5_DIR             "${DASHBOARDS_DIR}/Support/Qt${QT_VERSION}/${QT_VERSION}/gcc_64/lib/cmake/Qt5")
+endif()
 
 #   Source directory : <DASHBOARDS_DIR>/<Slicer_DASHBOARD_SUBDIR>/<Slicer_DIRECTORY_BASENAME>-<Slicer_DIRECTORY_IDENTIFIER>
 #   Build directory  : <DASHBOARDS_DIR>/<Slicer_DASHBOARD_SUBDIR>/<Slicer_DIRECTORY_BASENAME>-<Slicer_DIRECTORY_IDENTIFIER>-build

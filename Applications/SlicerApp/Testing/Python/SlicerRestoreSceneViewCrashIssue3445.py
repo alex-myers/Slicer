@@ -101,7 +101,7 @@ class SlicerRestoreSceneViewCrashIssue3445Test(ScriptedLoadableModuleTest):
 
         filePath = SampleData.downloadFromURL(
             fileNames="BrainAtlas2012.mrb",
-            loadFiles=True,
+            loadFiles=False,
             uris=TESTING_DATA_URL + "SHA256/688ebcc6f45989795be2bcdc6b8b5bfc461f1656d677ed3ddef8c313532687f1",
             checksums="SHA256:688ebcc6f45989795be2bcdc6b8b5bfc461f1656d677ed3ddef8c313532687f1")[0]
 
@@ -121,8 +121,7 @@ class SlicerRestoreSceneViewCrashIssue3445Test(ScriptedLoadableModuleTest):
         ioManager.loadFile(filePath)
         ioManager.loadFile(filePath)
 
-        sceneViewNode = slicer.mrmlScene.GetFirstNodeByClass("vtkMRMLSceneViewNode")
-        sceneViewNode.RestoreScene()
+        slicer.modules.sceneviews.logic().RestoreSceneView(0)
 
         # If test reach this point without crashing it is a success
 

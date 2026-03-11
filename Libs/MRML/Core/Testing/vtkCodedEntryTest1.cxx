@@ -17,8 +17,11 @@
 // VTK includes
 #include "vtkNew.h"
 
+// STD includes
+#include <iostream>
+
 //----------------------------------------------------------------------------
-int vtkCodedEntryTest1(int , char * [] )
+int vtkCodedEntryTest1(int, char*[])
 {
   vtkNew<vtkCodedEntry> codedEntry;
 

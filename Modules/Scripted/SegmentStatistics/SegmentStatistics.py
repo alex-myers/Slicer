@@ -231,7 +231,7 @@ class SegmentStatisticsWidget(ScriptedLoadableModuleWidget):
             optionButton.connect("clicked()", partial(self.onEditParameters, plugin.name))
             editWidget = qt.QWidget()
             editWidget.setLayout(qt.QHBoxLayout())
-            editWidget.layout().margin = 0
+            editWidget.layout().setContentsMargins(0, 0, 0, 0)
             editWidget.layout().addWidget(checkbox, 0)
             editWidget.layout().addStretch(1)
             editWidget.layout().addWidget(optionButton, 0)
@@ -435,26 +435,27 @@ class SegmentStatisticsLogic(ScriptedLoadableModuleLogic):
         self.reset()
 
         segmentationNode = slicer.mrmlScene.GetNodeByID(self.getParameterNode().GetParameter("Segmentation"))
+
+        # Get segment ID list
+        visibleSegmentIds = vtk.vtkStringArray()
+        if self.getParameterNode().GetParameter("visibleSegmentsOnly") == "True":
+            segmentationNode.GetDisplayNode().GetVisibleSegmentIDs(visibleSegmentIds)
+        else:
+            segmentationNode.GetSegmentation().GetSegmentIDs(visibleSegmentIds)
+        if visibleSegmentIds.GetNumberOfValues() == 0:
+            logging.debug("computeStatistics will not return any results: there are no visible segments")
+
         transformedSegmentationNode = None
         try:
             if not segmentationNode.GetParentTransformNode() is None:
                 # Create a temporary segmentation and harden the transform to ensure that the statistics are calculated
                 # in world coordinates
-                transformedSegmentationNode = slicer.vtkMRMLSegmentationNode()
-                transformedSegmentationNode.Copy(segmentationNode)
-                transformedSegmentationNode.HideFromEditorsOn()
-                slicer.mrmlScene.AddNode(transformedSegmentationNode)
+                transformedSegmentationNode = slicer.mrmlScene.AddNewNodeByClass(
+                    "vtkMRMLSegmentationNode", "_tmp_" + segmentationNode.GetName() + "_transformedForSegmentStatistics")
+                transformedSegmentationNode.CopyContent(segmentationNode)
+                transformedSegmentationNode.SetAndObserveTransformNodeID(segmentationNode.GetParentTransformNode().GetID())
                 transformedSegmentationNode.HardenTransform()
                 self.getParameterNode().SetParameter("Segmentation", transformedSegmentationNode.GetID())
-
-            # Get segment ID list
-            visibleSegmentIds = vtk.vtkStringArray()
-            if self.getParameterNode().GetParameter("visibleSegmentsOnly") == "True":
-                segmentationNode.GetDisplayNode().GetVisibleSegmentIDs(visibleSegmentIds)
-            else:
-                segmentationNode.GetSegmentation().GetSegmentIDs(visibleSegmentIds)
-            if visibleSegmentIds.GetNumberOfValues() == 0:
-                logging.debug("computeStatistics will not return any results: there are no visible segments")
 
             # update statistics for all segment IDs
             for segmentIndex in range(visibleSegmentIds.GetNumberOfValues()):
@@ -462,7 +463,7 @@ class SegmentStatisticsLogic(ScriptedLoadableModuleLogic):
                 self.updateStatisticsForSegment(segmentID)
         finally:
             if transformedSegmentationNode is not None:
-                # We made a copy and hardened the segmentation transform
+                # We made a copy and hardened the segmentation transform, restore the original now
                 self.getParameterNode().SetParameter("Segmentation", segmentationNode.GetID())
                 slicer.mrmlScene.RemoveNode(transformedSegmentationNode)
 
@@ -533,7 +534,7 @@ class SegmentStatisticsLogic(ScriptedLoadableModuleLogic):
     def makeUnique(names, suffixes, differentiators=None):
         # Add suffix to name if name+differentiator is not unique in the list
         if differentiators:
-            fullNames = [f"{name} & {differentiator}" for name, differentiator in zip(names, differentiators)]
+            fullNames = [f"{name} & {differentiator}" for name, differentiator in zip(names, differentiators, strict=True)]
         else:
             fullNames = names
         uniqueNames = []
@@ -802,7 +803,7 @@ class SegmentStatisticsTest(ScriptedLoadableModuleTest):
             sphereSource.SetCenter(segmentGeometry[1], segmentGeometry[2], segmentGeometry[3])
             sphereSource.Update()
             uniqueSegmentID = segmentationNode.GetSegmentation().GenerateUniqueSegmentID("Test")
-            segmentationNode.AddSegmentFromClosedSurfaceRepresentation(sphereSource.GetOutput(), uniqueSegmentID)
+            segmentationNode.AddSegmentFromClosedSurfaceRepresentation(sphereSource.GetOutput(), "", None, uniqueSegmentID)
 
         self.delayDisplay("Compute statistics")
 
@@ -859,7 +860,7 @@ class SegmentStatisticsTest(ScriptedLoadableModuleTest):
             sphereSource.Update()
             segment = vtkSegmentationCore.vtkSegment()
             uniqueSegmentID = segmentationNode.GetSegmentation().GenerateUniqueSegmentID("Test")
-            segmentationNode.AddSegmentFromClosedSurfaceRepresentation(sphereSource.GetOutput(), uniqueSegmentID)
+            segmentationNode.AddSegmentFromClosedSurfaceRepresentation(sphereSource.GetOutput(), "", None, uniqueSegmentID)
 
         # test calculating only measurements for selected segments
         self.delayDisplay("Test calculating only measurements for individual segments")
@@ -929,7 +930,7 @@ class SegmentStatisticsTest(ScriptedLoadableModuleTest):
         segStatLogic.showTable(resultsTableNode)
         columnHeaders = [resultsTableNode.GetColumnName(i) for i in range(resultsTableNode.GetNumberOfColumns())]
         self.assertEqual(columnHeaders, ["Segment", "Volume mm3 (LM)", "Voxel count", "Volume mm3 (SV)", "Volume cm3 (SV)",
-            "Minimum", "Maximum", "Mean", "Median", "Standard deviation", "Surface mm2", "Volume mm3 (CS)", "Volume cm3 (CS)"])
+            "Minimum", "Maximum", "Mean", "Standard deviation", "Percentile 5", "Percentile 95", "Median", "Surface mm2", "Volume mm3 (CS)", "Volume cm3 (CS)"])
 
         self.delayDisplay("Test re-enabling of individual measurements")
         segStatLogic.getParameterNode().SetParameter("LabelmapSegmentStatisticsPlugin.voxel_count.enabled", str(True))

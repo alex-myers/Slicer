@@ -50,18 +50,19 @@ public:
   QStringList Dependencies;
   QString HelpText;
   QString AcknowledgementText;
-  QIcon   Icon;
-  bool   Hidden;
-  QVariantMap   Extensions;
+  QIcon Icon;
+  bool Hidden;
+  QVariantMap Extensions;
   int Index;
 
-  enum {
+  enum
+  {
     SetupMethod = 0
   };
 
   mutable qSlicerPythonCppAPI PythonCppAPI;
 
-  QString    PythonSourceFilePath;
+  QString PythonSourceFilePath;
 };
 
 //-----------------------------------------------------------------------------
@@ -79,7 +80,6 @@ qSlicerScriptedLoadableModulePrivate::qSlicerScriptedLoadableModulePrivate()
 //-----------------------------------------------------------------------------
 qSlicerScriptedLoadableModulePrivate::~qSlicerScriptedLoadableModulePrivate() = default;
 
-
 //-----------------------------------------------------------------------------
 // qSlicerScriptedLoadableModule methods
 
@@ -96,7 +96,7 @@ qSlicerScriptedLoadableModule::qSlicerScriptedLoadableModule(QObject* _parentObj
 qSlicerScriptedLoadableModule::~qSlicerScriptedLoadableModule() = default;
 
 //-----------------------------------------------------------------------------
-QString qSlicerScriptedLoadableModule::pythonSource()const
+QString qSlicerScriptedLoadableModule::pythonSource() const
 {
   Q_D(const qSlicerScriptedLoadableModule);
   return d->PythonSourceFilePath;
@@ -123,11 +123,12 @@ bool qSlicerScriptedLoadableModule::setPythonSource(const QString& filePath)
   QString className = moduleName;
 
   // Get a reference to the main module and global dictionary
-  PyObject * main_module = PyImport_AddModule("__main__");
-  PyObject * global_dict = PyModule_GetDict(main_module);
+  PyObject* main_module = PyImport_AddModule("__main__");
+  PyObject* global_dict = PyModule_GetDict(main_module);
 
-  // Get a reference (or create if needed) the <moduleName> python module
-  PyObject * module = PyImport_AddModule(moduleName.toUtf8());
+  // Get actual module from sys.modules
+  PyObject* sysModules = PyImport_GetModuleDict();
+  PyObject* module = PyDict_GetItemString(sysModules, moduleName.toUtf8());
 
   // Get a reference to the python module class to instantiate
   PythonQtObjectPtr classToInstantiate;
@@ -143,6 +144,10 @@ bool qSlicerScriptedLoadableModule::setPythonSource(const QString& filePath)
     {
       return false;
     }
+
+    // After loading, re-fetch actual module from sys.modules
+    module = PyDict_GetItemString(PyImport_GetModuleDict(), moduleName.toUtf8());
+
     if (PyObject_HasAttrString(module, className.toUtf8()))
     {
       classToInstantiate.setNewRef(PyObject_GetAttrString(module, className.toUtf8()));
@@ -155,7 +160,10 @@ bool qSlicerScriptedLoadableModule::setPythonSource(const QString& filePath)
     PyErr_SetString(PyExc_RuntimeError,
                     QString("qSlicerScriptedLoadableModule::setPythonSource - "
                             "Failed to load scripted loadable module: "
-                            "class %1 was not found in file %2").arg(className).arg(filePath).toLatin1());
+                            "class %1 was not found in file %2")
+                      .arg(className)
+                      .arg(filePath)
+                      .toLatin1());
     PythonQt::self()->handleError();
     return false;
   }
@@ -170,8 +178,7 @@ bool qSlicerScriptedLoadableModule::setPythonSource(const QString& filePath)
 
   d->PythonSourceFilePath = filePath;
 
-  if (!qSlicerScriptedUtils::setModuleAttribute(
-        "slicer.modules", moduleName + "Instance", self))
+  if (!qSlicerScriptedUtils::setModuleAttribute("slicer.modules", moduleName + "Instance", self))
   {
     qCritical() << "Failed to set" << ("slicer.modules." + moduleName + "Instance");
   }
@@ -205,8 +212,7 @@ void qSlicerScriptedLoadableModule::registerFileDialog()
   {
     return;
   }
-  qSlicerApplication::application()->ioManager()
-    ->registerDialog(fileDialog.take());
+  qSlicerApplication::application()->ioManager()->registerDialog(fileDialog.take());
 }
 
 //-----------------------------------------------------------------------------
@@ -250,16 +256,16 @@ qSlicerAbstractModuleRepresentation* qSlicerScriptedLoadableModule::createWidget
 //-----------------------------------------------------------------------------
 vtkMRMLAbstractLogic* qSlicerScriptedLoadableModule::createLogic()
 {
-//  Q_D(qSlicerScriptedLoadableModule);
+  //  Q_D(qSlicerScriptedLoadableModule);
 
   vtkSlicerScriptedLoadableModuleLogic* logic = vtkSlicerScriptedLoadableModuleLogic::New();
 
-//  bool ret = logic->SetPythonSource(d->PythonSource.toStdString());
-//  if (!ret)
-//    {
-//    logic->Delete();
-//    return 0;
-//    }
+  //  bool ret = logic->SetPythonSource(d->PythonSource.toStdString());
+  //  if (!ret)
+  //    {
+  //    logic->Delete();
+  //    return 0;
+  //    }
 
   return logic;
 }

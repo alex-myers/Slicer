@@ -34,21 +34,22 @@
 #include <QSurfaceFormat>
 
 #ifdef _WIN32
-#include <Windows.h> //for SetProcessDPIAware
+# include <Windows.h> //for SetProcessDPIAware
 #endif
 
 //-----------------------------------------------------------------------------
 class qMRMLWidgetPrivate
 {
 public:
-  vtkSmartPointer<vtkMRMLScene>              MRMLScene;
+  vtkSmartPointer<vtkMRMLScene> MRMLScene;
 };
 
 //-----------------------------------------------------------------------------
 // qMRMLWidget methods
 
 //-----------------------------------------------------------------------------
-qMRMLWidget::qMRMLWidget(QWidget * _parent, Qt::WindowFlags f):Superclass(_parent, f)
+qMRMLWidget::qMRMLWidget(QWidget* _parent, Qt::WindowFlags f)
+  : Superclass(_parent, f)
   , d_ptr(new qMRMLWidgetPrivate)
 {
 }
@@ -62,7 +63,7 @@ void qMRMLWidget::setMRMLScene(vtkMRMLScene* newScene)
   Q_D(qMRMLWidget);
   if (newScene == d->MRMLScene)
   {
-    return ;
+    return;
   }
   d->MRMLScene = newScene;
   emit mrmlSceneChanged(newScene);
@@ -79,34 +80,23 @@ vtkMRMLScene* qMRMLWidget::mrmlScene() const
 void qMRMLWidget::preInitializeApplication()
 {
 #ifdef _WIN32
-  // Qt windows defaults to the PROCESS_PER_MONITOR_DPI_AWARE for DPI display
+# if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+  // Qt5 windows defaults to the PROCESS_PER_MONITOR_DPI_AWARE for DPI display
   // on windows. Unfortunately, this doesn't work well on multi-screens setups.
   // By calling SetProcessDPIAware(), we force the value to
   // PROCESS_SYSTEM_DPI_AWARE instead which fixes those issues.
+  // Note: Qt6 uses DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 which handles
+  // multi-monitor setups correctly, so this workaround is not needed.
   SetProcessDPIAware();
+# endif
 #endif
 
   QSurfaceFormat format = QVTKOpenGLNativeWidget::defaultFormat();
 
   QString openGLProfileStr = qgetenv(MRML_APPLICATION_OPENGL_PROFILE_ENV);
   openGLProfileStr = openGLProfileStr.toLower();
-  if (openGLProfileStr.isEmpty() || openGLProfileStr=="default")
+  if (!openGLProfileStr.isEmpty() && openGLProfileStr != "default")
   {
-    // Use default profile
-#ifdef _WIN32
-    // Enable OpenGL compatibility profile on Windows.
-    // It fixes display update issues and should not have any
-    // side effect.
-    // Compatibility profile is only requested for Windows, as it is
-    // not fully supported on Mac, and there is no known issue
-    // on Linux that would require requesting compatibility profile.
-    // More details: https://gitlab.kitware.com/vtk/vtk/issues/17572
-    format.setProfile(QSurfaceFormat::CompatibilityProfile);
-#endif
-  }
-  else
-  {
-    // Force a specific profile
     if (openGLProfileStr == "no")
     {
       format.setProfile(QSurfaceFormat::NoProfile);
@@ -118,6 +108,12 @@ void qMRMLWidget::preInitializeApplication()
     else if (openGLProfileStr == "compatibility")
     {
       format.setProfile(QSurfaceFormat::CompatibilityProfile);
+    }
+    else
+    {
+      qCritical("Invalid OpenGL profile option '%s' set in %s. Valid options are: 'default', 'no', 'core', 'compatibility'.",
+                qPrintable(openGLProfileStr),
+                MRML_APPLICATION_OPENGL_PROFILE_ENV);
     }
   }
 
@@ -166,4 +162,14 @@ QPixmap qMRMLWidget::pixmapFromIcon(const QIcon& icon)
 
   QPixmap pixmap = icon.pixmap(icon.availableSizes().first());
   return pixmap;
+}
+
+//-----------------------------------------------------------------------------
+QString qMRMLWidget::safeQStringFromUtf8Ptr(const char* cString)
+{
+  if (!cString)
+  {
+    return QString();
+  }
+  return QString::fromUtf8(cString);
 }

@@ -33,6 +33,9 @@
 #include "qSlicerVolumesModule.h"
 #include "vtkSlicerVolumesLogic.h"
 
+// STD includes
+#include <iostream>
+
 // VTK includes
 #include <vtkNew.h>
 #include "qMRMLWidget.h"
@@ -42,7 +45,7 @@
 #include <itkFactoryRegistration.h>
 
 //-----------------------------------------------------------------------------
-int qSlicerVolumesModuleWidgetTest1( int argc, char * argv[] )
+int qSlicerVolumesModuleWidgetTest1(int argc, char* argv[])
 {
   itk::itkFactoryRegistration();
 

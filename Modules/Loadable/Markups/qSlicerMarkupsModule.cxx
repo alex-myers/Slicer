@@ -31,6 +31,9 @@
 #include <qSlicerIOManager.h>
 #include <qSlicerNodeWriter.h>
 #include "qSlicerModuleManager.h"
+#ifdef Slicer_USE_PYTHONQT
+# include <qSlicerPythonManager.h>
+#endif
 
 #include "vtkMRMLScene.h"
 
@@ -77,10 +80,12 @@ static const double UPDATE_VIRTUAL_OUTPUT_NODES_PERIOD_SEC = 0.020; // refresh o
 //-----------------------------------------------------------------------------
 class qSlicerMarkupsModulePrivate
 {
-QVTK_OBJECT
-Q_DECLARE_PUBLIC(qSlicerMarkupsModule);
+  QVTK_OBJECT
+  Q_DECLARE_PUBLIC(qSlicerMarkupsModule);
+
 protected:
   qSlicerMarkupsModule* const q_ptr;
+
 public:
   qSlicerMarkupsModulePrivate(qSlicerMarkupsModule& object);
 
@@ -92,7 +97,6 @@ public:
   bool MarkupsModuleOwnsToolBar{ true };
   bool AutoShowToolBar{ true };
   vtkWeakPointer<vtkMRMLMarkupsNode> MarkupsToShow;
-
 };
 
 //-----------------------------------------------------------------------------
@@ -147,7 +151,7 @@ void qSlicerMarkupsModulePrivate::addToolBar()
   mainWindow->addToolBarBreak();
   mainWindow->addToolBar(this->ToolBar);
   this->MarkupsModuleOwnsToolBar = false;
-  foreach(QMenu * toolBarMenu, mainWindow->findChildren<QMenu*>())
+  for (QMenu* const toolBarMenu : mainWindow->findChildren<QMenu*>())
   {
     if (toolBarMenu->objectName() == QString("WindowToolBarsMenu"))
     {
@@ -174,7 +178,8 @@ void qSlicerMarkupsModulePrivate::addToolBar()
 
 //-----------------------------------------------------------------------------
 qSlicerMarkupsModule::qSlicerMarkupsModule(QObject* _parent)
-  : Superclass(_parent), d_ptr(new qSlicerMarkupsModulePrivate(*this))
+  : Superclass(_parent)
+  , d_ptr(new qSlicerMarkupsModulePrivate(*this))
 {
   Q_D(qSlicerMarkupsModule);
   /*
@@ -188,7 +193,7 @@ qSlicerMarkupsModule::qSlicerMarkupsModule(QObject* _parent)
 }
 
 //-----------------------------------------------------------------------------
-QStringList qSlicerMarkupsModule::categories()const
+QStringList qSlicerMarkupsModule::categories() const
 {
   return QStringList() << "" << qSlicerAbstractCoreModule::tr("Informatics");
 }
@@ -197,23 +202,22 @@ QStringList qSlicerMarkupsModule::categories()const
 qSlicerMarkupsModule::~qSlicerMarkupsModule() = default;
 
 //-----------------------------------------------------------------------------
-QString qSlicerMarkupsModule::helpText()const
+QString qSlicerMarkupsModule::helpText() const
 {
-  QString help = tr(
-    "A module to create and manage markups in 2D and 3D."
-    " This module replaced the former Annotations module.");
+  QString help = tr("A module to create and manage markups in 2D and 3D."
+                    " This module replaced the former Annotations module.");
   help += this->defaultDocumentationLink();
   return help;
 }
 
 //-----------------------------------------------------------------------------
-QString qSlicerMarkupsModule::acknowledgementText()const
+QString qSlicerMarkupsModule::acknowledgementText() const
 {
   return tr("This work was supported by NAMIC, NAC, and the Slicer Community.");
 }
 
 //-----------------------------------------------------------------------------
-QStringList qSlicerMarkupsModule::contributors()const
+QStringList qSlicerMarkupsModule::contributors() const
 {
   QStringList moduleContributors;
   moduleContributors << QString("Nicole Aucoin (BWH)");
@@ -221,7 +225,7 @@ QStringList qSlicerMarkupsModule::contributors()const
 }
 
 //-----------------------------------------------------------------------------
-QIcon qSlicerMarkupsModule::icon()const
+QIcon qSlicerMarkupsModule::icon() const
 {
   return QIcon(":/Icons/Markups.png");
 }
@@ -232,7 +236,7 @@ void qSlicerMarkupsModule::setup()
   Q_D(qSlicerMarkupsModule);
   this->Superclass::setup();
 
-  vtkSlicerMarkupsLogic *logic = vtkSlicerMarkupsLogic::SafeDownCast(this->logic());
+  vtkSlicerMarkupsLogic* logic = vtkSlicerMarkupsLogic::SafeDownCast(this->logic());
   if (!logic)
   {
     qCritical() << Q_FUNC_INFO << ": cannot get Markups logic.";
@@ -254,6 +258,18 @@ void qSlicerMarkupsModule::setup()
 
   // Register Subject Hierarchy core plugins
   qSlicerSubjectHierarchyPluginHandler::instance()->registerPlugin(new qSlicerSubjectHierarchyMarkupsPlugin());
+
+  qSlicerApplication* app = qSlicerApplication::application();
+  if (app)
+  {
+    // Explicitly import associated python library to trigger registration of plugins
+#ifdef Slicer_USE_PYTHONQT
+    if (!qSlicerCoreApplication::testAttribute(qSlicerCoreApplication::AA_DisablePython))
+    {
+      app->pythonManager()->executeString(QString("import MarkupsLib"));
+    }
+#endif
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -317,8 +333,7 @@ void qSlicerMarkupsModule::readDefaultMarkupsDisplaySettings(vtkMRMLMarkupsDispl
 
   if (settings.contains("Markups/SnapMode"))
   {
-    markupsDisplayNode->SetSnapMode(vtkMRMLMarkupsDisplayNode::GetSnapModeFromString(
-      settings.value("Markups/SnapMode").toString().toUtf8()));
+    markupsDisplayNode->SetSnapMode(vtkMRMLMarkupsDisplayNode::GetSnapModeFromString(settings.value("Markups/SnapMode").toString().toUtf8()));
   }
   if (settings.contains("Markups/FillVisibility"))
   {
@@ -386,11 +401,9 @@ void qSlicerMarkupsModule::readDefaultMarkupsDisplaySettings(vtkMRMLMarkupsDispl
     markupsDisplayNode->SetSliceProjectionOpacity(settings.value("Markups/SliceProjectionOpacity").toDouble());
   }
 
-
   if (settings.contains("Markups/CurveLineSizeMode"))
   {
-    markupsDisplayNode->SetCurveLineSizeMode(vtkMRMLMarkupsDisplayNode::GetCurveLineSizeModeFromString(
-      settings.value("Markups/CurveLineSizeMode").toString().toUtf8()));
+    markupsDisplayNode->SetCurveLineSizeMode(vtkMRMLMarkupsDisplayNode::GetCurveLineSizeModeFromString(settings.value("Markups/CurveLineSizeMode").toString().toUtf8()));
   }
   if (settings.contains("Markups/LineThickness"))
   {
@@ -429,9 +442,7 @@ void qSlicerMarkupsModule::readDefaultMarkupsDisplaySettings(vtkMRMLMarkupsDispl
 
   if (settings.contains("Markups/TextProperty"))
   {
-    vtkMRMLMarkupsDisplayNode::UpdateTextPropertyFromString(
-      settings.value("Markups/TextProperty").toString().toStdString(),
-      markupsDisplayNode->GetTextProperty());
+    vtkMRMLMarkupsDisplayNode::UpdateTextPropertyFromString(settings.value("Markups/TextProperty").toString().toStdString(), markupsDisplayNode->GetTextProperty());
   }
 
   if (settings.contains("Markups/SelectedColor"))
@@ -460,7 +471,6 @@ void qSlicerMarkupsModule::readDefaultMarkupsDisplaySettings(vtkMRMLMarkupsDispl
   {
     markupsDisplayNode->SetInteractionHandleScale(settings.value("Markups/InteractionHandleScale").toDouble());
   }
-
 }
 
 //-----------------------------------------------------------------------------
@@ -473,8 +483,7 @@ void qSlicerMarkupsModule::writeDefaultMarkupsDisplaySettings(vtkMRMLMarkupsDisp
   }
   QSettings settings;
 
-  settings.setValue("Markups/SnapMode", vtkMRMLMarkupsDisplayNode::GetSnapModeAsString(
-    markupsDisplayNode->GetSnapMode()));
+  settings.setValue("Markups/SnapMode", vtkMRMLMarkupsDisplayNode::GetSnapModeAsString(markupsDisplayNode->GetSnapMode()));
   settings.setValue("Markups/FillVisibility", markupsDisplayNode->GetFillVisibility());
   settings.setValue("Markups/OutlineVisibility", markupsDisplayNode->GetOutlineVisibility());
   settings.setValue("Markups/FillOpacity", markupsDisplayNode->GetFillOpacity());
@@ -505,8 +514,7 @@ void qSlicerMarkupsModule::writeDefaultMarkupsDisplaySettings(vtkMRMLMarkupsDisp
   settings.setValue("Markups/OccludedVisibility", markupsDisplayNode->GetOccludedVisibility());
   settings.setValue("Markups/OccludedOpacity", markupsDisplayNode->GetOccludedOpacity());
 
-  settings.setValue("Markups/TextProperty", QString::fromStdString(
-    vtkMRMLDisplayNode::GetTextPropertyAsString(markupsDisplayNode->GetTextProperty())));
+  settings.setValue("Markups/TextProperty", QString::fromStdString(vtkMRMLDisplayNode::GetTextPropertyAsString(markupsDisplayNode->GetTextProperty())));
 
   color = markupsDisplayNode->GetSelectedColor();
   settings.setValue("Markups/SelectedColor", QColor::fromRgbF(color[0], color[1], color[2]));
@@ -558,9 +566,9 @@ bool qSlicerMarkupsModule::showMarkups(vtkMRMLMarkupsNode* markupsNode)
 {
   Q_UNUSED(markupsNode);
   qSlicerCoreApplication* app = qSlicerCoreApplication::application();
-  if (!app
-      || !app->moduleManager()
-      || !dynamic_cast<qSlicerMarkupsModule*>(app->moduleManager()->module(/*no tr*/"Markups")))
+  if (!app                     //
+      || !app->moduleManager() //
+      || !dynamic_cast<qSlicerMarkupsModule*>(app->moduleManager()->module(/*no tr*/ "Markups")))
   {
     qCritical("Markups module is not available");
     return false;

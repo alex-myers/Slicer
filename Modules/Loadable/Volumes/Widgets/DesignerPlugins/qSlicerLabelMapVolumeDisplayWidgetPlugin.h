@@ -18,23 +18,23 @@
 #ifndef __qSlicerLabelMapVolumeDisplayWidgetPlugin_h
 #define __qSlicerLabelMapVolumeDisplayWidgetPlugin_h
 
+#include <QObject>
 #include "qSlicerVolumesModuleWidgetsAbstractPlugin.h"
 
-class Q_SLICER_MODULE_VOLUMES_WIDGETS_PLUGINS_EXPORT
-qSlicerLabelMapVolumeDisplayWidgetPlugin
-  : public QObject, public qSlicerVolumesModuleWidgetsAbstractPlugin
+class Q_SLICER_MODULE_VOLUMES_WIDGETS_PLUGINS_EXPORT qSlicerLabelMapVolumeDisplayWidgetPlugin
+  : public QObject
+  , public qSlicerVolumesModuleWidgetsAbstractPlugin
 {
   Q_OBJECT
 
 public:
-  qSlicerLabelMapVolumeDisplayWidgetPlugin(QObject *_parent = nullptr);
+  qSlicerLabelMapVolumeDisplayWidgetPlugin(QObject* _parent = nullptr);
 
-  QWidget *createWidget(QWidget *_parent) override;
+  QWidget* createWidget(QWidget* _parent) override;
   QString domXml() const override;
   QString includeFile() const override;
   bool isContainer() const override;
   QString name() const override;
-
 };
 
 #endif

@@ -44,21 +44,15 @@ if((NOT DEFINED CURL_INCLUDE_DIR
     endif()
   endif()
 
-
-  set(${proj}_CMAKE_C_FLAGS ${ep_common_c_flags})
-  if(CMAKE_SIZEOF_VOID_P EQUAL 8) # 64-bit
-    set(${proj}_CMAKE_C_FLAGS "${ep_common_c_flags} -fPIC")
-  endif()
-
   ExternalProject_SetIfNotDefined(
     Slicer_${proj}_GIT_REPOSITORY
-    "${EP_GIT_PROTOCOL}://github.com/Slicer/curl.git"
+    "${EP_GIT_PROTOCOL}://github.com/curl/curl.git"
     QUIET
     )
 
   ExternalProject_SetIfNotDefined(
     Slicer_${proj}_GIT_TAG
-    "d73e360a78d97adda85364e6bd5c504a2eb1572a" # slicer-7.70.0-2020-04-29-53cdc2c
+    "curl-8_17_0"
     QUIET
     )
 
@@ -83,13 +77,14 @@ if((NOT DEFINED CURL_INCLUDE_DIR
     #Not needed -DCMAKE_CXX_COMPILER:FILEPATH=${CMAKE_CXX_COMPILER}
     #Not needed -DCMAKE_CXX_FLAGS:STRING=${ep_common_cxx_flags}
       -DCMAKE_C_COMPILER:FILEPATH=${CMAKE_C_COMPILER}
-      -DCMAKE_C_FLAGS:STRING=${${proj}_CMAKE_C_FLAGS}
+      -DCMAKE_C_FLAGS:STRING=${ep_common_c_flags}
+      -DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON
       -DCMAKE_DEBUG_POSTFIX:STRING=
       -DCMAKE_INSTALL_PREFIX:PATH=${EP_INSTALL_DIR}
       -DCMAKE_INSTALL_LIBDIR:STRING=lib  # Override value set in GNUInstallDirs CMake module
       -DBUILD_TESTING:BOOL=OFF
       -DBUILD_CURL_EXE:BOOL=OFF
-      -DBUILD_SHARED_LIBS:BOOL=OFF  # Before enabling this option, see https://github.com/Slicer/curl/commit/ca5fe8e63df7faea0bfb988ef3fe58f538e6950b
+      -DBUILD_SHARED_LIBS:BOOL=OFF  # Before enabling this option, review CURL_STATICLIB in CFLAGS where cURL is used
       -DENABLE_ARES:BOOL=OFF
       -DCURL_ZLIB:BOOL=ON
       -DZLIB_INCLUDE_DIR:PATH=${ZLIB_INCLUDE_DIR}
@@ -101,10 +96,12 @@ if((NOT DEFINED CURL_INCLUDE_DIR
       -DCURL_DISABLE_DICT:BOOL=ON
       -DCURL_DISABLE_FILE:BOOL=ON
       -DCURL_DISABLE_TFTP:BOOL=ON
-      -DHAVE_LIBIDN2:BOOL=FALSE
-      -DCMAKE_USE_LIBSSH:BOOL=OFF
-      -DCMAKE_USE_LIBSSH2:BOOL=OFF
-      -DCMAKE_USE_OPENSSL:BOOL=${CURL_ENABLE_SSL}
+      -DHAVE_LIBIDN2:BOOL=OFF
+      -DCURL_BROTLI:STRING=OFF  # Available options are "OFF", "ON", and "AUTO" (CURL's default)
+      -DCURL_USE_LIBPSL:BOOL=OFF
+      -DCURL_USE_LIBSSH:BOOL=OFF
+      -DCURL_USE_LIBSSH2:BOOL=OFF
+      -DCURL_USE_OPENSSL:BOOL=${CURL_ENABLE_SSL}
     ${EXTERNAL_PROJECT_OPTIONAL_CMAKE_ARGS}
     DEPENDS
       ${${proj}_DEPENDENCIES}

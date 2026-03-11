@@ -19,9 +19,10 @@
 ==============================================================================*/
 
 // Qt includes
+#include <QActionGroup>
 #include <QDebug>
-#include <QToolButton>
 #include <QMainWindow>
+#include <QToolButton>
 
 // MRML includes
 #include <vtkMRMLInteractionNode.h>
@@ -42,7 +43,6 @@
 
 // SlicerLogic includes
 #include <vtkSlicerApplicationLogic.h>
-
 
 //---------------------------------------------------------------------------
 // qSlicerMouseModeToolBarPrivate methods
@@ -83,8 +83,7 @@ void qSlicerMouseModeToolBarPrivate::init()
   this->AdjustViewAction->setText(qSlicerMouseModeToolBar::tr("View"));
   this->AdjustViewAction->setCheckable(true);
 
-  QObject::connect(this->AdjustViewAction, SIGNAL(toggled(bool)),
-    q, SLOT(interactionModeActionTriggered(bool)));
+  QObject::connect(this->AdjustViewAction, SIGNAL(toggled(bool)), q, SLOT(interactionModeActionTriggered(bool)));
   q->addAction(this->AdjustViewAction);
   this->InteractionModesActionGroup->addAction(this->AdjustViewAction);
 
@@ -100,14 +99,14 @@ void qSlicerMouseModeToolBarPrivate::init()
 
   this->AdjustWindowLevelRegionModeAction = new QAction(q);
   this->AdjustWindowLevelRegionModeAction->setText(qSlicerMouseModeToolBar::tr("Select region"));
-  this->AdjustWindowLevelRegionModeAction->setToolTip(qSlicerMouseModeToolBar::tr(
-    "Set window level based on a rectangular region, specified by click-and-drag in a slice viewer. Click position is used as region corner."));
+  this->AdjustWindowLevelRegionModeAction->setToolTip(
+    qSlicerMouseModeToolBar::tr("Set window level based on a rectangular region, specified by click-and-drag in a slice viewer. Click position is used as region corner."));
   this->AdjustWindowLevelRegionModeAction->setCheckable(true);
 
   this->AdjustWindowLevelCenteredRegionModeAction = new QAction(q);
   this->AdjustWindowLevelCenteredRegionModeAction->setText(qSlicerMouseModeToolBar::tr("Select region - centered"));
-  this->AdjustWindowLevelCenteredRegionModeAction->setToolTip(qSlicerMouseModeToolBar::tr(
-    "Set window level based on a rectangular region, specified by click-and-drag in a slice viewer. Click position is used as region center."));
+  this->AdjustWindowLevelCenteredRegionModeAction->setToolTip(
+    qSlicerMouseModeToolBar::tr("Set window level based on a rectangular region, specified by click-and-drag in a slice viewer. Click position is used as region center."));
   this->AdjustWindowLevelCenteredRegionModeAction->setCheckable(true);
 
   windowLevelModeActions->addAction(this->AdjustWindowLevelAdjustModeAction);
@@ -119,7 +118,7 @@ void qSlicerMouseModeToolBarPrivate::init()
   this->AdjustWindowLevelModeMapper->setMapping(this->AdjustWindowLevelRegionModeAction, vtkMRMLWindowLevelWidget::ModeRectangle);
   this->AdjustWindowLevelModeMapper->setMapping(this->AdjustWindowLevelCenteredRegionModeAction, vtkMRMLWindowLevelWidget::ModeRectangleCentered);
   QObject::connect(windowLevelModeActions, SIGNAL(triggered(QAction*)), this->AdjustWindowLevelModeMapper, SLOT(map(QAction*)));
-  QObject::connect(this->AdjustWindowLevelModeMapper, SIGNAL(mapped(int)), q, SLOT(setAdjustWindowLevelMode(int)));
+  QObject::connect(this->AdjustWindowLevelModeMapper, &QSignalMapper::mappedInt, q, &qSlicerMouseModeToolBar::setAdjustWindowLevelMode);
 
   // Menu
   this->AdjustWindowLevelMenu = new QMenu(qSlicerMouseModeToolBar::tr("Adjust window/level"), q);
@@ -128,17 +127,15 @@ void qSlicerMouseModeToolBarPrivate::init()
   this->AdjustWindowLevelAction = new QAction(this);
   this->AdjustWindowLevelAction->setObjectName("AdjustWindowLevelAction");
   this->AdjustWindowLevelAction->setData(vtkMRMLInteractionNode::AdjustWindowLevel);
-  this->AdjustWindowLevelAction->setToolTip(qSlicerMouseModeToolBar::tr(
-    "Adjust window/level of volume by left-click-and-drag in slice views."
-    " Hold down Ctrl/Cmd key for temporarily switch between adjustment and region-based setting."));
+  this->AdjustWindowLevelAction->setToolTip(qSlicerMouseModeToolBar::tr("Adjust window/level of volume by left-click-and-drag in slice views."
+                                                                        " Hold down Ctrl/Cmd key for temporarily switch between adjustment and region-based setting."));
   this->AdjustWindowLevelAction->setIcon(QIcon(":/Icons/MouseWindowLevelMode.png"));
   this->AdjustWindowLevelAction->setText(qSlicerMouseModeToolBar::tr("Window/level"));
   this->AdjustWindowLevelAction->setCheckable(true);
   this->AdjustWindowLevelAction->setMenu(this->AdjustWindowLevelMenu);
-  //this->AdjustWindowLevelAction->setPopupMode(QToolButton::MenuButtonPopup);
+  // this->AdjustWindowLevelAction->setPopupMode(QToolButton::MenuButtonPopup);
 
-  QObject::connect(this->AdjustWindowLevelAction, SIGNAL(toggled(bool)),
-    q, SLOT(interactionModeActionTriggered(bool)));
+  QObject::connect(this->AdjustWindowLevelAction, SIGNAL(toggled(bool)), q, SLOT(interactionModeActionTriggered(bool)));
   q->addAction(this->AdjustWindowLevelAction);
   this->InteractionModesActionGroup->addAction(this->AdjustWindowLevelAction);
 
@@ -150,8 +147,7 @@ void qSlicerMouseModeToolBarPrivate::init()
   this->ToolBarAction->setEnabled(true);
   this->ToolBarAction->setIcon(QIcon(":/Icons/MarkupsDisplayToolBar.png"));
 
-  QObject::connect(this->ToolBarAction, SIGNAL(triggered()),
-    q, SLOT(toggleMarkupsToolBar()));
+  QObject::connect(this->ToolBarAction, SIGNAL(triggered()), q, SLOT(toggleMarkupsToolBar()));
 
   this->PlaceWidgetMenu = new QMenu(qSlicerMouseModeToolBar::tr("Place Menu"), q);
   this->PlaceWidgetMenu->setObjectName("PlaceWidgetMenu");
@@ -171,7 +167,7 @@ void qSlicerMouseModeToolBarPrivate::init()
   this->PlaceWidgetAction->setVisible(false);
   q->addAction(this->PlaceWidgetAction);
 
-  q->addAction(this->ToolBarAction);  // add Toggle Markups ToolBar action last
+  q->addAction(this->ToolBarAction); // add Toggle Markups ToolBar action last
 
   this->PlaceWidgetToolBarAction = new QAction(this);
   this->PlaceWidgetToolBarAction->setObjectName("PlaceWidgetToolBarAction");
@@ -180,8 +176,7 @@ void qSlicerMouseModeToolBarPrivate::init()
   this->PlaceWidgetToolBarAction->setEnabled(true);
   this->PlaceWidgetToolBarAction->setIcon(QIcon(":/Icons/MarkupsDisplayToolBar.png"));
 
-  QObject::connect(this->PlaceWidgetToolBarAction, SIGNAL(triggered()),
-    q, SLOT(toggleMarkupsToolBar()));
+  QObject::connect(this->PlaceWidgetToolBarAction, SIGNAL(triggered()), q, SLOT(toggleMarkupsToolBar()));
   this->PlaceWidgetMenu->addAction(this->PlaceWidgetToolBarAction);
 }
 
@@ -195,28 +190,20 @@ void qSlicerMouseModeToolBarPrivate::setMRMLScene(vtkMRMLScene* newScene)
     return;
   }
 
-  this->qvtkReconnect(this->MRMLScene, newScene, vtkMRMLScene::StartBatchProcessEvent,
-                      this, SLOT(onMRMLSceneStartBatchProcess()));
+  this->qvtkReconnect(this->MRMLScene, newScene, vtkMRMLScene::StartBatchProcessEvent, this, SLOT(onMRMLSceneStartBatchProcess()));
 
-  this->qvtkReconnect(this->MRMLScene, newScene, vtkMRMLScene::EndBatchProcessEvent,
-                      this, SLOT(onMRMLSceneEndBatchProcess()));
+  this->qvtkReconnect(this->MRMLScene, newScene, vtkMRMLScene::EndBatchProcessEvent, this, SLOT(onMRMLSceneEndBatchProcess()));
 
   this->MRMLScene = newScene;
 
   // watch for changes to the interaction, selection nodes so can update the widget
   q->setInteractionNode((this->MRMLAppLogic && this->MRMLScene) ? this->MRMLAppLogic->GetInteractionNode() : nullptr);
 
-  vtkMRMLSelectionNode* selectionNode =
-    (this->MRMLAppLogic && this->MRMLScene) ?
-    this->MRMLAppLogic->GetSelectionNode() : nullptr;
-  this->qvtkReconnect(selectionNode, vtkMRMLSelectionNode::ActivePlaceNodeClassNameChangedEvent,
-                      this, SLOT(updateWidgetFromMRML()));
-  this->qvtkReconnect(selectionNode, vtkMRMLSelectionNode::PlaceNodeClassNameListModifiedEvent,
-                      this, SLOT(updateWidgetFromMRML()));
-  this->qvtkReconnect(selectionNode, vtkMRMLSelectionNode::ActivePlaceNodeIDChangedEvent,
-    this, SLOT(updateWidgetFromMRML()));
-  this->qvtkReconnect(selectionNode, vtkMRMLSelectionNode::ActivePlaceNodePlacementValidEvent,
-    this, SLOT(updateWidgetFromMRML()));
+  vtkMRMLSelectionNode* selectionNode = (this->MRMLAppLogic && this->MRMLScene) ? this->MRMLAppLogic->GetSelectionNode() : nullptr;
+  this->qvtkReconnect(selectionNode, vtkMRMLSelectionNode::ActivePlaceNodeClassNameChangedEvent, this, SLOT(updateWidgetFromMRML()));
+  this->qvtkReconnect(selectionNode, vtkMRMLSelectionNode::PlaceNodeClassNameListModifiedEvent, this, SLOT(updateWidgetFromMRML()));
+  this->qvtkReconnect(selectionNode, vtkMRMLSelectionNode::ActivePlaceNodeIDChangedEvent, this, SLOT(updateWidgetFromMRML()));
+  this->qvtkReconnect(selectionNode, vtkMRMLSelectionNode::ActivePlaceNodePlacementValidEvent, this, SLOT(updateWidgetFromMRML()));
 
   // Update UI
   q->setEnabled(this->MRMLScene != nullptr);
@@ -254,7 +241,7 @@ void qSlicerMouseModeToolBarPrivate::updateWidgetFromMRML()
   // Find action corresponding to current interaction mode
   int currentInteractionMode = interactionNode->GetCurrentInteractionMode();
   QAction* currentAction = nullptr;
-  foreach(QAction* action, this->InteractionModesActionGroup->actions())
+  for (QAction* const action : this->InteractionModesActionGroup->actions())
   {
     if (action->data().toInt() == currentInteractionMode)
     {
@@ -283,7 +270,7 @@ void qSlicerMouseModeToolBarPrivate::updateWidgetFromMRML()
 
   // find the active place node class name and set it's corresponding action to be checked
   QString activePlaceNodeClassName;
-  vtkMRMLSelectionNode *selectionNode = (this->MRMLAppLogic ? this->MRMLAppLogic->GetSelectionNode() : nullptr);
+  vtkMRMLSelectionNode* selectionNode = (this->MRMLAppLogic ? this->MRMLAppLogic->GetSelectionNode() : nullptr);
   if (selectionNode && selectionNode->GetActivePlaceNodeClassName())
   {
     activePlaceNodeClassName = selectionNode->GetActivePlaceNodeClassName();
@@ -294,27 +281,27 @@ void qSlicerMouseModeToolBarPrivate::updateWidgetFromMRML()
     activePlaceNodeClassName = this->DefaultPlaceClassName;
   }
 
-  int adjustWindowLevelMode = vtkMRMLWindowLevelWidget::GetAdjustWindowLevelModeFromString(
-    interactionNode->GetAttribute(vtkMRMLWindowLevelWidget::GetInteractionNodeAdjustWindowLevelModeAttributeName()));
-    switch (adjustWindowLevelMode)
-    {
+  int adjustWindowLevelMode =
+    vtkMRMLWindowLevelWidget::GetAdjustWindowLevelModeFromString(interactionNode->GetAttribute(vtkMRMLWindowLevelWidget::GetInteractionNodeAdjustWindowLevelModeAttributeName()));
+  switch (adjustWindowLevelMode)
+  {
     case vtkMRMLWindowLevelWidget::ModeRectangle:
     {
       this->AdjustWindowLevelRegionModeAction->setChecked(true);
     }
-      break;
+    break;
     case vtkMRMLWindowLevelWidget::ModeRectangleCentered:
     {
       this->AdjustWindowLevelCenteredRegionModeAction->setChecked(true);
     }
-      break;
+    break;
     case vtkMRMLWindowLevelWidget::ModeAdjust:
     default:
     {
       this->AdjustWindowLevelAdjustModeAction->setChecked(true);
     }
-      break;
-    }
+    break;
+  }
   this->updateCursor();
 }
 
@@ -327,8 +314,7 @@ void qSlicerMouseModeToolBarPrivate::updatePlaceWidget()
   {
     return;
   }
-  vtkMRMLSelectionNode *selectionNode =
-    this->MRMLAppLogic ? this->MRMLAppLogic->GetSelectionNode() : nullptr;
+  vtkMRMLSelectionNode* selectionNode = this->MRMLAppLogic ? this->MRMLAppLogic->GetSelectionNode() : nullptr;
   if (!selectionNode)
   {
     return;
@@ -409,7 +395,7 @@ void qSlicerMouseModeToolBarPrivate::updateCursor()
     else
     {
       // Find action corresponding to current interaction mode
-      foreach(QAction * action, this->InteractionModesActionGroup->actions())
+      for (QAction* const action : this->InteractionModesActionGroup->actions())
       {
         if (action->data().toInt() == currentInteractionMode)
         {
@@ -423,8 +409,7 @@ void qSlicerMouseModeToolBarPrivate::updateCursor()
   }
 
   const char* placeNodeClassName = nullptr;
-  vtkMRMLSelectionNode* selectionNode =
-    this->MRMLAppLogic ? this->MRMLAppLogic->GetSelectionNode() : nullptr;
+  vtkMRMLSelectionNode* selectionNode = this->MRMLAppLogic ? this->MRMLAppLogic->GetSelectionNode() : nullptr;
   if (selectionNode)
   {
     placeNodeClassName = selectionNode->GetActivePlaceNodeClassName();
@@ -480,7 +465,7 @@ void qSlicerMouseModeToolBarPrivate::onPlaceNodeClassNameListModifiedEvent()
 
 //---------------------------------------------------------------------------
 qSlicerMouseModeToolBar::qSlicerMouseModeToolBar(const QString& title, QWidget* parentWidget)
-  :Superclass(title, parentWidget)
+  : Superclass(title, parentWidget)
   , d_ptr(new qSlicerMouseModeToolBarPrivate(*this))
 {
   Q_D(qSlicerMouseModeToolBar);
@@ -488,7 +473,8 @@ qSlicerMouseModeToolBar::qSlicerMouseModeToolBar(const QString& title, QWidget* 
 }
 
 //---------------------------------------------------------------------------
-qSlicerMouseModeToolBar::qSlicerMouseModeToolBar(QWidget* parentWidget):Superclass(parentWidget)
+qSlicerMouseModeToolBar::qSlicerMouseModeToolBar(QWidget* parentWidget)
+  : Superclass(parentWidget)
   , d_ptr(new qSlicerMouseModeToolBarPrivate(*this))
 {
   Q_D(qSlicerMouseModeToolBar);
@@ -522,7 +508,7 @@ void qSlicerMouseModeToolBar::switchToViewTransformMode()
     qWarning() << "Mouse Mode Tool Bar not set up with application logic";
     return;
   }
-  vtkMRMLInteractionNode * intNode = this->interactionNode();
+  vtkMRMLInteractionNode* intNode = this->interactionNode();
   if (!intNode)
   {
     qWarning() << "Mouse Mode Tool Bar not set up with application logic";
@@ -541,7 +527,7 @@ void qSlicerMouseModeToolBar::changeCursorTo(QCursor cursor)
     qWarning() << "changeCursorTo: can't get a qSlicerApplication";
     return;
   }
-  qMRMLLayoutManager *layoutManager = qSlicerApplication::application()->layoutManager();
+  qMRMLLayoutManager* layoutManager = qSlicerApplication::application()->layoutManager();
 
   if (!layoutManager)
   {
@@ -549,7 +535,7 @@ void qSlicerMouseModeToolBar::changeCursorTo(QCursor cursor)
   }
 
   // Updated all mapped 3D viewers
-  for (int i=0; i < layoutManager->threeDViewCount(); ++i)
+  for (int i = 0; i < layoutManager->threeDViewCount(); ++i)
   {
     qMRMLThreeDView* threeDView = layoutManager->threeDWidget(i)->threeDView();
 
@@ -567,7 +553,7 @@ void qSlicerMouseModeToolBar::changeCursorTo(QCursor cursor)
   }
 
   // Updated all mapped slicer viewers
-  foreach(const QString& viewerName, layoutManager->sliceViewNames())
+  for (const QString& viewerName : layoutManager->sliceViewNames())
   {
     qMRMLSliceView* sliceView = layoutManager->sliceWidget(viewerName)->sliceView();
 
@@ -600,9 +586,9 @@ void qSlicerMouseModeToolBar::switchPlaceMode()
 }
 
 //---------------------------------------------------------------------------
-QAction* qSlicerMouseModeToolBar::actionFromPlaceNodeClassName(QString placeNodeClassName, QMenu *menu)
+QAction* qSlicerMouseModeToolBar::actionFromPlaceNodeClassName(QString placeNodeClassName, QMenu* menu)
 {
-  foreach(QAction* action, menu->actions())
+  for (QAction* const action : menu->actions())
   {
     if (action->objectName() == placeNodeClassName)
     {
@@ -615,7 +601,7 @@ QAction* qSlicerMouseModeToolBar::actionFromPlaceNodeClassName(QString placeNode
 //---------------------------------------------------------------------------
 void qSlicerMouseModeToolBar::setPersistence(bool persistent)
 {
-  vtkMRMLInteractionNode *interactionNode = this->interactionNode();
+  vtkMRMLInteractionNode* interactionNode = this->interactionNode();
   if (interactionNode)
   {
     interactionNode->SetPlaceModePersistence(persistent ? 1 : 0);
@@ -627,7 +613,7 @@ void qSlicerMouseModeToolBar::setPersistence(bool persistent)
 }
 
 //---------------------------------------------------------------------------
-QString qSlicerMouseModeToolBar::defaultPlaceClassName()const
+QString qSlicerMouseModeToolBar::defaultPlaceClassName() const
 {
   Q_D(const qSlicerMouseModeToolBar);
   return d->DefaultPlaceClassName;
@@ -641,7 +627,7 @@ void qSlicerMouseModeToolBar::setDefaultPlaceClassName(const QString& className)
 }
 
 //-----------------------------------------------------------------------------
-vtkMRMLInteractionNode* qSlicerMouseModeToolBar::interactionNode()const
+vtkMRMLInteractionNode* qSlicerMouseModeToolBar::interactionNode() const
 {
   Q_D(const qSlicerMouseModeToolBar);
   return d->InteractionNode;
@@ -655,8 +641,7 @@ void qSlicerMouseModeToolBar::setInteractionNode(vtkMRMLInteractionNode* interac
   {
     return;
   }
-  d->qvtkReconnect(d->InteractionNode, interactionNode, vtkCommand::ModifiedEvent,
-                   d, SLOT(updateWidgetFromMRML()));
+  d->qvtkReconnect(d->InteractionNode, interactionNode, vtkCommand::ModifiedEvent, d, SLOT(updateWidgetFromMRML()));
   d->InteractionNode = interactionNode;
   d->updateWidgetFromMRML();
 }
@@ -684,8 +669,7 @@ void qSlicerMouseModeToolBar::interactionModeActionTriggered(bool toggled)
   // If no active place node class name is selected then use the default class
   if (d->InteractionNode->GetCurrentInteractionMode() == vtkMRMLInteractionNode::Place)
   {
-    vtkMRMLSelectionNode* selectionNode = (d->MRMLAppLogic && d->MRMLScene) ?
-      d->MRMLAppLogic->GetSelectionNode() : nullptr;
+    vtkMRMLSelectionNode* selectionNode = (d->MRMLAppLogic && d->MRMLScene) ? d->MRMLAppLogic->GetSelectionNode() : nullptr;
     if (selectionNode)
     {
       const char* currentPlaceNodeClassName = selectionNode->GetActivePlaceNodeClassName();
@@ -709,12 +693,12 @@ void qSlicerMouseModeToolBar::setAdjustWindowLevelMode(int adjustWindowLevelMode
     return;
   }
   interactionNode->SetAttribute(vtkMRMLWindowLevelWidget::GetInteractionNodeAdjustWindowLevelModeAttributeName(),
-    vtkMRMLWindowLevelWidget::GetAdjustWindowLevelModeAsString(adjustWindowLevelMode));
+                                vtkMRMLWindowLevelWidget::GetAdjustWindowLevelModeAsString(adjustWindowLevelMode));
 
-   // Activate window/level action when setting its mode.
-   // This is done to save a button click and reduce user confusion, similarly how it is done elsewhere in Slicer
-   // and other software, where adjusting an option of a feature activates that feature.
-   d->AdjustWindowLevelAction->trigger();
+  // Activate window/level action when setting its mode.
+  // This is done to save a button click and reduce user confusion, similarly how it is done elsewhere in Slicer
+  // and other software, where adjusting an option of a feature activates that feature.
+  d->AdjustWindowLevelAction->trigger();
 }
 
 //-----------------------------------------------------------------------------
@@ -726,7 +710,7 @@ void qSlicerMouseModeToolBar::toggleMarkupsToolBar()
     qDebug("qSlicerMouseModeToolBar::toggleMarkupsToolBar: no main window is available, toolbar is not added");
     return;
   }
-  foreach(QToolBar * toolBar, mainWindow->findChildren<QToolBar*>())
+  for (QToolBar* const toolBar : mainWindow->findChildren<QToolBar*>())
   {
     if (toolBar->objectName() == QString("MarkupsToolBar"))
     {

@@ -70,14 +70,14 @@ class SliceAnnotations(VTKObservationMixin):
             "4-Bg-SeriesDate": {"text": "", "category": "B"},
             "5-Fg-SeriesDate": {"text": "", "category": "B"},
             "6-Bg-SeriesTime": {"text": "", "category": "C"},
-            "7-Bg-SeriesTime": {"text": "", "category": "C"},
+            "7-Fg-SeriesTime": {"text": "", "category": "C"},
             "8-Bg-SeriesDescription": {"text": "", "category": "C"},
             "9-Fg-SeriesDescription": {"text": "", "category": "C"},
         })
         # Top Right Corner Text
         self.cornerTexts.append({
             "1-Institution-Name": {"text": "", "category": "B"},
-            "2-Referring-Phisycian": {"text": "", "category": "B"},
+            "2-Referring-Physician": {"text": "", "category": "B"},
             "3-Manufacturer": {"text": "", "category": "C"},
             "4-Model": {"text": "", "category": "C"},
             "5-Patient-Position": {"text": "", "category": "A"},
@@ -87,7 +87,6 @@ class SliceAnnotations(VTKObservationMixin):
             "9-SlabReconstructionType": {"text": "", "category": "A"},
         })
 
-        #
         self.scene = slicer.mrmlScene
         self.sliceViews = {}
 
@@ -586,7 +585,7 @@ class SliceAnnotations(VTKObservationMixin):
             # top right corner annotation would be hidden if view height is less than 260 pixels
             if self.topRight:
                 self.cornerTexts[3]["1-Institution-Name"]["text"] = dicomDic["Institution Name"]
-                self.cornerTexts[3]["2-Referring-Phisycian"]["text"] = dicomDic["Referring Physician Name"].replace("^", ", ")
+                self.cornerTexts[3]["2-Referring-Physician"]["text"] = dicomDic["Referring Physician Name"].replace("^", ", ")
                 self.cornerTexts[3]["3-Manufacturer"]["text"] = dicomDic["Manufacturer"]
                 self.cornerTexts[3]["4-Model"]["text"] = dicomDic["Model"]
                 self.cornerTexts[3]["5-Patient-Position"]["text"] = dicomDic["Patient Position"]
@@ -701,9 +700,9 @@ class SliceAnnotations(VTKObservationMixin):
             "0018,0080": "Repetition Time",
             "0018,0081": "Echo Time",
         }
-        for tag in tags.keys():
+        for tag, tag_value in tags.items():
             value = slicer.dicomDatabase.instanceValue(uid, tag)
-            p[tags[tag]] = value
+            p[tag_value] = value
 
         # Store DICOM tags in cache
         self.extractedDICOMValuesCache[uid] = p

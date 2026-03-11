@@ -28,6 +28,8 @@ vtkMRMLNodeNewMacro(vtkMRMLCrosshairNode);
 //----------------------------------------------------------------------------
 vtkMRMLCrosshairNode::vtkMRMLCrosshairNode()
 {
+  this->TypeDisplayName = vtkMRMLTr("vtkMRMLCrosshairNode", "Crosshair");
+
   this->HideFromEditors = 1;
   this->SetSingletonTag("default");
 }
@@ -67,7 +69,7 @@ void vtkMRMLCrosshairNode::ReadXMLAttributes(const char** atts)
 }
 
 //----------------------------------------------------------------------------
-void vtkMRMLCrosshairNode::CopyContent(vtkMRMLNode* anode, bool deepCopy/*=true*/)
+void vtkMRMLCrosshairNode::CopyContent(vtkMRMLNode* anode, bool deepCopy /*=true*/)
 {
   MRMLNodeModifyBlocker blocker(this);
   Superclass::CopyContent(anode, deepCopy);
@@ -90,7 +92,7 @@ void vtkMRMLCrosshairNode::CopyContent(vtkMRMLNode* anode, bool deepCopy/*=true*
 //----------------------------------------------------------------------------
 void vtkMRMLCrosshairNode::PrintSelf(ostream& os, vtkIndent indent)
 {
-  Superclass::PrintSelf(os,indent);
+  Superclass::PrintSelf(os, indent);
 
   vtkMRMLPrintBeginMacro(os, indent);
   vtkMRMLPrintEnumMacro(CrosshairMode);
@@ -102,17 +104,12 @@ void vtkMRMLCrosshairNode::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 //----------------------------------------------------------------------------
-void vtkMRMLCrosshairNode::SetCrosshairRAS(double ras[3], int id)
+void vtkMRMLCrosshairNode::SetCrosshairRAS(double ras[3], int vtkNotUsed(id))
 {
   bool modified = false;
 
-  if (this->LightBoxPane != id)
-  {
-    modified = true;
-  }
-
-  if (this->CrosshairRAS[0] != ras[0]
-      || this->CrosshairRAS[1] != ras[1]
+  if (this->CrosshairRAS[0] != ras[0]    //
+      || this->CrosshairRAS[1] != ras[1] //
       || this->CrosshairRAS[2] != ras[2])
   {
     modified = true;
@@ -121,7 +118,6 @@ void vtkMRMLCrosshairNode::SetCrosshairRAS(double ras[3], int id)
   this->CrosshairRAS[0] = ras[0];
   this->CrosshairRAS[1] = ras[1];
   this->CrosshairRAS[2] = ras[2];
-  this->LightBoxPane = id;
 
   if (modified)
   {
@@ -132,32 +128,32 @@ void vtkMRMLCrosshairNode::SetCrosshairRAS(double ras[3], int id)
 //---------------------------------------------------------------------------
 void vtkMRMLCrosshairNode::SetCursorPositionRAS(double ras[3])
 {
-  this->CursorPositionRAS[0]=ras[0];
-  this->CursorPositionRAS[1]=ras[1];
-  this->CursorPositionRAS[2]=ras[2];
-  this->CursorPositionRASValid=true;
-  this->CursorSliceNode=nullptr; // slice position is not available
+  this->CursorPositionRAS[0] = ras[0];
+  this->CursorPositionRAS[1] = ras[1];
+  this->CursorPositionRAS[2] = ras[2];
+  this->CursorPositionRASValid = true;
+  this->CursorSliceNode = nullptr; // slice position is not available
   this->InvokeEvent(vtkMRMLCrosshairNode::CursorPositionModifiedEvent, nullptr);
 }
 
 //---------------------------------------------------------------------------
-void vtkMRMLCrosshairNode::SetCursorPositionXYZ(double xyz[3], vtkMRMLSliceNode *sliceNode)
+void vtkMRMLCrosshairNode::SetCursorPositionXYZ(double xyz[3], vtkMRMLSliceNode* sliceNode)
 {
-  this->CursorPositionXYZ[0]=xyz[0];
-  this->CursorPositionXYZ[1]=xyz[1];
-  this->CursorPositionXYZ[2]=xyz[2];
-  this->CursorSliceNode=sliceNode;
+  this->CursorPositionXYZ[0] = xyz[0];
+  this->CursorPositionXYZ[1] = xyz[1];
+  this->CursorPositionXYZ[2] = xyz[2];
+  this->CursorSliceNode = sliceNode;
 
   // Cursor position in the slice viewer defines the RAS position, so update that as well
   if (this->CursorSliceNode)
   {
-    double xyzw[4] = {xyz[0], xyz[1], xyz[2], 1.0 };
-    double rasw[4] = {0.0, 0.0, 0.0, 1.0};
+    double xyzw[4] = { xyz[0], xyz[1], xyz[2], 1.0 };
+    double rasw[4] = { 0.0, 0.0, 0.0, 1.0 };
     sliceNode->GetXYToRAS()->MultiplyPoint(xyzw, rasw);
-    this->CursorPositionRAS[0]=rasw[0]/rasw[3];
-    this->CursorPositionRAS[1]=rasw[1]/rasw[3];
-    this->CursorPositionRAS[2]=rasw[2]/rasw[3];
-    this->CursorPositionRASValid=true;
+    this->CursorPositionRAS[0] = rasw[0] / rasw[3];
+    this->CursorPositionRAS[1] = rasw[1] / rasw[3];
+    this->CursorPositionRAS[2] = rasw[2] / rasw[3];
+    this->CursorPositionRASValid = true;
   }
 
   this->InvokeEvent(vtkMRMLCrosshairNode::CursorPositionModifiedEvent, nullptr);
@@ -174,18 +170,18 @@ void vtkMRMLCrosshairNode::SetCursorPositionInvalid()
 //---------------------------------------------------------------------------
 bool vtkMRMLCrosshairNode::GetCursorPositionRAS(double ras[3])
 {
-  ras[0]=this->CursorPositionRAS[0];
-  ras[1]=this->CursorPositionRAS[1];
-  ras[2]=this->CursorPositionRAS[2];
+  ras[0] = this->CursorPositionRAS[0];
+  ras[1] = this->CursorPositionRAS[1];
+  ras[2] = this->CursorPositionRAS[2];
   return this->CursorPositionRASValid;
 }
 
 //---------------------------------------------------------------------------
 vtkMRMLSliceNode* vtkMRMLCrosshairNode::GetCursorPositionXYZ(double xyz[3])
 {
-  xyz[0]=this->CursorPositionXYZ[0];
-  xyz[1]=this->CursorPositionXYZ[1];
-  xyz[2]=this->CursorPositionXYZ[2];
+  xyz[0] = this->CursorPositionXYZ[0];
+  xyz[1] = this->CursorPositionXYZ[1];
+  xyz[2] = this->CursorPositionXYZ[2];
   return this->CursorSliceNode;
 }
 

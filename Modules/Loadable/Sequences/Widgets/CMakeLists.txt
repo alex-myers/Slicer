@@ -20,13 +20,6 @@ set(${KIT}_SRCS
   qMRMLSequenceEditWidget.h
   )
 
-set(${KIT}_MOC_SRCS
-  qMRMLSequenceBrowserPlayWidget.h
-  qMRMLSequenceBrowserSeekWidget.h
-  qMRMLSequenceBrowserToolBar.h
-  qMRMLSequenceEditWidget.h
-  )
-
 set(${KIT}_UI_SRCS
   Resources/UI/qMRMLSequenceBrowserPlayWidget.ui
   Resources/UI/qMRMLSequenceBrowserSeekWidget.ui
@@ -38,7 +31,6 @@ set(${KIT}_RESOURCES
   )
 
 set(${KIT}_TARGET_LIBRARIES
-  vtkSlicer${MODULE_NAME}ModuleMRML
   vtkSlicer${MODULE_NAME}ModuleLogic
   )
 
@@ -48,7 +40,6 @@ SlicerMacroBuildModuleWidgets(
   EXPORT_DIRECTIVE ${${KIT}_EXPORT_DIRECTIVE}
   INCLUDE_DIRECTORIES ${${KIT}_INCLUDE_DIRECTORIES}
   SRCS ${${KIT}_SRCS}
-  MOC_SRCS ${${KIT}_MOC_SRCS}
   UI_SRCS ${${KIT}_UI_SRCS}
   TARGET_LIBRARIES ${${KIT}_TARGET_LIBRARIES}
   RESOURCES ${${KIT}_RESOURCES}

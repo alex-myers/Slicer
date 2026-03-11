@@ -22,13 +22,12 @@
 #include <algorithm>
 #include <sstream>
 
-#include "vtkMRMLMessageCollection.h"
-#include <vtkMRMLTextNode.h>
-#include "vtkMRMLTextStorageNode.h"
-
-// MRML includes
+#include "vtkDataFileFormatHelper.h"
 #include "vtkMRMLI18N.h"
+#include "vtkMRMLMessageCollection.h"
 #include "vtkMRMLScene.h"
+#include "vtkMRMLTextNode.h"
+#include "vtkMRMLTextStorageNode.h"
 
 // VTK includes
 #include <vtkObjectFactory.h>
@@ -40,7 +39,10 @@
 vtkMRMLNodeNewMacro(vtkMRMLTextStorageNode);
 
 //----------------------------------------------------------------------------
-vtkMRMLTextStorageNode::vtkMRMLTextStorageNode() = default;
+vtkMRMLTextStorageNode::vtkMRMLTextStorageNode()
+{
+  this->TypeDisplayName = vtkMRMLTr("vtkMRMLTextStorageNode", "Text Storage");
+}
 
 //----------------------------------------------------------------------------
 vtkMRMLTextStorageNode::~vtkMRMLTextStorageNode() = default;
@@ -52,7 +54,66 @@ bool vtkMRMLTextStorageNode::CanReadInReferenceNode(vtkMRMLNode* refNode)
 }
 
 //----------------------------------------------------------------------------
-int vtkMRMLTextStorageNode::ReadDataInternal(vtkMRMLNode * refNode)
+void vtkMRMLTextStorageNode::WriteXML(ostream& of, int nIndent)
+{
+  // Write all attributes not equal to their defaults
+  Superclass::WriteXML(of, nIndent);
+  vtkMRMLWriteXMLBeginMacro(of);
+  if (!this->SupportedReadFileExtensions.empty())
+  {
+    vtkMRMLWriteXMLStdStringVectorMacro(readExtensions, SupportedReadFileExtensions, std::vector);
+  }
+  if (!this->SupportedWriteFileExtensions.empty())
+  {
+    vtkMRMLWriteXMLStdStringVectorMacro(writeExtensions, SupportedWriteFileExtensions, std::vector);
+  }
+  vtkMRMLWriteXMLEndMacro();
+}
+
+//----------------------------------------------------------------------------
+void vtkMRMLTextStorageNode::ReadXMLAttributes(const char** atts)
+{
+  MRMLNodeModifyBlocker blocker(this);
+
+  Superclass::ReadXMLAttributes(atts);
+
+  vtkMRMLReadXMLBeginMacro(atts);
+  vtkMRMLReadXMLStdStringVectorMacro(readExtensions, SupportedReadFileExtensions, std::vector);
+  vtkMRMLReadXMLStdStringVectorMacro(writeExtensions, SupportedWriteFileExtensions, std::vector);
+  vtkMRMLReadXMLEndMacro();
+}
+
+//----------------------------------------------------------------------------
+void vtkMRMLTextStorageNode::CopyContent(vtkMRMLNode* anode, bool deepCopy /*=true*/)
+{
+  MRMLNodeModifyBlocker blocker(this);
+  Superclass::CopyContent(anode, deepCopy);
+
+  vtkMRMLTextStorageNode* node = vtkMRMLTextStorageNode::SafeDownCast(anode);
+  if (!node)
+  {
+    return;
+  }
+
+  vtkMRMLCopyBeginMacro(anode);
+  vtkMRMLCopyStdStringVectorMacro(SupportedReadFileExtensions);
+  vtkMRMLCopyStdStringVectorMacro(SupportedWriteFileExtensions);
+  vtkMRMLCopyEndMacro();
+}
+
+//----------------------------------------------------------------------------
+void vtkMRMLTextStorageNode::PrintSelf(ostream& os, vtkIndent indent)
+{
+  Superclass::PrintSelf(os, indent);
+
+  vtkMRMLPrintBeginMacro(os, indent);
+  vtkMRMLPrintStdStringVectorMacro(SupportedReadFileExtensions, std::vector);
+  vtkMRMLPrintStdStringVectorMacro(SupportedWriteFileExtensions, std::vector);
+  vtkMRMLPrintEndMacro();
+}
+
+//----------------------------------------------------------------------------
+int vtkMRMLTextStorageNode::ReadDataInternal(vtkMRMLNode* refNode)
 {
   if (!this->CanReadInReferenceNode(refNode))
   {
@@ -103,7 +164,7 @@ int vtkMRMLTextStorageNode::ReadDataInternal(vtkMRMLNode * refNode)
 }
 
 //----------------------------------------------------------------------------
-bool vtkMRMLTextStorageNode::CanWriteFromReferenceNode(vtkMRMLNode * refNode)
+bool vtkMRMLTextStorageNode::CanWriteFromReferenceNode(vtkMRMLNode* refNode)
 {
   vtkMRMLTextNode* textNode = vtkMRMLTextNode::SafeDownCast(refNode);
   if (textNode == nullptr)
@@ -115,7 +176,7 @@ bool vtkMRMLTextStorageNode::CanWriteFromReferenceNode(vtkMRMLNode * refNode)
 }
 
 //----------------------------------------------------------------------------
-int vtkMRMLTextStorageNode::WriteDataInternal(vtkMRMLNode * refNode)
+int vtkMRMLTextStorageNode::WriteDataInternal(vtkMRMLNode* refNode)
 {
   vtkMRMLTextNode* textNode = vtkMRMLTextNode::SafeDownCast(refNode);
   if (textNode == nullptr)
@@ -136,15 +197,26 @@ int vtkMRMLTextStorageNode::WriteDataInternal(vtkMRMLNode * refNode)
   {
     if (!vtksys::SystemTools::RemoveFile(fullName.c_str()))
     {
-      vtkErrorMacro("WriteData: Could not overwrite existing file");
+      vtkErrorToMessageCollectionMacro(this->GetUserMessages(),
+                                       "vtkMRMLTextStorageNode::WriteDataInternal",
+                                       "Text file '" << fullName.c_str() << "' could not be overwritten while trying to write (" << (this->ID ? this->ID : "(unknown)") << ").");
+      return 0;
     }
   }
 
   std::ofstream file;
   file.open(fullName);
+  if (!file.is_open())
+  {
+    vtkErrorToMessageCollectionMacro(this->GetUserMessages(),
+                                     "vtkMRMLTextStorageNode::WriteDataInternal",
+                                     "Text file '" << fullName.c_str() << "' could not be opened for writing while trying to write (" << (this->ID ? this->ID : "(unknown)")
+                                                   << ").");
+    return 0;
+  }
   file << textNode->GetText();
   this->StageWriteData(refNode);
-  return true;
+  return 1;
 }
 
 //----------------------------------------------------------------------------
@@ -172,5 +244,61 @@ void vtkMRMLTextStorageNode::InitializeSupportedWriteFileTypes()
 //----------------------------------------------------------------------------
 const char* vtkMRMLTextStorageNode::GetDefaultWriteFileExtension()
 {
+  // use the first writause the first write file type as file extension
+  vtkStringArray* fileTypes = this->GetSupportedWriteFileTypes();
+  if (fileTypes && fileTypes->GetNumberOfValues() > 0)
+  {
+    std::string fileExtension = vtkDataFileFormatHelper::GetFileExtensionFromFormatString(fileTypes->GetValue(0).c_str());
+    if (!fileExtension.empty())
+    {
+      // Remove leading "."
+      if (fileExtension[0] == '.')
+      {
+        fileExtension.erase(0, 1);
+      }
+      this->SetDefaultWriteFileExtension(fileExtension.c_str());
+      return this->DefaultWriteFileExtension.c_str();
+    }
+  }
   return "txt";
+}
+
+//----------------------------------------------------------------------------
+void vtkMRMLTextStorageNode::SetSupportedReadFileExtensions(const std::vector<std::string> fileExtensions)
+{
+  this->SupportedReadFileExtensions = fileExtensions;
+  this->SupportedReadFileTypes->Reset();
+  this->SupportedReadFileTypes->SetNumberOfTuples(0);
+  for (const std::string& fileExtension : fileExtensions)
+  {
+    // We do not let developers to specify custom file format description, because then a translated format description
+    // would need to be stored in the scene file, which would be difficult to get translated to the current application language.
+    this->SupportedReadFileTypes->InsertNextValue(vtkMRMLI18N::Format(vtkMRMLTr("vtkMRMLTextStorageNode", "Text file (.%1)"), fileExtension.c_str()));
+  }
+}
+
+//----------------------------------------------------------------------------
+void vtkMRMLTextStorageNode::SetSupportedWriteFileExtensions(const std::vector<std::string> fileExtensions)
+{
+  this->SupportedWriteFileExtensions = fileExtensions;
+  this->SupportedWriteFileTypes->Reset();
+  this->SupportedWriteFileTypes->SetNumberOfTuples(0);
+  for (const std::string& fileExtension : fileExtensions)
+  {
+    // We do not let developers to specify custom file format description, because then a translated format description
+    // would need to be stored in the scene file, which would be difficult to get translated to the current application language.
+    this->SupportedWriteFileTypes->InsertNextValue(vtkMRMLI18N::Format(vtkMRMLTr("vtkMRMLTextStorageNode", "Text file (.%1)"), fileExtension.c_str()));
+  }
+}
+
+//----------------------------------------------------------------------------
+std::vector<std::string> vtkMRMLTextStorageNode::GetSupportedReadFileExtensions()
+{
+  return this->SupportedReadFileExtensions;
+}
+
+//----------------------------------------------------------------------------
+std::vector<std::string> vtkMRMLTextStorageNode::GetSupportedWriteFileExtensions()
+{
+  return this->SupportedWriteFileExtensions;
 }

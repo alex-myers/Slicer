@@ -7,6 +7,8 @@ import importlib
 import logging
 import pathlib
 import typing
+import qt
+import types
 
 import slicer
 
@@ -32,6 +34,7 @@ __all__ = [
     "DictSerializer",
     "UnionSerializer",
     "AnySerializer",
+    "QColorSerializer",
 ]
 
 
@@ -417,6 +420,74 @@ class NodeSerializer(Serializer):
         return True
 
 
+@parameterNodeSerializer
+class QColorSerializer(Serializer):
+    """Serializer for qt.QColor"""
+
+    @staticmethod
+    def canSerialize(type_) -> bool:
+        return type_ == qt.QColor
+
+    @staticmethod
+    def create(type_):
+        if QColorSerializer.canSerialize(type_):
+            return ValidatedSerializer(QColorSerializer(),
+                                       [NotNone(), IsInstance(type_)])
+        return None
+
+    def default(self):
+        return qt.QColor()
+
+    def isIn(self, parameterNode, name: str) -> bool:
+        return parameterNode.HasParameter(name)
+
+    def write(self, parameterNode, name: str, value : qt.QColor) -> None:
+        parameterNode.SetParameter(name, value.name(1))
+
+    def read(self, parameterNode, name: str):
+        argbString = parameterNode.GetParameter(name)
+        color = ObservedQColor(parameterNode, self, name, argbString)
+        return color
+
+    def remove(self, parameterNode, name: str) -> None:
+        parameterNode.UnsetParameter(name)
+
+    def supportsCaching(self) -> bool:
+        return False
+
+
+class ObservedQColor(qt.QColor):
+    """
+    Subclass of QColor that automatically synchronizes any changes back to the
+    parameter node. All 'set*' methods are wrapped so that whenever the color
+    is modified, the new value is re-saved to the parameter node.
+    """
+
+    def __init__(self, parameterNode, colorSerializer, name, argbString):
+        super().__init__(argbString)
+        self._parameterNode = parameterNode
+        self._serializer = colorSerializer
+        self._name = name
+
+    def _save(func):
+        def wrapper(*args, **kw):
+            func(*args, **kw)
+            args[0]._serializer.write(args[0]._parameterNode, args[0]._name, args[0])
+        return wrapper
+
+
+# Automatically wrap all "set*" methods of ObservedQColor with a decorator that updates
+# the parameter node. This ensures that whenever the color is changed through one of
+# these Qt-style setter methods, the new color value is immediately saved back to the
+# parameter node.
+for attr_name in ObservedQColor.__dict__:
+    if not attr_name.startswith("set"): # Only wrap setter methods
+        continue
+    attr = getattr(ObservedQColor, attr_name)
+    if callable(attr):
+        setattr(ObservedQColor, attr_name, ObservedQColor._save(attr))
+
+
 class ObservedList(collections.abc.MutableSequence):
     """
     A list-like object that updates its associated parameter node when the container is updated.
@@ -664,7 +735,7 @@ class TupleSerializer(Serializer):
             raise ValueError("Unexpected number of tuple values")
 
         with slicer.util.NodeModify(parameterNode):
-            for index, (value, serializer) in enumerate(zip(values, self._serializers)):
+            for index, (value, serializer) in enumerate(zip(values, self._serializers, strict=True)):
                 serializer.write(parameterNode, self._paramName(name, index), value)
 
     def read(self, parameterNode, name: str) -> None:
@@ -871,15 +942,24 @@ class NoneSerializer(Serializer):
 class UnionSerializer(Serializer):
     """
     Serializer for multiple types. This supports typing.Union[A, B] as well as
-    typing.Optional[A]
+    typing.Optional[A] and types.UnionType (PEP 604, e.g., int | str)
     """
 
     @staticmethod
     def canSerialize(type_) -> bool:
-        return typing.get_origin(type_) == typing.Union
+        # Support both typing.Union and types.UnionType (PEP 604)
+        if typing.get_origin(type_) == typing.Union:
+            return True
+        if hasattr(types, "UnionType") and isinstance(type_, types.UnionType):
+            return True
+        return False
 
     @staticmethod
     def create(type_):
+        # Handle types.UnionType (PEP 604)
+        if hasattr(types, "UnionType") and isinstance(type_, types.UnionType):
+            args = typing.get_args(type_)
+            type_ = typing.Union[args]
         if UnionSerializer.canSerialize(type_):
             args = typing.get_args(type_)
             if len(args) < 2:

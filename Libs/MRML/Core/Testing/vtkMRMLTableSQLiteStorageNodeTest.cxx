@@ -30,10 +30,11 @@
 
 // ITKSYS includes
 #include <itksys/SystemTools.hxx>
+#include <iostream>
 
 #include "vtkMRMLCoreTestingMacros.h"
 
-static int removeFile(char *fileName)
+static int removeFile(char* fileName)
 {
   int removed = 1;
   if (itksys::SystemTools::FileExists(fileName))
@@ -43,14 +44,14 @@ static int removeFile(char *fileName)
   return removed;
 }
 
-int vtkMRMLTableSQLiteStorageNodeTest(int , char * [] )
+int vtkMRMLTableSQLiteStorageNodeTest(int, char*[])
 {
   vtkNew<vtkMRMLScene> scene;
 
   vtkNew<vtkMRMLTableNode> tableNode;
   scene->AddNode(tableNode.GetPointer());
 
-  vtkNew< vtkMRMLTableSQLiteStorageNode > storageNode;
+  vtkNew<vtkMRMLTableSQLiteStorageNode> storageNode;
   scene->AddNode(storageNode.GetPointer());
 
   tableNode->SetAndObserveStorageNodeID(storageNode->GetID());
@@ -69,7 +70,7 @@ int vtkMRMLTableSQLiteStorageNodeTest(int , char * [] )
 
   // add few  points...
   int numPoints = 29;
-  float inc = 7.0 / (numPoints-1);
+  float inc = 7.0 / (numPoints - 1);
   table->SetNumberOfRows(numPoints);
   for (int i = 0; i < numPoints; ++i)
   {
@@ -99,14 +100,14 @@ int vtkMRMLTableSQLiteStorageNodeTest(int , char * [] )
 
   if (tableNode->GetNumberOfColumns() != 3)
   {
-    std::cerr << "Unable to read table columns from the database " << storageNode->GetFileName() <<std::endl;
+    std::cerr << "Unable to read table columns from the database " << storageNode->GetFileName() << std::endl;
     removeFile(storageNode->GetFileName());
     return EXIT_FAILURE;
   }
 
   if (tableNode->GetNumberOfRows() != numPoints)
   {
-    std::cerr << "Unable to read table rows from the database " << storageNode->GetFileName() <<std::endl;
+    std::cerr << "Unable to read table rows from the database " << storageNode->GetFileName() << std::endl;
     removeFile(storageNode->GetFileName());
     return EXIT_FAILURE;
   }

@@ -46,8 +46,11 @@
 #include <itkConfigure.h>
 #include <itkFactoryRegistration.h>
 
+// STD includes
+#include <iostream>
+
 //-----------------------------------------------------------------------------
-int qSlicerDTISliceDisplayWidgetTest2( int argc, char * argv[] )
+int qSlicerDTISliceDisplayWidgetTest2(int argc, char* argv[])
 {
   itk::itkFactoryRegistration();
 

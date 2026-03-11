@@ -23,10 +23,13 @@
 
 // Qt includes
 #include <QDesktopServices>
+#include <QHBoxLayout>
 #include <QLabel>
 #include <QPixmap>
+#include <QPushButton>
 #include <QStyle>
 #include <QUrl>
+#include <QWidget>
 
 // Slicer includes
 #include "qSlicerAboutDialog.h"
@@ -35,6 +38,7 @@
 #include "qSlicerApplication.h"
 #include "qSlicerErrorReportDialog.h"
 #include "qSlicerModuleManager.h"
+#include "qMRMLWidget.h"
 
 namespace
 {
@@ -66,7 +70,7 @@ void qSlicerAppMainWindowPrivate::init()
 }
 
 //-----------------------------------------------------------------------------
-void qSlicerAppMainWindowPrivate::setupUi(QMainWindow * mainWindow)
+void qSlicerAppMainWindowPrivate::setupUi(QMainWindow* mainWindow)
 {
   //----------------------------------------------------------------------------
   // Add actions
@@ -102,9 +106,9 @@ void qSlicerAppMainWindowPrivate::setupUi(QMainWindow * mainWindow)
   helpBrowseTutorialsAction->setText(qSlicerAppMainWindow::tr("Browse Tutorials"));
   helpBrowseTutorialsAction->setToolTip(qSlicerAppMainWindow::tr("Raise the training pages in your favorite web browser"));
 
-  QAction* helpJoinUsOnTwitterAction = new QAction(mainWindow);
-  helpJoinUsOnTwitterAction->setObjectName("HelpJoinUsOnTwitterAction");
-  helpJoinUsOnTwitterAction->setText(qSlicerAppMainWindow::tr("Join Us on Twitter"));
+  QAction* helpJoinUsOnLinkedInAction = new QAction(mainWindow);
+  helpJoinUsOnLinkedInAction->setObjectName("HelpJoinUsOnLinkedInAction");
+  helpJoinUsOnLinkedInAction->setText(qSlicerAppMainWindow::tr("Join Us on LinkedIn"));
 
   QAction* helpSearchFeatureRequestsAction = new QAction(mainWindow);
   helpSearchFeatureRequestsAction->setObjectName("HelpSearchFeatureRequestsAction");
@@ -133,7 +137,7 @@ void qSlicerAppMainWindowPrivate::setupUi(QMainWindow * mainWindow)
 
   QAction* helpAboutSlicerAppAction = new QAction(mainWindow);
   helpAboutSlicerAppAction->setObjectName("HelpAboutSlicerAppAction");
-  helpAboutSlicerAppAction->setText(qSlicerAppMainWindow::tr("About 3D Slicer"));
+  helpAboutSlicerAppAction->setText(qSlicerAppMainWindow::tr("About %1").arg(qSlicerApplication::application()->mainApplicationDisplayName()));
   helpAboutSlicerAppAction->setToolTip(qSlicerAppMainWindow::tr("Provides a description of the Slicer effort and its support."));
 
   //----------------------------------------------------------------------------
@@ -145,13 +149,41 @@ void qSlicerAppMainWindowPrivate::setupUi(QMainWindow * mainWindow)
   //----------------------------------------------------------------------------
   // Configure
   //----------------------------------------------------------------------------
-  mainWindow->setWindowTitle("3D Slicer");
+  mainWindow->setWindowTitle(qSlicerApplication::application()->mainApplicationDisplayName());
   mainWindow->setWindowIcon(QIcon(":/Icons/Medium/DesktopIcon.png"));
+
+  // Create custom title bar with logo, float button, and close button
+  QWidget* titleBarWidget = new QWidget();
+  QHBoxLayout* titleBarLayout = new QHBoxLayout(titleBarWidget);
+  titleBarLayout->setContentsMargins(0, 0, 0, 0);
+  titleBarLayout->setSpacing(1);
 
   QLabel* logoLabel = new QLabel();
   logoLabel->setObjectName("LogoLabel");
   logoLabel->setPixmap(qMRMLWidget::pixmapFromIcon(QIcon(":/ModulePanelLogo.png")));
-  this->PanelDockWidget->setTitleBarWidget(logoLabel);
+  titleBarLayout->addWidget(logoLabel);
+  titleBarLayout->addStretch();
+
+  // Set icon size to match the appearance of default QDockWidget title bar buttons
+  int iconSize = 13;
+
+  QPushButton* floatButton = new QPushButton();
+  floatButton->setIcon(mainWindow->style()->standardIcon(QStyle::SP_TitleBarNormalButton));
+  floatButton->setFlat(true);
+  floatButton->setMaximumSize(iconSize, iconSize);
+  floatButton->setIconSize(QSize(iconSize, iconSize));
+  QObject::connect(floatButton, &QPushButton::clicked, [this]() { this->PanelDockWidget->setFloating(!this->PanelDockWidget->isFloating()); });
+  titleBarLayout->addWidget(floatButton);
+
+  QPushButton* closeButton = new QPushButton();
+  closeButton->setIcon(mainWindow->style()->standardIcon(QStyle::SP_TitleBarCloseButton));
+  closeButton->setFlat(true);
+  closeButton->setMaximumSize(iconSize, iconSize);
+  closeButton->setIconSize(QSize(iconSize, iconSize));
+  QObject::connect(closeButton, &QPushButton::clicked, this->PanelDockWidget, &QDockWidget::close);
+  titleBarLayout->addWidget(closeButton);
+
+  this->PanelDockWidget->setTitleBarWidget(titleBarWidget);
 
   this->HelpMenu->addAction(helpDocumentationAction);
   this->HelpMenu->addAction(helpQuickStartAction);
@@ -162,7 +194,7 @@ void qSlicerAppMainWindowPrivate::setupUi(QMainWindow * mainWindow)
   this->HelpMenu->addAction(helpBrowseTutorialsAction);
   this->HelpMenu->addSeparator();
   this->HelpMenu->addAction(helpVisitSlicerForumAction);
-  this->HelpMenu->addAction(helpJoinUsOnTwitterAction);
+  this->HelpMenu->addAction(helpJoinUsOnLinkedInAction);
   this->HelpMenu->addAction(helpSearchFeatureRequestsAction);
   this->HelpMenu->addAction(helpReportBugOrFeatureRequestAction);
   this->HelpMenu->addSeparator();
@@ -192,7 +224,7 @@ void qSlicerAppMainWindowPrivate::setupUi(QMainWindow * mainWindow)
 // qSlicerAppMainWindow methods
 
 //-----------------------------------------------------------------------------
-qSlicerAppMainWindow::qSlicerAppMainWindow(QWidget *_parent)
+qSlicerAppMainWindow::qSlicerAppMainWindow(QWidget* _parent)
   : Superclass(new qSlicerAppMainWindowPrivate(*this), _parent)
 {
   Q_D(qSlicerAppMainWindow);
@@ -200,8 +232,7 @@ qSlicerAppMainWindow::qSlicerAppMainWindow(QWidget *_parent)
 }
 
 //-----------------------------------------------------------------------------
-qSlicerAppMainWindow::qSlicerAppMainWindow(qSlicerAppMainWindowPrivate* pimpl,
-                                           QWidget* windowParent)
+qSlicerAppMainWindow::qSlicerAppMainWindow(qSlicerAppMainWindowPrivate* pimpl, QWidget* windowParent)
   : Superclass(pimpl, windowParent)
 {
   // init() is called by derived class.
@@ -220,11 +251,10 @@ void qSlicerAppMainWindow::on_HelpKeyboardShortcutsAction_triggered()
 
   // scan the modules for their actions
   QList<QAction*> moduleActions;
-  qSlicerModuleManager * moduleManager = qSlicerApplication::application()->moduleManager();
-  foreach(const QString& moduleName, moduleManager->modulesNames())
+  qSlicerModuleManager* moduleManager = qSlicerApplication::application()->moduleManager();
+  for (const QString& moduleName : moduleManager->modulesNames())
   {
-    qSlicerAbstractModule* module =
-      qobject_cast<qSlicerAbstractModule*>(moduleManager->module(moduleName));
+    qSlicerAbstractModule* module = qobject_cast<qSlicerAbstractModule*>(moduleManager->module(moduleName));
     if (module)
     {
       moduleActions << module->action();
@@ -275,9 +305,9 @@ void qSlicerAppMainWindow::on_HelpVisitSlicerForumAction_triggered()
 }
 
 //---------------------------------------------------------------------------
-void qSlicerAppMainWindow::on_HelpJoinUsOnTwitterAction_triggered()
+void qSlicerAppMainWindow::on_HelpJoinUsOnLinkedInAction_triggered()
 {
-  QDesktopServices::openUrl(QUrl("https://twitter.com/3dslicerapp"));
+  QDesktopServices::openUrl(QUrl("https://www.linkedin.com/feed/hashtag/?keywords=3dslicer"));
 }
 
 //---------------------------------------------------------------------------

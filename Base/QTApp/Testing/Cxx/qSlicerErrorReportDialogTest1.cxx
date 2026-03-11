@@ -25,9 +25,12 @@
 #include "qSlicerApplication.h"
 #include "qSlicerErrorReportDialog.h"
 
+// MRML includes
+#include <qMRMLUtils.h>
+
 // STD includes
 
-int qSlicerErrorReportDialogTest1(int argc, char * argv[] )
+int qSlicerErrorReportDialogTest1(int argc, char* argv[])
 {
   qSlicerApplication app(argc, argv);
 
@@ -35,7 +38,7 @@ int qSlicerErrorReportDialogTest1(int argc, char * argv[] )
 
   if (argc < 2 || QString(argv[1]) != "-I")
   {
-    QTimer::singleShot(100, qApp, SLOT(quit()));
+    qMRMLUtils::closeAllTopLevelWidgetsLater();
   }
 
   return errorReport.exec();

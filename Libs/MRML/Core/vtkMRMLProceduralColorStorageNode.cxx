@@ -32,6 +32,8 @@ vtkMRMLNodeNewMacro(vtkMRMLProceduralColorStorageNode);
 //----------------------------------------------------------------------------
 vtkMRMLProceduralColorStorageNode::vtkMRMLProceduralColorStorageNode()
 {
+  this->TypeDisplayName = vtkMRMLTr("vtkMRMLProceduralColorStorageNode", "Procedural Color Storage");
+
   this->DefaultWriteFileExtension = "txt";
 }
 
@@ -41,7 +43,7 @@ vtkMRMLProceduralColorStorageNode::~vtkMRMLProceduralColorStorageNode() = defaul
 //----------------------------------------------------------------------------
 void vtkMRMLProceduralColorStorageNode::PrintSelf(ostream& os, vtkIndent indent)
 {
-  vtkMRMLStorageNode::PrintSelf(os,indent);
+  vtkMRMLStorageNode::PrintSelf(os, indent);
 }
 
 //----------------------------------------------------------------------------
@@ -49,27 +51,25 @@ bool vtkMRMLProceduralColorStorageNode::CanReadInReferenceNode(vtkMRMLNode* refN
 {
   // FreeSurfer color nodes are special cases and are treated like
   // color table nodes
-  return (refNode->IsA("vtkMRMLProceduralColorNode") &&
+  return (refNode->IsA("vtkMRMLProceduralColorNode") && //
           !refNode->IsA("vtkMRMLFreeSurferProceduralColorNode"));
 }
 
 //----------------------------------------------------------------------------
-int vtkMRMLProceduralColorStorageNode::ReadDataInternal(vtkMRMLNode *refNode)
+int vtkMRMLProceduralColorStorageNode::ReadDataInternal(vtkMRMLNode* refNode)
 {
   std::string fullName = this->GetFullNameFromFileName();
 
   // cast the input node
-  vtkMRMLProceduralColorNode *colorNode =
-    vtkMRMLProceduralColorNode::SafeDownCast(refNode);
+  vtkMRMLProceduralColorNode* colorNode = vtkMRMLProceduralColorNode::SafeDownCast(refNode);
 
   if (colorNode == nullptr)
   {
-    vtkErrorMacro("ReadData: unable to cast input node " << refNode->GetID()
-                  << " to a known procedural color node");
+    vtkErrorMacro("ReadData: unable to cast input node " << refNode->GetID() << " to a known procedural color node");
     return 0;
   }
 
-  vtkColorTransferFunction *ctf = colorNode->GetColorTransferFunction();
+  vtkColorTransferFunction* ctf = colorNode->GetColorTransferFunction();
   if (!ctf)
   {
     vtkErrorMacro("ReadDataInternal: no color transfer function!");
@@ -93,7 +93,6 @@ int vtkMRMLProceduralColorStorageNode::ReadDataInternal(vtkMRMLNode *refNode)
     // clear out the node
     int wasModifying = colorNode->StartModify();
     colorNode->SetTypeToFile();
-    colorNode->NamesInitialisedOff();
     ctf->RemoveAllPoints();
 
     std::string line;
@@ -141,7 +140,7 @@ int vtkMRMLProceduralColorStorageNode::ReadDataInternal(vtkMRMLNode *refNode)
 }
 
 //----------------------------------------------------------------------------
-int vtkMRMLProceduralColorStorageNode::WriteDataInternal(vtkMRMLNode *refNode)
+int vtkMRMLProceduralColorStorageNode::WriteDataInternal(vtkMRMLNode* refNode)
 {
   std::string fullName = this->GetFullNameFromFileName();
   if (fullName.empty())
@@ -151,10 +150,10 @@ int vtkMRMLProceduralColorStorageNode::WriteDataInternal(vtkMRMLNode *refNode)
   }
 
   // cast the input node
-  vtkMRMLProceduralColorNode *colorNode = nullptr;
-  if ( refNode->IsA("vtkMRMLProceduralColorNode") )
+  vtkMRMLProceduralColorNode* colorNode = nullptr;
+  if (refNode->IsA("vtkMRMLProceduralColorNode"))
   {
-    colorNode = dynamic_cast <vtkMRMLProceduralColorNode *> (refNode);
+    colorNode = dynamic_cast<vtkMRMLProceduralColorNode*>(refNode);
   }
 
   if (colorNode == nullptr)
@@ -163,7 +162,7 @@ int vtkMRMLProceduralColorStorageNode::WriteDataInternal(vtkMRMLNode *refNode)
     return 0;
   }
 
-  vtkColorTransferFunction *ctf = colorNode->GetColorTransferFunction();
+  vtkColorTransferFunction* ctf = colorNode->GetColorTransferFunction();
   if (!ctf)
   {
     vtkErrorMacro("WriteDataInternal: no color transfer function!");
@@ -185,10 +184,10 @@ int vtkMRMLProceduralColorStorageNode::WriteDataInternal(vtkMRMLNode *refNode)
     }
 
     // put down a header
-    of << "# Color procedural file " << (this->GetFileName() != nullptr ? this->GetFileName() : "null") << endl;
+    of << "# Color procedural file " << (this->GetFileName() != nullptr ? this->GetFileName() : "null") << std::endl;
     int numPoints = ctf->GetSize();
-    of << "# " << numPoints << " points" << endl;
-    of << "# position R G B" << endl;
+    of << "# " << numPoints << " points" << std::endl;
+    of << "# position R G B" << std::endl;
     for (int i = 0; i < numPoints; ++i)
     {
       double val[6];
@@ -201,7 +200,7 @@ int vtkMRMLProceduralColorStorageNode::WriteDataInternal(vtkMRMLNode *refNode)
       of << val[2];
       of << " ";
       of << val[3];
-      of << endl;
+      of << std::endl;
     }
     of.close();
   }
@@ -210,7 +209,6 @@ int vtkMRMLProceduralColorStorageNode::WriteDataInternal(vtkMRMLNode *refNode)
     vtkErrorMacro("WriteDataInternal: only .txt supported");
     return 0;
   }
-
 
   return 1;
 }

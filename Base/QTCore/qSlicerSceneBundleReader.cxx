@@ -38,6 +38,7 @@
 #include <vtkMRMLApplicationLogic.h>
 
 // VTK includes
+#include <vtkCollection.h>
 #include <vtkNew.h>
 
 // VTKSYS includes
@@ -54,19 +55,19 @@ qSlicerSceneBundleReader::qSlicerSceneBundleReader(QObject* _parent)
 }
 
 //-----------------------------------------------------------------------------
-QString qSlicerSceneBundleReader::description()const
+QString qSlicerSceneBundleReader::description() const
 {
   return tr("MRB Slicer Data Bundle");
 }
 
 //-----------------------------------------------------------------------------
-qSlicerIO::IOFileType qSlicerSceneBundleReader::fileType()const
+qSlicerIO::IOFileType qSlicerSceneBundleReader::fileType() const
 {
   return QString("SceneFile");
 }
 
 //-----------------------------------------------------------------------------
-QStringList qSlicerSceneBundleReader::extensions()const
+QStringList qSlicerSceneBundleReader::extensions() const
 {
   return QStringList() << "*.mrb" << "*.zip" << "*.xar";
 }
@@ -90,7 +91,31 @@ bool qSlicerSceneBundleReader::load(const qSlicerIO::IOProperties& properties)
     clear = properties["clear"].toBool();
   }
 
+  // Get all the nodes that have been around before loading
+  QSet<vtkMRMLNode*> nodesPresentBeforeLoading;
+  vtkCollection* nodes = this->mrmlScene()->GetNodes();
+  for (int index = 0; index < nodes->GetNumberOfItems(); ++index)
+  {
+    vtkMRMLNode* node = vtkMRMLNode::SafeDownCast(nodes->GetItemAsObject(index));
+    nodesPresentBeforeLoading.insert(node);
+  }
+
   bool success = this->mrmlScene()->ReadFromMRB(file.toUtf8(), clear, this->userMessages());
+
+  // Get all the new nodes
+  QStringList loadedNodeIds;
+  nodes = this->mrmlScene()->GetNodes();
+  for (int index = 0; index < nodes->GetNumberOfItems(); ++index)
+  {
+    vtkMRMLNode* node = vtkMRMLNode::SafeDownCast(nodes->GetItemAsObject(index));
+    if (nodesPresentBeforeLoading.contains(node) || !node || !node->GetID())
+    {
+      continue;
+    }
+    loadedNodeIds.append(node->GetID());
+  }
+  this->setLoadedNodes(loadedNodeIds);
+
   if (success)
   {
     // Set default scene file format to mrb

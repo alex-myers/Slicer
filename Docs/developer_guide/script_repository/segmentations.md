@@ -108,7 +108,7 @@ Slicer can import a labelmap volume into segmentation, visualize/edit the segmen
 
 #### Create color table node
 
-A color table node can be loaded from a [color table file](/developer_guide/modules/colors.md#color-table-file-format-txt-ctbl) or created from scratch like this:
+A color table node can be loaded from a [color table file](/developer_guide/modules/colors.md#color-table-text-file-format-txt-ctbl) or created from scratch like this:
 
 ```python
 segment_names_to_labels = [("ribs", 10), ("right lung", 12), ("left lung", 6)]
@@ -119,7 +119,6 @@ colorTableNode.HideFromEditorsOff()  # make the color table selectable in the GU
 slicer.mrmlScene.AddNode(colorTableNode); colorTableNode.UnRegister(None)
 largestLabelValue = max([name_value[1] for name_value in segment_names_to_labels])
 colorTableNode.SetNumberOfColors(largestLabelValue + 1)
-colorTableNode.SetNamesInitialised(True) # prevent automatic color name generation
 import random
 for segmentName, labelValue in segment_names_to_labels:
     r = random.uniform(0.0, 1.0)
@@ -189,7 +188,7 @@ hollowModeler.SetAttribute("ShellThickness", "2.5")  # grow outside
 hollowModeler.SetContinuousUpdate(True)  # auto-update output model if input parameters are changed
 
 # Hide inputs, show output
-segmentation.GetDisplayNode().SetVisibility(False)
+segmentationNode.GetDisplayNode().SetVisibility(False)
 modelNode.GetDisplayNode().SetVisibility(False)
 hollowedModelNode.GetDisplayNode().SetOpacity(0.5)
 ```
@@ -431,13 +430,14 @@ segmentId = "Segment_1"
 
 # Get array voxel coordinates
 import numpy as np
-seg=arrayFromSegment(segmentation_node, segmentId)
+seg = slicer.util.arrayFromSegmentBinaryLabelmap(segmentationNode, segmentId)
 # numpy array has voxel coordinates in reverse order (KJI instead of IJK)
 # and the array is cropped to minimum size in the segmentation
 mean_KjiCropped = [coords.mean() for coords in np.nonzero(seg)]
 
 # Get segmentation voxel coordinates
-segImage = segmentationNode.GetBinaryLabelmapRepresentation(segmentId)
+segImage = slicer.vtkOrientedImageData()
+segmentationNode.GetBinaryLabelmapRepresentation(segmentId, segImage)
 segImageExtent = segImage.GetExtent()
 # origin of the array in voxel coordinates is determined by the start extent
 mean_Ijk = [mean_KjiCropped[2], mean_KjiCropped[1], mean_KjiCropped[0]] + np.array([segImageExtent[0], segImageExtent[2], segImageExtent[4]])
@@ -446,7 +446,7 @@ mean_Ijk = [mean_KjiCropped[2], mean_KjiCropped[1], mean_KjiCropped[0]] + np.arr
 ijkToWorld = vtk.vtkMatrix4x4()
 segImage.GetImageToWorldMatrix(ijkToWorld)
 mean_World = [0, 0, 0, 1]
-ijkToRas.MultiplyPoint(np.append(mean_Ijk,1.0), mean_World)
+ijkToWorld.MultiplyPoint(np.append(mean_Ijk,1.0), mean_World)
 mean_World = mean_World[0:3]
 
 # If segmentation node is transformed, apply that transform to get RAS coordinates
@@ -513,8 +513,9 @@ sliceViewLabel = "Red"  # any slice view where segmentation node is visible work
 
 def printSegmentNames(unused1=None, unused2=None):
 
-  sliceViewWidget = slicer.app.layoutManager().sliceWidget(sliceViewLabel)
-  segmentationsDisplayableManager = sliceViewWidget.sliceView().displayableManagerByClassName("vtkMRMLSegmentationsDisplayableManager2D")
+  sliceViewNode = slicer.mrmlScene.GetNodeByID(f"vtkMRMLSliceNode{sliceViewLabel}")
+  appLogic = slicer.app.applicationLogic()
+  segmentationsDisplayableManager = appLogic.GetViewDisplayableManagerByClassName(sliceViewNode, "vtkMRMLSegmentationsDisplayableManager2D")
   ras = [0,0,0]
   pointListNode.GetNthControlPointPositionWorld(0, ras)
   segmentIds = vtk.vtkStringArray()
@@ -524,7 +525,7 @@ def printSegmentNames(unused1=None, unused2=None):
     print("Segment found at position {0}: {1}".format(ras, segment.GetName()))
 
 # Observe markup node changes
-pointListNode.AddObserver(slicer.vtkMRMLMarkupsPlaneNode.PointModifiedEvent, printSegmentNames)
+pointListNode.AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent, printSegmentNames)
 printSegmentNames()
 ```
 
@@ -602,7 +603,33 @@ slicer.mrmlScene.RemoveNode(labelmapVolumeNode)
 
 You can use [slicerio](https://pypi.org/project/slicerio/) Python package (in any Python environment, not just within Slicer) to get information from segmentation (.seg.nrrd) files.
 
-For example, this code snippet extracts selected segments from a segmentation as a numpy array (`extracted_voxels`) and writes it into a nrrd file. This operation can be useful when creating training data for deep learning networks.
+For example, a common need when training AI tools is to assemble data sets from various sources, which use different label values for the same segments.
+If data sets are in .seg.nrrd format, then segment names or standard terminology can be used to identify segments and then assign label values consistently.
+
+#### Extract selected segments by standard terminology
+
+[Segments cannot be reliably identified using "name" (simple string label)](https://github.com/lassoan/slicerio/blob/main/UsingStandardTerminology.md). Instead, it is recommended to use a standard terminology. This code snippet extracts selected segments from a segmentation and writes the result into a nrrd file.
+
+```python
+# pip install slicerio
+
+import slicerio
+
+input_filename = "path/to/Segmentation.seg.nrrd"
+output_filename = "path/to/SegmentationExtracted.seg.nrrd"
+segments_to_labels = [
+   ({"category": ["SCT", "123037004", "Anatomical Structure"], "type": ["SCT", "113197003", "Ribs"]}, 1),
+   ({"category": ["SCT", "123037004", "Anatomical Structure"], "type": ["SCT", "39607008", "Lung"], "typeModifier": ["SCT", "24028007", "Right"]}, 3)
+   ]
+
+segmentation = slicerio.read_segmentation(input_filename)
+extracted_segmentation = slicerio.extract_segments(segmentation, segments_to_labels)
+slicerio.write_segmentation(output_filename, extracted_segmentation)
+```
+
+#### Extract selected segments by segment name
+
+This code snippet extracts selected segments from a segmentation by segment name and writes it into a nrrd file.
 
 ```python
 # pip install slicerio
@@ -655,6 +682,12 @@ oversamplingFactor = 2.0
 isotropicSpacing = True
 
 # Update geometry of internal binary labelmap representation in segmentation node
+segmentationGeometryLogic = slicer.vtkSlicerSegmentationGeometryLogic()
+segmentationGeometryLogic.SetInputSegmentationNode(segmentationNode)
+segmentationGeometryLogic.SetSourceGeometryNode(volumeNode)
+segmentationGeometryLogic.SetOversamplingFactor(oversamplingFactor)
+segmentationGeometryLogic.SetIsotropicSpacing(isotropicSpacing)
+segmentationGeometryLogic.CalculateOutputGeometry()
 segmentationGeometryLogic.SetReferenceImageGeometryInSegmentationNode()
 segmentationGeometryLogic.ResampleLabelmapsInSegmentationNode()
 ```
@@ -701,7 +734,7 @@ pointListNode.CreateDefaultDisplayNodes()
 for segmentId in stats["SegmentIDs"]:
   centroid_ras = stats[segmentId,"LabelmapSegmentStatisticsPlugin.centroid_ras"]
   segmentName = segmentationNode.GetSegmentation().GetSegment(segmentId).GetName()
-  pointListNode.AddFiducialFromArray(centroid_ras, segmentName)
+  pointListNode.AddControlPoint(centroid_ras, segmentName)
 ```
 
 #### Get size, position, and orientation of each segment

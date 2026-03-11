@@ -314,6 +314,12 @@ slicer_add_python_unittest(
   )
 
 slicer_add_python_unittest(
+  SCRIPT ${Slicer_SOURCE_DIR}/Base/Python/slicer/tests/test_slicer_util_childWidgetVariables.py
+  SLICER_ARGS --no-main-window --disable-modules
+  TESTNAME_PREFIX nomainwindow_
+  )
+
+slicer_add_python_unittest(
   SCRIPT ${Slicer_SOURCE_DIR}/Base/Python/slicer/tests/test_slicer_parameter_node_wrapper.py
   SLICER_ARGS --no-main-window --disable-cli-modules --disable-scripted-loadable-modules
   TESTNAME_PREFIX nomainwindow_
@@ -434,6 +440,14 @@ add_test(
     ${Slicer_LAUNCHER_EXECUTABLE}
   )
 
+# Check that sys.path modifications performed at module import are preserved after Slicer startup
+add_test(
+  NAME py_startup_preserve_sys_path
+  COMMAND ${PYTHON_EXECUTABLE}
+    ${CMAKE_CURRENT_SOURCE_DIR}/SlicerStartupPreserveSysPathTest.py
+    ${Slicer_LAUNCHER_EXECUTABLE}
+  )
+
 # Check that stand-alone Python interpreter, without PythonQt support, can `import slicer` safely (#945)
 add_test(
   NAME py_standalonepython_import_slicer
@@ -477,6 +491,7 @@ if(Slicer_USE_QtTesting AND Slicer_USE_PYTHONQT)
   slicer_add_python_unittest(SCRIPT FiducialLayoutSwitchBug1914.py)
   slicer_add_python_unittest(SCRIPT ShaderProperties.py)
   slicer_add_python_unittest(SCRIPT SlicerScriptedFileReaderWriterTest.py)
+  slicer_add_python_unittest(SCRIPT CurvedPlanarReformation.py)
 
   # add as hidden module for use at run time
   set(KIT_PYTHON_SCRIPTS
@@ -503,20 +518,19 @@ if(Slicer_USE_QtTesting AND Slicer_USE_PYTHONQT)
     ShaderProperties.py
     UtilTest.py
     SlicerScriptedFileReaderWriterTest.py
+    CurvedPlanarReformation.py
     )
 
-  if(Slicer_BUILD_CLI_SUPPORT)
-    slicer_add_python_unittest(SCRIPT CLIEventTest.py SLICER_ARGS --no-main-window)
-    slicer_add_python_unittest(SCRIPT TwoCLIsInARowTest.py)
-    slicer_add_python_unittest(SCRIPT TwoCLIsInParallelTest.py)
+  slicer_add_python_unittest(SCRIPT CLIEventTest.py SLICER_ARGS --no-main-window)
+  slicer_add_python_unittest(SCRIPT TwoCLIsInARowTest.py)
+  slicer_add_python_unittest(SCRIPT TwoCLIsInParallelTest.py)
 
-    if(Slicer_BUILD_BRAINSTOOLS)
-      slicer_add_python_unittest(SCRIPT BRAINSFitRigidRegistrationCrashIssue4139.py)
+  if(Slicer_BUILD_BRAINSTOOLS)
+    slicer_add_python_unittest(SCRIPT BRAINSFitRigidRegistrationCrashIssue4139.py)
 
-      list(APPEND KIT_PYTHON_SCRIPTS
-        BRAINSFitRigidRegistrationCrashIssue4139.py
-        )
-    endif()
+    list(APPEND KIT_PYTHON_SCRIPTS
+      BRAINSFitRigidRegistrationCrashIssue4139.py
+      )
   endif()
 
   set(KIT_PYTHON_RESOURCES

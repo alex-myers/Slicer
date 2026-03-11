@@ -4,7 +4,8 @@ import sys
 import socket
 import urllib
 from http.server import HTTPServer
-from typing import Callable, Optional
+
+from collections.abc import Callable
 
 import ctk
 import qt
@@ -230,16 +231,25 @@ class WebServerWidget(ScriptedLoadableModuleWidget):
         if hasattr(slicer.modules, "dicom"):
             submoduleNames.append("DICOMRequestHandler")
 
-        import imp
+        import importlib.util
 
-        f, filename, description = imp.find_module(packageName)
-        package = imp.load_module(packageName, f, filename, description)
+        # Locate and reload package
+        spec = importlib.util.find_spec(packageName)
+        if spec is None:
+            raise ImportError(f"Cannot find package {packageName}")
+        package = importlib.util.module_from_spec(spec)
+        sys.modules[packageName] = package
+        spec.loader.exec_module(package)
+
+        # Reload each submodule from the package
         for submoduleName in submoduleNames:
-            f, filename, description = imp.find_module(submoduleName, package.__path__)
-            try:
-                imp.load_module(packageName + "." + submoduleName, f, filename, description)
-            finally:
-                f.close()
+            full_name = f"{packageName}.{submoduleName}"
+            sub_spec = importlib.util.find_spec(full_name)
+            if sub_spec is None:
+                raise ImportError(f"Cannot find submodule {full_name}")
+            submodule = importlib.util.module_from_spec(sub_spec)
+            sys.modules[full_name] = submodule
+            sub_spec.loader.exec_module(submodule)
 
         ScriptedLoadableModuleWidget.onReload(self)
 
@@ -418,7 +428,7 @@ class SlicerHTTPServer(HTTPServer):
                     self.logMessage("Warning, we don't speak %s", version)
                     return
 
-                methods = ["GET", "POST", "PUT", "DELETE"]
+                methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
                 if method not in methods:
                     self.logMessage("Warning, we only handle %s" % methods)
                     return
@@ -439,7 +449,7 @@ class SlicerHTTPServer(HTTPServer):
                         highestConfidence = confidence
 
                 httpStatus = "200 OK"
-                if highestConfidenceHandler is not None and highestConfidence > 0.0:
+                if highestConfidenceHandler is not None and highestConfidence > 0.0 and method != "OPTIONS":
                     try:
                         contentType, responseBody = highestConfidenceHandler.handleRequest(method=method, uri=uri, requestBody=requestBody)
                     except Exception as e:
@@ -469,6 +479,14 @@ class SlicerHTTPServer(HTTPServer):
                     self.response += b"Cache-Control: no-cache\r\n"
                     self.response += b"\r\n"
                     self.response += responseBody
+                elif method == "OPTIONS":
+                    self.response = b"HTTP/1.1 204 No Content\r\n"
+                    self.response += b"Connection: keep-alive\r\n"
+                    if self.enableCORS:
+                        self.response += b"Access-Control-Allow-Origin: *\r\n"
+                        self.response += b"Access-Control-Allow-Methods: POST, GET, OPTIONS, DELETE, PUT\r\n"
+                        self.response += b"Access-Control-Allow-Headers: Accept\r\n"
+                        self.response += b"Access-Control-Max-Age: 86400\r\n"
                 else:
                     self.response = b"HTTP/1.1 404 Not Found\r\n"
                     self.response += b"\r\n"
@@ -500,7 +518,7 @@ class SlicerHTTPServer(HTTPServer):
     def onServerSocketNotify(self, fileno):
         self.logMessage("got request on %d" % fileno)
         try:
-            (connectionSocket, clientAddress) = self.socket.accept()
+            (connectionSocket, _clientAddress) = self.socket.accept()
             fileno = connectionSocket.fileno()
             self.requestCommunicators[fileno] = self.SlicerRequestCommunicator(connectionSocket, self.requestHandlers, self.docroot, self.logMessage, self.enableCORS)
             self.logMessage("Connected on %s fileno %d" % (connectionSocket, connectionSocket.fileno()))
@@ -574,13 +592,13 @@ class WebServerLogic:
     """
 
     def __init__(self,
-                 port:Optional[int]=None,
+                 port:int | None=None,
                  enableSlicer:bool=True,
                  enableExec:bool=False,
                  enableDICOM:bool=True,
                  enableStaticPages:bool=True,
                  requestHandlers:list[BaseRequestHandler]=None,
-                 logMessage:Optional[BaseRequestLoggingFunction]=None,
+                 logMessage:BaseRequestLoggingFunction | None=None,
                  enableCORS:bool=False):
         self.logMessage = logMessage or self.defaultLogMessage
         self.port = port or 2016

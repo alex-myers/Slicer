@@ -36,8 +36,9 @@
 #include "qMRMLWidget.h"
 
 // STD includes
+#include <iostream>
 
-int qMRMLNodeComboBoxTest2( int argc, char * argv [] )
+int qMRMLNodeComboBoxTest2(int argc, char* argv[])
 {
   qMRMLWidget::preInitializeApplication();
   QApplication app(argc, argv);
@@ -165,8 +166,7 @@ int qMRMLNodeComboBoxTest2( int argc, char * argv [] )
   nodeSelector.setMRMLScene(sceneFactory.mrmlScene());
   if (nodeSelector.nodeCount() != 1)
   {
-    std::cerr << __LINE__ << " - qMRMLNodeSelector: attribute filtering failed, expected 1 node, got "
-              << nodeSelector.nodeCount() << "." << std::endl;
+    std::cerr << __LINE__ << " - qMRMLNodeSelector: attribute filtering failed, expected 1 node, got " << nodeSelector.nodeCount() << "." << std::endl;
     return EXIT_FAILURE;
   }
 
@@ -203,7 +203,7 @@ int qMRMLNodeComboBoxTest2( int argc, char * argv [] )
   QStringList types;
   // don't use the view node as that has an attribute filter on it
   types << "vtkMRMLModelNode" << "vtkMRMLCameraNode";
-  //test setNodeTypes()/nodeTypes()
+  // test setNodeTypes()/nodeTypes()
   nodeSelector.setNodeTypes(types);
 
   if (nodeSelector.nodeTypes() != types)
@@ -246,9 +246,7 @@ int qMRMLNodeComboBoxTest2( int argc, char * argv [] )
   // Let's connect the sceneFactory with the widget
   //
 
-  QObject::connect(&sceneFactory, SIGNAL(mrmlSceneChanged(vtkMRMLScene*)),
-                   &nodeSelector, SLOT(setMRMLScene(vtkMRMLScene*)));
-
+  QObject::connect(&sceneFactory, SIGNAL(mrmlSceneChanged(vtkMRMLScene*)), &nodeSelector, SLOT(setMRMLScene(vtkMRMLScene*)));
 
   // Let's check the state of the buttons
 
@@ -261,7 +259,6 @@ int qMRMLNodeComboBoxTest2( int argc, char * argv [] )
     std::cerr << __LINE__ << " - qMRMLNodeSelector::setMRMLScene() failed." << std::endl;
     return EXIT_FAILURE;
   }
-
 
   sceneFactory.deleteScene();
 

@@ -20,7 +20,6 @@
 
 ==============================================================================*/
 
-
 #ifndef __qMRMLTransformDisplayNodeWidget_h
 #define __qMRMLTransformDisplayNodeWidget_h
 
@@ -37,16 +36,14 @@ class qMRMLTransformDisplayNodeWidgetPrivate;
 class vtkMRMLTransformNode;
 class vtkMRMLNode;
 
-class Q_SLICER_MODULE_TRANSFORMS_WIDGETS_EXPORT
-qMRMLTransformDisplayNodeWidget
-  : public qMRMLWidget
+class Q_SLICER_MODULE_TRANSFORMS_WIDGETS_EXPORT qMRMLTransformDisplayNodeWidget : public qMRMLWidget
 {
   Q_OBJECT
   QVTK_OBJECT
 
 public:
   typedef qMRMLWidget Superclass;
-  qMRMLTransformDisplayNodeWidget(QWidget *newParent = nullptr);
+  qMRMLTransformDisplayNodeWidget(QWidget* newParent = nullptr);
   ~qMRMLTransformDisplayNodeWidget() override;
 
 public slots:
@@ -67,7 +64,6 @@ public slots:
   void setGridVisualizationMode(bool);
   void setContourVisualizationMode(bool);
 
-  void updateGlyphSourceOptions(int sourceOption);
   void regionNodeChanged(vtkMRMLNode* node);
   void glyphPointsNodeChanged(vtkMRMLNode* node);
   void setGlyphSpacingMm(double spacing);
@@ -78,6 +74,9 @@ public slots:
   void setGlyphDiameterMm(double diameterMm);
   void setGlyphShaftDiameterPercent(double diameterPercent);
   void setGlyphResolution(double resolution);
+  void setSliceIntersectionThickness(int thickness);
+  void setGlyphResolution2D(double resolution);
+  void setGlyphTipLengthPercent2D(double lengthPercent);
   void setGridScalePercent(double scale);
   void setGridSpacingMm(double spacing);
   void setGridLineDiameterMm(double diameterMm);
@@ -125,7 +124,6 @@ protected:
 private:
   Q_DECLARE_PRIVATE(qMRMLTransformDisplayNodeWidget);
   Q_DISABLE_COPY(qMRMLTransformDisplayNodeWidget);
-
 };
 
 #endif

@@ -40,7 +40,6 @@
 #include <vtkWeakPointer.h>
 
 class QAction;
-class qMRMLSceneViewMenu;
 class vtkMRMLPlotViewNode;
 class vtkMRMLPlotChartNode;
 class QString;
@@ -61,10 +60,10 @@ public:
 
   void init() override;
 
-  vtkWeakPointer<vtkMRMLPlotChartNode>   PlotChartNode;
-  qMRMLPlotView*                         PlotView;
+  vtkWeakPointer<vtkMRMLPlotChartNode> PlotChartNode;
+  qMRMLPlotView* PlotView;
 
-  QToolButton*                           FitToWindowToolButton;
+  QToolButton* FitToWindowToolButton;
 
   vtkMRMLPlotChartNode* GetPlotChartNodeFromView();
 
@@ -92,7 +91,6 @@ protected:
   void setupPopupUi() override;
 
 public:
-
 };
 
 #endif

@@ -62,12 +62,9 @@ void vtkSlicerUnitsLogic::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 //----------------------------------------------------------------------------
-vtkMRMLUnitNode* vtkSlicerUnitsLogic
-::AddUnitNode(const char* name, const char* quantity, const char* prefix,
-              const char* suffix, int precision, double min, double max)
+vtkMRMLUnitNode* vtkSlicerUnitsLogic::AddUnitNode(const char* name, const char* quantity, const char* prefix, const char* suffix, int precision, double min, double max)
 {
-  return this->AddUnitNodeToScene(this->GetMRMLScene(), name, quantity,
-    prefix, suffix, precision, min, max);
+  return this->AddUnitNodeToScene(this->GetMRMLScene(), name, quantity, prefix, suffix, precision, min, max);
 }
 
 //----------------------------------------------------------------------------
@@ -77,13 +74,13 @@ vtkMRMLScene* vtkSlicerUnitsLogic::GetUnitsScene() const
 }
 
 //----------------------------------------------------------------------------
-double vtkSlicerUnitsLogic::
-GetSIPrefixCoefficient(const char* prefix)
+double vtkSlicerUnitsLogic::GetSIPrefixCoefficient(const char* prefix)
 {
   if (!prefix)
   {
     return 1.;
   }
+  // clang-format off
   if (strcmp("yotta", prefix) == 0) { return 1000000000000000000000000.; }
   else if (strcmp("zetta", prefix) == 0) { return 1000000000000000000000.; }
   else if (strcmp("exa", prefix) == 0) { return 1000000000000000000.; }
@@ -106,21 +103,26 @@ GetSIPrefixCoefficient(const char* prefix)
   else if (strcmp("zepto", prefix) == 0) { return 0.000000000000000000001; }
   else if (strcmp("yocto", prefix) == 0) { return 0.000000000000000000000001; }
   else { return 1.; }
+  // clang-format on
 }
 
 //----------------------------------------------------------------------------
-double vtkSlicerUnitsLogic::GetDisplayCoefficient(const char* prefix, const char* basePrefix, double power/*=1*/)
+double vtkSlicerUnitsLogic::GetDisplayCoefficient(const char* prefix, const char* basePrefix, double power /*=1*/)
 {
   return pow(GetSIPrefixCoefficient(basePrefix) / GetSIPrefixCoefficient(prefix), power);
 }
 
 //----------------------------------------------------------------------------
-vtkMRMLUnitNode* vtkSlicerUnitsLogic
-::AddUnitNodeToScene(vtkMRMLScene* scene, const char* name,
-                     const char* quantity, const char* prefix,
-                     const char* suffix, int precision,
-                     double min, double max,
-                     double displayCoeff, double displayOffset)
+vtkMRMLUnitNode* vtkSlicerUnitsLogic::AddUnitNodeToScene(vtkMRMLScene* scene,
+                                                         const char* name,
+                                                         const char* quantity,
+                                                         const char* prefix,
+                                                         const char* suffix,
+                                                         int precision,
+                                                         double min,
+                                                         double max,
+                                                         double displayCoeff,
+                                                         double displayOffset)
 {
   if (!scene)
   {
@@ -144,7 +146,7 @@ vtkMRMLUnitNode* vtkSlicerUnitsLogic
 }
 
 //---------------------------------------------------------------------------
-void vtkSlicerUnitsLogic::SetMRMLSceneInternal(vtkMRMLScene * newScene)
+void vtkSlicerUnitsLogic::SetMRMLSceneInternal(vtkMRMLScene* newScene)
 {
   vtkNew<vtkIntArray> events;
   events->InsertNextValue(vtkMRMLScene::StartBatchProcessEvent);
@@ -172,6 +174,7 @@ void vtkSlicerUnitsLogic::UpdateFromMRMLScene()
 //---------------------------------------------------------------------------
 void vtkSlicerUnitsLogic::AddDefaultsUnits()
 {
+  // clang-format off
   vtkMRMLUnitNode* node =
     this->AddUnitNode("ApplicationLength", "length", "", "mm", 4);
   node->SetSaveWithScene(false);
@@ -202,6 +205,7 @@ void vtkSlicerUnitsLogic::AddDefaultsUnits()
   node = this->AddUnitNode("ApplicationIntensity", "intensity", "", "W/m^2", 3);
   node->SetSaveWithScene(false);
   this->SetDefaultUnit(node->GetQuantity(), node->GetID());
+  // clang-format on
 }
 
 //---------------------------------------------------------------------------
@@ -216,6 +220,7 @@ void vtkSlicerUnitsLogic::AddBuiltInUnits(vtkMRMLScene* scene)
 
   // Add defaults nodes here
 
+  // clang-format off
   // in Slicer, "length" quantity values are always expressed in millimeters.
   this->AddUnitNodeToScene(scene,
     "Meter", "length", "", "m", 4, -10000., 10000., Self::GetDisplayCoefficient("", "milli"), 0.);
@@ -224,7 +229,8 @@ void vtkSlicerUnitsLogic::AddBuiltInUnits(vtkMRMLScene* scene)
   this->AddUnitNodeToScene(scene,
     "Millimeter", "length", "", "mm", 4, -10000., 10000., Self::GetDisplayCoefficient("milli", "milli"), 0.);
   this->AddUnitNodeToScene(scene,
-    "Micrometer", "length", "", u8"\u00b5m", 4, -10000., 10000., Self::GetDisplayCoefficient("micro", "milli"), 0.);
+    "Micrometer", "length", "",
+    static_cast<const char*>(u8"\u00b5m"), 4, -10000., 10000., Self::GetDisplayCoefficient("micro", "milli"), 0.);
   this->AddUnitNodeToScene(scene,
     "Nanometer", "length", "", "nm", 4, -10000., 10000., Self::GetDisplayCoefficient("nano", "milli"), 0.);
 
@@ -235,7 +241,8 @@ void vtkSlicerUnitsLogic::AddBuiltInUnits(vtkMRMLScene* scene)
   this->AddUnitNodeToScene(scene,
     "Square Millimeter", "area", "", "mm2", 4, -10000., 10000., Self::GetDisplayCoefficient("milli", "milli", 2), 0.);
   this->AddUnitNodeToScene(scene,
-    "Square Micrometer", "area", "", u8"\u00b5m2", 4, -10000., 10000., Self::GetDisplayCoefficient("micro", "milli", 2), 0.);
+    "Square Micrometer", "area", "",
+    static_cast<const char*>(u8"\u00b5m2"), 4, -10000., 10000., Self::GetDisplayCoefficient("micro", "milli", 2), 0.);
   this->AddUnitNodeToScene(scene,
     "Square Nanometer", "area", "", "nm2", 4, -10000., 10000., Self::GetDisplayCoefficient("nano", "milli", 2), 0.);
 
@@ -246,7 +253,8 @@ void vtkSlicerUnitsLogic::AddBuiltInUnits(vtkMRMLScene* scene)
   this->AddUnitNodeToScene(scene,
     "Cubic Millimeter", "volume", "", "mm3", 5, -10000., 10000., Self::GetDisplayCoefficient("milli", "milli", 3), 0.);
   this->AddUnitNodeToScene(scene,
-    "Cubic Micrometer", "volume", "", u8"\u00b5m3", 5, -10000., 10000., Self::GetDisplayCoefficient("micro", "milli", 3), 0.);
+    "Cubic Micrometer", "volume", "",
+    static_cast<const char*>(u8"\u00b5m3"), 5, -10000., 10000., Self::GetDisplayCoefficient("micro", "milli", 3), 0.);
   this->AddUnitNodeToScene(scene,
     "Cubic Nanometer", "volume", "", "nm3", 5, -10000., 10000., Self::GetDisplayCoefficient("nano", "milli", 3), 0.);
 
@@ -266,7 +274,8 @@ void vtkSlicerUnitsLogic::AddBuiltInUnits(vtkMRMLScene* scene)
   this->AddUnitNodeToScene(scene,
     "Millisecond", "time", "", "ms", 3, -10000., 10000., Self::GetDisplayCoefficient("milli"), 0.);
   this->AddUnitNodeToScene(scene,
-    "Microsecond", "time", "", u8"\u00b5s", 3, -10000., 10000., Self::GetDisplayCoefficient("micro"), 0.);
+    "Microsecond", "time", "",
+    static_cast<const char*>(u8"\u00b5s"), 3, -10000., 10000., Self::GetDisplayCoefficient("micro"), 0.);
 
   this->AddUnitNodeToScene(scene,
     "Hertz", "frequency", "", "Hz", 3, -10000., 10000., Self::GetDisplayCoefficient(""), 0.);
@@ -290,6 +299,7 @@ void vtkSlicerUnitsLogic::AddBuiltInUnits(vtkMRMLScene* scene)
 
   this->AddUnitNodeToScene(scene,
     "Intensity", "intensity", "", "W/m\xB2", 3, -10000., 10000., 1., 0.);
+  // clang-format on
 }
 
 //-----------------------------------------------------------------------------
@@ -300,13 +310,11 @@ void vtkSlicerUnitsLogic::SetDefaultUnit(const char* quantity, const char* id)
     return;
   }
 
-  vtkMRMLSelectionNode* selectionNode =  vtkMRMLSelectionNode::SafeDownCast(
-    this->GetMRMLScene()->GetNodeByID("vtkMRMLSelectionNodeSingleton"));
+  vtkMRMLSelectionNode* selectionNode = vtkMRMLSelectionNode::SafeDownCast(this->GetMRMLScene()->GetNodeByID("vtkMRMLSelectionNodeSingleton"));
   if (selectionNode)
   {
     selectionNode->SetUnitNodeID(quantity, id);
-    if (!vtkIsObservedMRMLNodeEventMacro(selectionNode,
-                                         vtkCommand::ModifiedEvent))
+    if (!vtkIsObservedMRMLNodeEventMacro(selectionNode, vtkCommand::ModifiedEvent))
     {
       vtkObserveMRMLNodeMacro(selectionNode);
     }
@@ -340,7 +348,7 @@ void vtkSlicerUnitsLogic::OnMRMLSceneStartBatchProcess()
 //-----------------------------------------------------------------------------
 void vtkSlicerUnitsLogic::OnMRMLNodeModified(vtkMRMLNode* node)
 {
-  if (vtkMRMLSelectionNode::SafeDownCast(node) &&
+  if (vtkMRMLSelectionNode::SafeDownCast(node) && //
       !this->RestoringDefaultUnits)
   {
     this->RestoreDefaultUnits();
@@ -352,10 +360,9 @@ void vtkSlicerUnitsLogic::OnMRMLNodeModified(vtkMRMLNode* node)
 void vtkSlicerUnitsLogic::SaveDefaultUnits()
 {
   // Save selection node units.
-  vtkMRMLSelectionNode* selectionNode =  vtkMRMLSelectionNode::SafeDownCast(
-    this->GetMRMLScene()->GetNodeByID("vtkMRMLSelectionNodeSingleton"));
-  std::vector<const char *> quantities;
-  std::vector<const char *> unitIDs;
+  vtkMRMLSelectionNode* selectionNode = vtkMRMLSelectionNode::SafeDownCast(this->GetMRMLScene()->GetNodeByID("vtkMRMLSelectionNodeSingleton"));
+  std::vector<const char*> quantities;
+  std::vector<const char*> unitIDs;
   if (selectionNode)
   {
     selectionNode->GetUnitNodeIDs(quantities, unitIDs);
@@ -363,13 +370,12 @@ void vtkSlicerUnitsLogic::SaveDefaultUnits()
   this->CachedDefaultUnits.clear();
   std::vector<const char*>::const_iterator qIt;
   std::vector<const char*>::const_iterator uIt;
-  for (qIt = quantities.begin(), uIt = unitIDs.begin();
-       uIt != unitIDs.end(); ++qIt, ++uIt)
+  for (qIt = quantities.begin(), uIt = unitIDs.begin(); uIt != unitIDs.end(); ++qIt, ++uIt)
   {
     assert(qIt != quantities.end());
     const char* quantity = *qIt;
     const char* unitID = *uIt;
-    assert( (quantity != nullptr) == (unitID != nullptr) );
+    assert((quantity != nullptr) == (unitID != nullptr));
     if (quantity && unitID)
     {
       this->CachedDefaultUnits[quantity] = unitID;
@@ -381,8 +387,7 @@ void vtkSlicerUnitsLogic::SaveDefaultUnits()
 void vtkSlicerUnitsLogic::RestoreDefaultUnits()
 {
   this->RestoringDefaultUnits = true;
-  vtkMRMLSelectionNode* selectionNode =  vtkMRMLSelectionNode::SafeDownCast(
-    this->GetMRMLScene()->GetNodeByID("vtkMRMLSelectionNodeSingleton"));
+  vtkMRMLSelectionNode* selectionNode = vtkMRMLSelectionNode::SafeDownCast(this->GetMRMLScene()->GetNodeByID("vtkMRMLSelectionNodeSingleton"));
   int wasModifying = 0;
   if (selectionNode)
   {
@@ -390,9 +395,7 @@ void vtkSlicerUnitsLogic::RestoreDefaultUnits()
   }
   // Restore selection node units.
   std::map<std::string, std::string>::const_iterator it;
-  for ( it = this->CachedDefaultUnits.begin() ;
-        it != this->CachedDefaultUnits.end();
-        ++it )
+  for (it = this->CachedDefaultUnits.begin(); it != this->CachedDefaultUnits.end(); ++it)
   {
     this->SetDefaultUnit(it->first.c_str(), it->second.c_str());
   }

@@ -42,8 +42,11 @@
 #include <itkConfigure.h>
 #include <itkFactoryRegistration.h>
 
+// STD includes
+#include <iostream>
+
 //-----------------------------------------------------------------------------
-int qSlicerVolumeRenderingModuleWidgetTest2( int argc, char * argv[] )
+int qSlicerVolumeRenderingModuleWidgetTest2(int argc, char* argv[])
 {
   itk::itkFactoryRegistration();
 
@@ -59,12 +62,9 @@ int qSlicerVolumeRenderingModuleWidgetTest2( int argc, char * argv[] )
   module.setMRMLScene(app.mrmlScene());
   module.initialize(nullptr);
 
-  qSlicerVolumeRenderingModuleWidget* moduleWidget =
-    dynamic_cast<qSlicerVolumeRenderingModuleWidget*>(
-      module.widgetRepresentation());
+  qSlicerVolumeRenderingModuleWidget* moduleWidget = dynamic_cast<qSlicerVolumeRenderingModuleWidget*>(module.widgetRepresentation());
 
-  vtkSmartPointer<vtkSlicerVolumesLogic> volumesLogic =
-    vtkSmartPointer<vtkSlicerVolumesLogic>::New();
+  vtkSmartPointer<vtkSlicerVolumesLogic> volumesLogic = vtkSmartPointer<vtkSlicerVolumesLogic>::New();
   volumesLogic->SetMRMLScene(app.mrmlScene());
 
   vtkMRMLVolumeNode* volumeNode = volumesLogic->AddArchetypeVolume(argv[1], "volume");

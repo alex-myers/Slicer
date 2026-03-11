@@ -60,8 +60,10 @@ vtkMRMLNodeNewMacro(vtkMRMLSegmentationDisplayNode);
 //----------------------------------------------------------------------------
 vtkMRMLSegmentationDisplayNode::vtkMRMLSegmentationDisplayNode()
 {
+  this->TypeDisplayName = vtkMRMLTr("vtkMRMLSegmentationDisplayNode", "Segmentation Display");
+
   this->SetBackfaceCulling(0); // segment models are not necessarily closed surfaces (e.g., ribbon models)
-  this->Visibility2D = 1; // show slice intersections by default
+  this->Visibility2D = 1;      // show slice intersections by default
 
   this->SegmentationDisplayProperties.clear();
 
@@ -81,153 +83,132 @@ void vtkMRMLSegmentationDisplayNode::WriteXML(ostream& of, int nIndent)
 {
   Superclass::WriteXML(of, nIndent);
 
-  of << " PreferredDisplayRepresentationName2D=\""
-    << (this->PreferredDisplayRepresentationName2D ? this->PreferredDisplayRepresentationName2D : "") << "\"";
-  of << " PreferredDisplayRepresentationName3D=\""
-    << (this->PreferredDisplayRepresentationName3D ? this->PreferredDisplayRepresentationName3D : "") << "\"";
-
-  of << " Visibility2DFill=\"" << (this->Visibility2DFill ? "true" : "false") << "\"";
-  of << " Visibility2DOutline=\"" << (this->Visibility2DOutline ? "true" : "false") << "\"";
-  of << " Opacity3D=\"" << this->Opacity3D << "\"";
-  of << " Opacity2DFill=\"" << this->Opacity2DFill << "\"";
-  of << " Opacity2DOutline=\"" << this->Opacity2DOutline << "\"";
+  vtkMRMLWriteXMLBeginMacro(of);
+  vtkMRMLWriteXMLStringMacro(PreferredDisplayRepresentationName2D, PreferredDisplayRepresentationName2D);
+  vtkMRMLWriteXMLStringMacro(PreferredDisplayRepresentationName3D, PreferredDisplayRepresentationName3D);
+  vtkMRMLWriteXMLBooleanMacro(Visibility2DFill, Visibility2DFill);
+  vtkMRMLWriteXMLBooleanMacro(Visibility2DOutline, Visibility2DOutline);
+  vtkMRMLWriteXMLFloatMacro(Opacity3D, Opacity3D);
+  vtkMRMLWriteXMLFloatMacro(Opacity2DFill, Opacity2DFill);
+  vtkMRMLWriteXMLFloatMacro(Opacity2DOutline, Opacity2DOutline);
+  vtkMRMLWriteXMLBooleanMacro(RemoveUnusedDisplayProperties, RemoveUnusedDisplayProperties);
+  vtkMRMLWriteXMLBooleanMacro(ClippingCapSurface, ClippingCapSurface);
+  vtkMRMLWriteXMLFloatMacro(ClippingCapOpacity, ClippingCapOpacity);
+  vtkMRMLWriteXMLBooleanMacro(ClippingOutline, ClippingOutline);
 
   this->UpdateSegmentList();
 
   of << " SegmentationDisplayProperties=\"";
-  for (SegmentDisplayPropertiesMap::iterator propIt = this->SegmentationDisplayProperties.begin();
-    propIt != this->SegmentationDisplayProperties.end(); ++propIt)
+  for (SegmentDisplayPropertiesMap::iterator propIt = this->SegmentationDisplayProperties.begin(); propIt != this->SegmentationDisplayProperties.end(); ++propIt)
   {
-    of << vtkMRMLNode::URLEncodeString(propIt->first.c_str())
-      << " OverrideColorR:" << propIt->second.OverrideColor[0]
-      << " OverrideColorG:" << propIt->second.OverrideColor[1]
-      << " OverrideColorB:" << propIt->second.OverrideColor[2]
-      << " Visible:" << (propIt->second.Visible ? "true" : "false")
-      << " Visible3D:" << (propIt->second.Visible3D ? "true" : "false")
-      << " Visible2DFill:" << (propIt->second.Visible2DFill ? "true" : "false")
-      << " Visible2DOutline:" << (propIt->second.Visible2DOutline ? "true" : "false")
-      << " Opacity3D:" << propIt->second.Opacity3D
-      << " Opacity2DFill:" << propIt->second.Opacity2DFill
-      << " Opacity2DOutline:" << propIt->second.Opacity2DOutline
-      << " Pickable:" << (propIt->second.Pickable ? "true" : "false") << "|";
+    of << vtkMRMLNode::URLEncodeString(propIt->first.c_str())                          //
+       << " OverrideColorR:" << propIt->second.OverrideColor[0]                        //
+       << " OverrideColorG:" << propIt->second.OverrideColor[1]                        //
+       << " OverrideColorB:" << propIt->second.OverrideColor[2]                        //
+       << " Visible:" << (propIt->second.Visible ? "true" : "false")                   //
+       << " Visible3D:" << (propIt->second.Visible3D ? "true" : "false")               //
+       << " Visible2DFill:" << (propIt->second.Visible2DFill ? "true" : "false")       //
+       << " Visible2DOutline:" << (propIt->second.Visible2DOutline ? "true" : "false") //
+       << " Opacity3D:" << propIt->second.Opacity3D                                    //
+       << " Opacity2DFill:" << propIt->second.Opacity2DFill                            //
+       << " Opacity2DOutline:" << propIt->second.Opacity2DOutline                      //
+       << " Pickable:" << (propIt->second.Pickable ? "true" : "false") << "|";
   }
   of << "\"";
+  vtkMRMLWriteXMLEndMacro();
 }
 
 //----------------------------------------------------------------------------
 void vtkMRMLSegmentationDisplayNode::ReadXMLAttributes(const char** atts)
 {
-  // Read all MRML node attributes from two arrays of names and values
-  int disabledModify = this->StartModify();
-
+  MRMLNodeModifyBlocker blocker(this);
   Superclass::ReadXMLAttributes(atts);
 
-  // Read all MRML node attributes from two arrays of names and values
-  const char* attName = nullptr;
-  const char* attValue = nullptr;
-
-  while (*atts != nullptr)
+  vtkMRMLReadXMLBeginMacro(atts);
+  vtkMRMLReadXMLStringMacro(PreferredDisplayRepresentationName2D, PreferredDisplayRepresentationName2D);
+  vtkMRMLReadXMLStringMacro(PreferredDisplayRepresentationName3D, PreferredDisplayRepresentationName3D);
+  vtkMRMLReadXMLBooleanMacro(Visibility2DFill, Visibility2DFill);
+  vtkMRMLReadXMLBooleanMacro(Visibility2DOutline, Visibility2DOutline);
+  vtkMRMLReadXMLFloatMacro(Opacity3D, Opacity3D);
+  vtkMRMLReadXMLFloatMacro(Opacity2DFill, Opacity2DFill);
+  vtkMRMLReadXMLFloatMacro(Opacity2DOutline, Opacity2DOutline);
+  vtkMRMLReadXMLBooleanMacro(RemoveUnusedDisplayProperties, RemoveUnusedDisplayProperties);
+  vtkMRMLReadXMLBooleanMacro(ClippingCapSurface, ClippingCapSurface);
+  vtkMRMLReadXMLFloatMacro(ClippingCapOpacity, ClippingCapOpacity);
+  vtkMRMLReadXMLBooleanMacro(ClippingOutline, ClippingOutline);
+  if (!strcmp(xmlReadAttName, "SegmentationDisplayProperties"))
   {
-    attName = *(atts++);
-    attValue = *(atts++);
-
-    if (!strcmp(attName, "PreferredDisplayRepresentationName2D"))
+    // attValue: "Segment_0 OverrideColorR:-1 OverrideColorG:-1 ... Opacity2DOutline:1|Segment_1 OverrideColorR:1 OverrideColorG:0.8...|"
+    std::stringstream segmentsDisplayProperties(xmlReadAttValue); // properties of all segments
+    std::string segmentDisplayPropertiesString;                   // properties of a single segment
+    while (std::getline(segmentsDisplayProperties, segmentDisplayPropertiesString, '|'))
     {
-      this->SetPreferredDisplayRepresentationName2D(attValue);
-    }
-    else if (!strcmp(attName, "PreferredDisplayRepresentationName3D"))
-    {
-      this->SetPreferredDisplayRepresentationName3D(attValue);
-    }
-    else if (!strcmp(attName, "Visibility2DFill"))
-    {
-      this->Visibility2DFill = (strcmp(attValue,"true") ? false : true);
-    }
-    else if (!strcmp(attName, "Visibility2DOutline"))
-    {
-      this->Visibility2DOutline = (strcmp(attValue,"true") ? false : true);
-    }
-    else if (!strcmp(attName, "Opacity3D"))
-    {
-      this->Opacity3D = vtkVariant(attValue).ToDouble();
-    }
-    else if (!strcmp(attName, "Opacity2DFill"))
-    {
-      this->Opacity2DFill = vtkVariant(attValue).ToDouble();
-    }
-    else if (!strcmp(attName, "Opacity2DOutline"))
-    {
-      this->Opacity2DOutline = vtkVariant(attValue).ToDouble();
-    }
-    else if (!strcmp(attName, "SegmentationDisplayProperties"))
-    {
-      // attValue: "Segment_0 OverrideColorR:-1 OverrideColorG:-1 ... Opacity2DOutline:1|Segment_1 OverrideColorR:1 OverrideColorG:0.8...|"
-      std::stringstream segmentsDisplayProperties(attValue); // properties of all segments
-      std::string segmentDisplayPropertiesString; // properties of a single segment
-      while (std::getline(segmentsDisplayProperties, segmentDisplayPropertiesString, '|'))
+      // segmentDisplayPropertiesString: "Segment_0 OverrideColorR:0.2 OverrideColorG:0.501961 ... Opacity2DOutline:1"
+      std::stringstream segmentDisplayProperties(segmentDisplayPropertiesString);
+      std::string id;
+      segmentDisplayProperties >> id;
+      SegmentDisplayProperties props;
+      std::string segmentDisplayPropertyString; // properties of a single segment
+      while (std::getline(segmentDisplayProperties, segmentDisplayPropertyString, ' '))
       {
-        // segmentDisplayPropertiesString: "Segment_0 OverrideColorR:0.2 OverrideColorG:0.501961 ... Opacity2DOutline:1"
-        std::stringstream segmentDisplayProperties(segmentDisplayPropertiesString);
-        std::string id;
-        segmentDisplayProperties >> id;
-        SegmentDisplayProperties props;
-        std::string segmentDisplayPropertyString; // properties of a single segment
-        while (std::getline(segmentDisplayProperties, segmentDisplayPropertyString, ' '))
+        // segmentDisplayPropertyString: "OverrideColorR:0.2"
+        if (segmentDisplayPropertyString.empty())
         {
-          // segmentDisplayPropertyString: "OverrideColorR:0.2"
-          if (segmentDisplayPropertyString.empty())
-          {
-            // multiple spaces between properties, just get the next item
-            continue;
-          }
-          size_t colonIndex = segmentDisplayPropertyString.find(':');
-          if (colonIndex == std::string::npos)
-          {
-            // no colon found, not a valid property, ignore it
-            vtkErrorMacro("Invalid property found in attribute of "<<(this->ID?this->ID:"(unknown)")<<" node: "<<segmentDisplayPropertyString);
-            continue;
-          }
-          std::string propertyName = segmentDisplayPropertyString.substr(0, colonIndex); // "OverrideColorR"
-          std::stringstream propertyValue(segmentDisplayPropertyString.substr(colonIndex + 1)); // "0.2"
-          if (propertyName=="OverrideColorR") { propertyValue >> props.OverrideColor[0]; }
-          else if (propertyName=="OverrideColorG") { propertyValue >> props.OverrideColor[1]; }
-          else if (propertyName=="OverrideColorB") { propertyValue >> props.OverrideColor[2]; }
+          // multiple spaces between properties, just get the next item
+          continue;
+        }
+        size_t colonIndex = segmentDisplayPropertyString.find(':');
+        if (colonIndex == std::string::npos)
+        {
+          // no colon found, not a valid property, ignore it
+          vtkErrorMacro("Invalid property found in attribute of " << (this->ID ? this->ID : "(unknown)") << " node: " << segmentDisplayPropertyString);
+          continue;
+        }
+        std::string propertyName = segmentDisplayPropertyString.substr(0, colonIndex);        // "OverrideColorR"
+        std::stringstream propertyValue(segmentDisplayPropertyString.substr(colonIndex + 1)); // "0.2"
+        // clang-format off
+        if (propertyName == "OverrideColorR") { propertyValue >> props.OverrideColor[0]; }
+        else if (propertyName == "OverrideColorG") { propertyValue >> props.OverrideColor[1]; }
+        else if (propertyName == "OverrideColorB") { propertyValue >> props.OverrideColor[2]; }
+        // clang-format on
 
-          // for backward compatibility
-          else if (propertyName == "ColorR") { propertyValue >> props.OverrideColor[0]; }
-          else if (propertyName == "ColorG") { propertyValue >> props.OverrideColor[1]; }
-          else if (propertyName == "ColorB") { propertyValue >> props.OverrideColor[2]; }
+        // for backward compatibility
+        // clang-format off
+        else if (propertyName == "ColorR") { propertyValue >> props.OverrideColor[0]; }
+        else if (propertyName == "ColorG") { propertyValue >> props.OverrideColor[1]; }
+        else if (propertyName == "ColorB") { propertyValue >> props.OverrideColor[2]; }
 
-          else if (propertyName=="Opacity3D") { propertyValue >> props.Opacity3D; }
-          else if (propertyName=="Opacity2DFill") { propertyValue >> props.Opacity2DFill; }
-          else if (propertyName=="Opacity2DOutline") { propertyValue >> props.Opacity2DOutline; }
-          else
+        else if (propertyName == "Opacity3D") { propertyValue >> props.Opacity3D; }
+        else if (propertyName == "Opacity2DFill") { propertyValue >> props.Opacity2DFill; }
+        else if (propertyName == "Opacity2DOutline") { propertyValue >> props.Opacity2DOutline; }
+        // clang-format off
+        else
+        {
+          // boolean values
+          std::string booleanValueString;
+          propertyValue >> booleanValueString;
+          bool booleanValue = booleanValueString.compare("true") ? false : true;
+          // clang-format off
+          if (propertyName == "Visible") { props.Visible = booleanValue; }
+          else if (propertyName == "Visible3D") { props.Visible3D = booleanValue; }
+          else if (propertyName == "Visible2DFill") { props.Visible2DFill = booleanValue; }
+          else if (propertyName == "Visible2DOutline") { props.Visible2DOutline = booleanValue; }
+          // clang-format on
+          else if (propertyName == "Pickable")
           {
-            // boolean values
-            std::string booleanValueString;
-            propertyValue >> booleanValueString;
-            bool booleanValue = booleanValueString.compare("true") ? false : true;
-            if (propertyName=="Visible") { props.Visible = booleanValue; }
-            else if (propertyName=="Visible3D") { props.Visible3D = booleanValue; }
-            else if (propertyName=="Visible2DFill") { props.Visible2DFill = booleanValue; }
-            else if (propertyName=="Visible2DOutline") { props.Visible2DOutline = booleanValue; }
-            else if (propertyName=="Pickable")
-            {
-              // Pickable property needs to be set to true if not specified
-              props.Pickable = booleanValueString.compare("false") ? true : false;
-            }
+            // Pickable property needs to be set to true if not specified
+            props.Pickable = booleanValueString.compare("false") ? true : false;
           }
         }
-        this->SetSegmentDisplayProperties(vtkMRMLNode::URLDecodeString(id.c_str()), props);
       }
+      this->SetSegmentDisplayProperties(vtkMRMLNode::URLDecodeString(id.c_str()), props);
     }
   }
-
-  this->EndModify(disabledModify);
+  vtkMRMLReadXMLEndMacro();
 }
 
 //----------------------------------------------------------------------------
-void vtkMRMLSegmentationDisplayNode::CopyContent(vtkMRMLNode* anode, bool deepCopy/*=true*/)
+void vtkMRMLSegmentationDisplayNode::CopyContent(vtkMRMLNode* anode, bool deepCopy /*=true*/)
 {
   MRMLNodeModifyBlocker blocker(this);
   Superclass::CopyContent(anode, deepCopy);
@@ -238,61 +219,79 @@ void vtkMRMLSegmentationDisplayNode::CopyContent(vtkMRMLNode* anode, bool deepCo
     return;
   }
 
-  this->SetPreferredDisplayRepresentationName2D(node->GetPreferredDisplayRepresentationName2D());
-  this->SetPreferredDisplayRepresentationName3D(node->GetPreferredDisplayRepresentationName3D());
-  this->Visibility2DFill = node->Visibility2DFill;
-  this->Visibility2DOutline = node->Visibility2DOutline;
-  this->Opacity3D = node->Opacity3D;
-  this->Opacity2DFill = node->Opacity2DFill;
-  this->Opacity2DOutline = node->Opacity2DOutline;
-  this->SegmentationDisplayProperties = node->SegmentationDisplayProperties;
+  vtkMRMLCopyBeginMacro(anode);
+  vtkMRMLCopyStringMacro(PreferredDisplayRepresentationName2D);
+  vtkMRMLCopyStringMacro(PreferredDisplayRepresentationName3D);
+  vtkMRMLCopyBooleanMacro(Visibility2DFill);
+  vtkMRMLCopyBooleanMacro(Visibility2DOutline);
+  vtkMRMLCopyFloatMacro(Opacity3D);
+  vtkMRMLCopyFloatMacro(Opacity2DFill);
+  vtkMRMLCopyFloatMacro(Opacity2DOutline);
+  vtkMRMLCopyBooleanMacro(RemoveUnusedDisplayProperties);
+  vtkMRMLCopyBooleanMacro(ClippingCapSurface);
+  vtkMRMLCopyFloatMacro(ClippingCapOpacity);
+  vtkMRMLCopyBooleanMacro(ClippingOutline);
+  if (this->SegmentationDisplayProperties != node->SegmentationDisplayProperties)
+  {
+    this->SegmentationDisplayProperties = node->SegmentationDisplayProperties;
+    this->Modified();
+  }
   // Reset segment list source to allow writing display properties to XML,
   // even if referenced segmentation node cannot be found (for example,
   // if SegmentListUpdateSource was not set to nullptr then segment display properties
   // would not be saved in scene views).
   this->SegmentListUpdateSource = nullptr;
   this->SegmentListUpdateTime = 0;
+  vtkMRMLCopyEndMacro();
 }
 
 //----------------------------------------------------------------------------
 void vtkMRMLSegmentationDisplayNode::PrintSelf(ostream& os, vtkIndent indent)
 {
-  Superclass::PrintSelf(os,indent);
+  Superclass::PrintSelf(os, indent);
 
-  os << indent << " PreferredDisplayRepresentationName2D:   " << (this->PreferredDisplayRepresentationName2D ? this->PreferredDisplayRepresentationName2D : "NULL") << "\n";
-  os << indent << " PreferredDisplayRepresentationName3D:   " << (this->PreferredDisplayRepresentationName3D ? this->PreferredDisplayRepresentationName3D : "NULL") << "\n";
-
-  os << indent << " Visibility2DFill:   " << (this->Visibility2DFill ? "true" : "false") << "\n";
-  os << indent << " Visibility2DOutline:   " << (this->Visibility2DOutline ? "true" : "false") << "\n";
-  os << indent << " Opacity3D:   " << this->Opacity3D << "\n";
-  os << indent << " Opacity2DFill:   " << this->Opacity2DFill << "\n";
-  os << indent << " Opacity2DOutline:   " << this->Opacity2DOutline << "\n";
-
+  vtkMRMLPrintBeginMacro(os, indent);
+  vtkMRMLPrintStringMacro(PreferredDisplayRepresentationName2D);
+  vtkMRMLPrintStringMacro(PreferredDisplayRepresentationName3D);
+  vtkMRMLPrintBooleanMacro(Visibility2DFill);
+  vtkMRMLPrintBooleanMacro(Visibility2DOutline);
+  vtkMRMLPrintFloatMacro(Opacity3D);
+  vtkMRMLPrintFloatMacro(Opacity2DFill);
+  vtkMRMLPrintFloatMacro(Opacity2DOutline);
+  vtkMRMLPrintBooleanMacro(RemoveUnusedDisplayProperties);
+  vtkMRMLPrintBooleanMacro(ClippingCapSurface);
+  vtkMRMLPrintFloatMacro(ClippingCapOpacity);
+  vtkMRMLPrintBooleanMacro(ClippingOutline);
   this->UpdateSegmentList();
-
   os << indent << " SegmentationDisplayProperties:\n";
-  for (SegmentDisplayPropertiesMap::iterator propIt = this->SegmentationDisplayProperties.begin();
-    propIt != this->SegmentationDisplayProperties.end(); ++propIt)
+  for (SegmentDisplayPropertiesMap::iterator propIt = this->SegmentationDisplayProperties.begin(); propIt != this->SegmentationDisplayProperties.end(); ++propIt)
   {
-    os << indent << "   SegmentID=" << propIt->first << ", OverrideColor=("
-       << propIt->second.OverrideColor[0] << "," << propIt->second.OverrideColor[1] << "," << propIt->second.OverrideColor[2]
-       << "), Visible=" << (propIt->second.Visible ? "true" : "false") << ", Visible3D=" << (propIt->second.Visible3D ? "true" : "false")
-       << ", Visible2DFill=" << (propIt->second.Visible2DFill ? "true" : "false") << ", Visible2DOutline="
-       << (propIt->second.Visible2DOutline ? "true" : "false")
-       << ", Opacity3D=" << propIt->second.Opacity3D << ", Opacity2DFill=" << propIt->second.Opacity2DFill
-       << ", Opacity2DOutline=" << propIt->second.Opacity2DOutline << ", Pickable=" << (propIt->second.Pickable ? "true" : "false") << "\n";
+    os << indent << "   SegmentID=" << propIt->first                                    //
+       << ", OverrideColor=(" << propIt->second.OverrideColor[0]                        //
+       << "," << propIt->second.OverrideColor[1]                                        //
+       << "," << propIt->second.OverrideColor[2]                                        //
+       << ")"                                                                           //
+       << ", Visible=" << (propIt->second.Visible ? "true" : "false")                   //
+       << ", Visible3D=" << (propIt->second.Visible3D ? "true" : "false")               //
+       << ", Visible2DFill=" << (propIt->second.Visible2DFill ? "true" : "false")       //
+       << ", Visible2DOutline=" << (propIt->second.Visible2DOutline ? "true" : "false") //
+       << ", Opacity3D=" << propIt->second.Opacity3D                                    //
+       << ", Opacity2DFill=" << propIt->second.Opacity2DFill                            //
+       << ", Opacity2DOutline=" << propIt->second.Opacity2DOutline                      //
+       << ", Pickable=" << (propIt->second.Pickable ? "true" : "false") << "\n";
   }
+  vtkMRMLPrintEndMacro();
 }
 
 //---------------------------------------------------------------------------
-bool vtkMRMLSegmentationDisplayNode::GetSegmentDisplayProperties(std::string segmentId, SegmentDisplayProperties &properties)
+bool vtkMRMLSegmentationDisplayNode::GetSegmentDisplayProperties(std::string segmentId, SegmentDisplayProperties& properties)
 {
   this->UpdateSegmentList();
 
   SegmentDisplayPropertiesMap::iterator propsIt = this->SegmentationDisplayProperties.find(segmentId);
   if (propsIt == this->SegmentationDisplayProperties.end())
   {
-    vtkWarningMacro("vtkMRMLSegmentationDisplayNode::GetSegmentDisplayProperties: no display properties are found for segment ID="<<segmentId<<", return default");
+    vtkWarningMacro("vtkMRMLSegmentationDisplayNode::GetSegmentDisplayProperties: no display properties are found for segment ID=" << segmentId << ", return default");
     SegmentDisplayProperties defaultProperties;
     properties = defaultProperties;
     return false;
@@ -302,7 +301,7 @@ bool vtkMRMLSegmentationDisplayNode::GetSegmentDisplayProperties(std::string seg
 }
 
 //---------------------------------------------------------------------------
-void vtkMRMLSegmentationDisplayNode::SetSegmentDisplayProperties(std::string segmentId, SegmentDisplayProperties &properties)
+void vtkMRMLSegmentationDisplayNode::SetSegmentDisplayProperties(std::string segmentId, SegmentDisplayProperties& properties)
 {
   this->UpdateSegmentList();
   SegmentDisplayPropertiesMap::iterator propsIt = this->SegmentationDisplayProperties.find(segmentId);
@@ -328,7 +327,7 @@ void vtkMRMLSegmentationDisplayNode::SetSegmentDisplayProperties(std::string seg
   else
   {
     // If found then replace values
-    for (int i=0; i<3; i++)
+    for (int i = 0; i < 3; i++)
     {
       if (propsIt->second.OverrideColor[i] != properties.OverrideColor[i])
       {
@@ -387,7 +386,7 @@ void vtkMRMLSegmentationDisplayNode::SetSegmentDisplayProperties(std::string seg
 //---------------------------------------------------------------------------
 vtkVector3d vtkMRMLSegmentationDisplayNode::GetSegmentColor(std::string segmentID)
 {
-  double color[3] = {vtkSegment::SEGMENT_COLOR_INVALID[0], vtkSegment::SEGMENT_COLOR_INVALID[1], vtkSegment::SEGMENT_COLOR_INVALID[2]};
+  double color[3] = { vtkSegment::SEGMENT_COLOR_INVALID[0], vtkSegment::SEGMENT_COLOR_INVALID[1], vtkSegment::SEGMENT_COLOR_INVALID[2] };
   this->GetSegmentColor(segmentID, color);
 
   vtkVector3d colorVtk(color[0], color[1], color[2]);
@@ -411,8 +410,8 @@ bool vtkMRMLSegmentationDisplayNode::GetSegmentColor(std::string segmentID, doub
   // Get display properties and return override color if set
   this->UpdateSegmentList();
   SegmentDisplayPropertiesMap::iterator propsIt = this->SegmentationDisplayProperties.find(segmentID);
-  if ( propsIt != this->SegmentationDisplayProperties.end()
-    && propsIt->second.OverrideColor[0] >= 0.0 && propsIt->second.OverrideColor[1] >= 0.0 && propsIt->second.OverrideColor[2] >= 0.0 )
+  if (propsIt != this->SegmentationDisplayProperties.end() && propsIt->second.OverrideColor[0] >= 0.0 && propsIt->second.OverrideColor[1] >= 0.0
+      && propsIt->second.OverrideColor[2] >= 0.0)
   {
     // If found and overridden, then return the override color
     color[0] = propsIt->second.OverrideColor[0];
@@ -443,9 +442,9 @@ bool vtkMRMLSegmentationDisplayNode::GetSegmentColor(std::string segmentID, doub
 }
 
 //---------------------------------------------------------------------------
-bool vtkMRMLSegmentationDisplayNode::GetSegmentColor(std::string segmentID, double &r, double &g, double &b)
+bool vtkMRMLSegmentationDisplayNode::GetSegmentColor(std::string segmentID, double& r, double& g, double& b)
 {
-  double color[3] = {vtkSegment::SEGMENT_COLOR_INVALID[0], vtkSegment::SEGMENT_COLOR_INVALID[1], vtkSegment::SEGMENT_COLOR_INVALID[2]};
+  double color[3] = { vtkSegment::SEGMENT_COLOR_INVALID[0], vtkSegment::SEGMENT_COLOR_INVALID[1], vtkSegment::SEGMENT_COLOR_INVALID[2] };
   if (!this->GetSegmentColor(segmentID, color))
   {
     return false;
@@ -781,7 +780,7 @@ void vtkMRMLSegmentationDisplayNode::SetSegmentPickable(std::string segmentID, b
 }
 
 //---------------------------------------------------------------------------
-void vtkMRMLSegmentationDisplayNode::SetAllSegmentsPickable(bool pickable, bool changeVisibleSegmentsOnly/* = false*/)
+void vtkMRMLSegmentationDisplayNode::SetAllSegmentsPickable(bool pickable, bool changeVisibleSegmentsOnly /* = false*/)
 {
   std::vector<std::string> segmentIDs;
   this->GetSegmentIDs(segmentIDs, changeVisibleSegmentsOnly);
@@ -815,9 +814,9 @@ void vtkMRMLSegmentationDisplayNode::SetSegmentDisplayPropertiesToDefault(const 
   double color[3] = { 0.0, 0.0, 0.0 };
   segment->GetColor(color);
   // Generate color if default color is the default gray
-  bool generateNewColor = ( color[0] == vtkSegment::SEGMENT_COLOR_INVALID[0]
-                         && color[1] == vtkSegment::SEGMENT_COLOR_INVALID[1]
-                         && color[2] == vtkSegment::SEGMENT_COLOR_INVALID[2] );
+  bool generateNewColor = (color[0] == vtkSegment::SEGMENT_COLOR_INVALID[0]    //
+                           && color[1] == vtkSegment::SEGMENT_COLOR_INVALID[1] //
+                           && color[2] == vtkSegment::SEGMENT_COLOR_INVALID[2]);
   if (generateNewColor)
   {
     this->GenerateSegmentColor(color, ++this->NumberOfGeneratedColors);
@@ -875,8 +874,7 @@ bool vtkMRMLSegmentationDisplayNode::CalculateAutoOpacitiesForSegments()
 
   // Make sure the requested representation exists
   vtkSegmentation* segmentation = segmentationNode->GetSegmentation();
-  if ( !this->PreferredDisplayRepresentationName3D
-    || !segmentation->CreateRepresentation(this->PreferredDisplayRepresentationName3D) )
+  if (!this->PreferredDisplayRepresentationName3D || !segmentation->CreateRepresentation(this->PreferredDisplayRepresentationName3D))
   {
     return false;
   }
@@ -889,8 +887,7 @@ bool vtkMRMLSegmentationDisplayNode::CalculateAutoOpacitiesForSegments()
 
   // Assemble segment polydatas into a collection that can be fed to topological hierarchy algorithm
   vtkSmartPointer<vtkPolyDataCollection> segmentPolyDataCollection = vtkSmartPointer<vtkPolyDataCollection>::New();
-  for (SegmentDisplayPropertiesMap::iterator propIt = this->SegmentationDisplayProperties.begin();
-    propIt != this->SegmentationDisplayProperties.end(); ++propIt)
+  for (SegmentDisplayPropertiesMap::iterator propIt = this->SegmentationDisplayProperties.begin(); propIt != this->SegmentationDisplayProperties.end(); ++propIt)
   {
     // Get segment
     vtkSegment* currentSegment = segmentation->GetSegment(propIt->first);
@@ -901,8 +898,7 @@ bool vtkMRMLSegmentationDisplayNode::CalculateAutoOpacitiesForSegments()
     }
 
     // Get poly data from segment
-    vtkPolyData* currentPolyData = vtkPolyData::SafeDownCast(
-      currentSegment->GetRepresentation(displayedPolyDataRepresentationName.c_str()) );
+    vtkPolyData* currentPolyData = vtkPolyData::SafeDownCast(currentSegment->GetRepresentation(displayedPolyDataRepresentationName.c_str()));
     if (!currentPolyData)
     {
       continue;
@@ -919,7 +915,7 @@ bool vtkMRMLSegmentationDisplayNode::CalculateAutoOpacitiesForSegments()
 
   // Determine number of levels
   int numberOfLevels = 0;
-  for (int i=0; i<levels->GetNumberOfTuples(); ++i)
+  for (int i = 0; i < levels->GetNumberOfTuples(); ++i)
   {
     if (levels->GetValue(i) > numberOfLevels)
     {
@@ -936,13 +932,13 @@ bool vtkMRMLSegmentationDisplayNode::CalculateAutoOpacitiesForSegments()
   // Set opacities into lookup table
   int idx = 0;
   SegmentDisplayPropertiesMap::iterator propIt;
-  for (idx=0, propIt=this->SegmentationDisplayProperties.begin(); idx < levels->GetNumberOfTuples(); ++idx, ++propIt)
+  for (idx = 0, propIt = this->SegmentationDisplayProperties.begin(); idx < levels->GetNumberOfTuples(); ++idx, ++propIt)
   {
     int level = levels->GetValue(idx);
 
     // The opacity level is set evenly distributed between 0 and 1 (excluding 0)
     // according to the topological hierarchy level of the segment
-    double opacity = 1.0 - ((double)level) / (numberOfLevels+1);
+    double opacity = 1.0 - ((double)level) / (numberOfLevels + 1);
     propIt->second.Opacity3D = opacity;
   }
 
@@ -963,7 +959,7 @@ const char* vtkMRMLSegmentationDisplayNode::GetSegmentColorGeneratorSourceColorN
 }
 
 //---------------------------------------------------------------------------
-void vtkMRMLSegmentationDisplayNode::GenerateSegmentColor(double color[3], int colorNumber/*=0*/)
+void vtkMRMLSegmentationDisplayNode::GenerateSegmentColor(double color[3], int colorNumber /*=0*/)
 {
   if (!this->Scene)
   {
@@ -971,19 +967,17 @@ void vtkMRMLSegmentationDisplayNode::GenerateSegmentColor(double color[3], int c
     return;
   }
 
-  vtkMRMLColorTableNode* colorTableNode = vtkMRMLColorTableNode::SafeDownCast(
-    this->GetNodeReference(SegmentColorGeneratorSourceColorNodeReferenceRole));
+  vtkMRMLColorTableNode* colorTableNode = vtkMRMLColorTableNode::SafeDownCast(this->GetNodeReference(SegmentColorGeneratorSourceColorNodeReferenceRole));
   if (!colorTableNode)
   {
     // Get default generic anatomy color table if no other color table was chosen
-    colorTableNode = vtkMRMLColorTableNode::SafeDownCast(
-      this->Scene->GetNodeByID("vtkMRMLColorTableNodeFileGenericAnatomyColors.txt"));
+    colorTableNode = vtkMRMLColorTableNode::SafeDownCast(this->Scene->GetNodeByID("vtkMRMLColorTableNodeFileGenericAnatomyColors.txt"));
   }
 
-  if (colorNumber == -1 // random color was requested
-    || !colorTableNode // color node was not found
-    || colorTableNode->GetNumberOfColors() <= 1 // color node is empty or only contains background color
-    )
+  if (colorNumber == -1                           // random color was requested
+      || !colorTableNode                          // color node was not found
+      || colorTableNode->GetNumberOfColors() <= 1 // color node is empty or only contains background color
+  )
   {
     // Generate random color if default color table is not available (such as in logic tests)
     std::default_random_engine randomGenerator(std::random_device{}());
@@ -1004,12 +998,12 @@ void vtkMRMLSegmentationDisplayNode::GenerateSegmentColor(double color[3], int c
   // - colorNumber == 1 means the first usable color (colorNumber == 0 means automatic coloring)
   // - We skip the first color (0) because that is the background color, which is usually set to
   //   black (not a good segment color).
-  colorNumber = 1 + ((colorNumber - 1) % (colorTableNode->GetNumberOfColors()-1));
+  colorNumber = 1 + ((colorNumber - 1) % (colorTableNode->GetNumberOfColors() - 1));
 
   // Get color corresponding to the number of added segments (which is incremented in
   // vtkMRMLSegmentationNode::AddSegmentDisplayProperties every time a new segment display
   // properties entry is added
-  double currentColor[4] = {0.0, 0.0, 0.0, 0.0};
+  double currentColor[4] = { 0.0, 0.0, 0.0, 0.0 };
   colorTableNode->GetColor(colorNumber, currentColor);
   color[0] = currentColor[0];
   color[1] = currentColor[1];
@@ -1017,9 +1011,9 @@ void vtkMRMLSegmentationDisplayNode::GenerateSegmentColor(double color[3], int c
 }
 
 //---------------------------------------------------------------------------
-void vtkMRMLSegmentationDisplayNode::GenerateSegmentColor(double &r, double &g, double &b)
+void vtkMRMLSegmentationDisplayNode::GenerateSegmentColor(double& r, double& g, double& b)
 {
-  double color[3] = {0.0, 0.0, 0.0};
+  double color[3] = { 0.0, 0.0, 0.0 };
   this->GenerateSegmentColor(color);
   r = color[0];
   g = color[1];
@@ -1064,8 +1058,7 @@ std::string vtkMRMLSegmentationDisplayNode::GetDisplayRepresentationName3D()
   // Otherwise return first poly data representation if any
   std::vector<std::string> containedRepresentationNames;
   segmentation->GetContainedRepresentationNames(containedRepresentationNames);
-  for (std::vector<std::string>::iterator reprIt = containedRepresentationNames.begin();
-    reprIt != containedRepresentationNames.end(); ++reprIt)
+  for (std::vector<std::string>::iterator reprIt = containedRepresentationNames.begin(); reprIt != containedRepresentationNames.end(); ++reprIt)
   {
     vtkDataObject* currentRepresentation = firstSegment->GetRepresentation(*reprIt);
     if (vtkPolyData::SafeDownCast(currentRepresentation))
@@ -1109,7 +1102,7 @@ std::string vtkMRMLSegmentationDisplayNode::GetDisplayRepresentationName2D()
 }
 
 //---------------------------------------------------------------------------
-void vtkMRMLSegmentationDisplayNode::GetPolyDataRepresentationNames(std::set<std::string> &representationNames)
+void vtkMRMLSegmentationDisplayNode::GetPolyDataRepresentationNames(std::set<std::string>& representationNames)
 {
   representationNames.clear();
 
@@ -1123,16 +1116,16 @@ void vtkMRMLSegmentationDisplayNode::GetPolyDataRepresentationNames(std::set<std
   {
     vtkSegmentationConverterRule* currentRule = (*ruleIt);
 
-    vtkSmartPointer<vtkDataObject> sourceObject = vtkSmartPointer<vtkDataObject>::Take(
-      currentRule->ConstructRepresentationObjectByRepresentation(currentRule->GetSourceRepresentationName()) );
+    vtkSmartPointer<vtkDataObject> sourceObject =
+      vtkSmartPointer<vtkDataObject>::Take(currentRule->ConstructRepresentationObjectByRepresentation(currentRule->GetSourceRepresentationName()));
     vtkPolyData* sourcePolyData = vtkPolyData::SafeDownCast(sourceObject);
     if (sourcePolyData)
     {
       representationNames.insert(std::string(currentRule->GetSourceRepresentationName()));
     }
 
-    vtkSmartPointer<vtkDataObject> targetObject = vtkSmartPointer<vtkDataObject>::Take(
-      currentRule->ConstructRepresentationObjectByRepresentation(currentRule->GetTargetRepresentationName()) );
+    vtkSmartPointer<vtkDataObject> targetObject =
+      vtkSmartPointer<vtkDataObject>::Take(currentRule->ConstructRepresentationObjectByRepresentation(currentRule->GetTargetRepresentationName()));
     vtkPolyData* targetPolyData = vtkPolyData::SafeDownCast(targetObject);
     if (targetPolyData)
     {
@@ -1208,7 +1201,13 @@ void vtkMRMLSegmentationDisplayNode::GetVisibleSegmentIDs(vtkStringArray* segmen
 }
 
 //---------------------------------------------------------------------------
-void vtkMRMLSegmentationDisplayNode::UpdateSegmentList(bool removeUnusedDisplayProperties /*=true*/)
+void vtkMRMLSegmentationDisplayNode::UpdateSegmentList()
+{
+  this->UpdateSegmentList(this->RemoveUnusedDisplayProperties);
+}
+
+//---------------------------------------------------------------------------
+void vtkMRMLSegmentationDisplayNode::UpdateSegmentList(bool removeUnusedDisplayProperties)
 {
   vtkMRMLSegmentationNode* segmentationNode = vtkMRMLSegmentationNode::SafeDownCast(this->GetDisplayableNode());
   vtkSegmentation* segmentation = segmentationNode ? segmentationNode->GetSegmentation() : nullptr;
@@ -1248,8 +1247,7 @@ void vtkMRMLSegmentationDisplayNode::UpdateSegmentList(bool removeUnusedDisplayP
     // Get list of segment IDs that we have display properties for but does not exist in
     // the segmentation anymore.
     std::vector<std::string> orphanSegmentIds;
-    for (SegmentDisplayPropertiesMap::iterator it = this->SegmentationDisplayProperties.begin();
-      it != this->SegmentationDisplayProperties.end(); ++it)
+    for (SegmentDisplayPropertiesMap::iterator it = this->SegmentationDisplayProperties.begin(); it != this->SegmentationDisplayProperties.end(); ++it)
     {
       if (segmentation->GetSegment(it->first) == nullptr)
       {
@@ -1258,8 +1256,7 @@ void vtkMRMLSegmentationDisplayNode::UpdateSegmentList(bool removeUnusedDisplayP
       }
     }
     // Delete unused properties and color table entries
-    for (std::vector<std::string>::iterator orphanSegmentIdIt = orphanSegmentIds.begin();
-      orphanSegmentIdIt != orphanSegmentIds.end(); ++orphanSegmentIdIt)
+    for (std::vector<std::string>::iterator orphanSegmentIdIt = orphanSegmentIds.begin(); orphanSegmentIdIt != orphanSegmentIds.end(); ++orphanSegmentIdIt)
     {
       // Remove segment display properties
       this->RemoveSegmentDisplayProperties(*orphanSegmentIdIt);
@@ -1268,10 +1265,10 @@ void vtkMRMLSegmentationDisplayNode::UpdateSegmentList(bool removeUnusedDisplayP
 
   // Add missing segment display properties
   // Get segment list of segments that do not have display properties.
-  std::vector< std::string > segmentIDs;
+  std::vector<std::string> segmentIDs;
   segmentation->GetSegmentIDs(segmentIDs);
   std::vector<std::string> missingSegmentIDs;
-  for (std::vector< std::string >::const_iterator segmentIdIt = segmentIDs.begin(); segmentIdIt != segmentIDs.end(); ++segmentIdIt)
+  for (std::vector<std::string>::const_iterator segmentIdIt = segmentIDs.begin(); segmentIdIt != segmentIDs.end(); ++segmentIdIt)
   {
     if (this->SegmentationDisplayProperties.find(*segmentIdIt) == this->SegmentationDisplayProperties.end())
     {
@@ -1280,8 +1277,7 @@ void vtkMRMLSegmentationDisplayNode::UpdateSegmentList(bool removeUnusedDisplayP
     }
   }
   // Add missing properties
-  for (std::vector<std::string>::iterator missingSegmentIdIt = missingSegmentIDs.begin();
-    missingSegmentIdIt != missingSegmentIDs.end(); ++missingSegmentIdIt)
+  for (std::vector<std::string>::iterator missingSegmentIdIt = missingSegmentIDs.begin(); missingSegmentIdIt != missingSegmentIDs.end(); ++missingSegmentIdIt)
   {
     this->SetSegmentDisplayPropertiesToDefault(*missingSegmentIdIt);
   }

@@ -31,8 +31,7 @@
 #include <vector>
 
 // --------------------------------------------------------------------------
-class qMRMLMarkupsPlaneWidgetPrivate:
-  public Ui_qMRMLMarkupsPlaneWidget
+class qMRMLMarkupsPlaneWidgetPrivate : public Ui_qMRMLMarkupsPlaneWidget
 {
 public:
   qMRMLMarkupsPlaneWidgetPrivate(qMRMLMarkupsPlaneWidget& object);
@@ -72,28 +71,24 @@ void qMRMLMarkupsPlaneWidgetPrivate::setupUi(qMRMLMarkupsPlaneWidget* widget)
     this->planeSizeModeComboBox->addItem(vtkMRMLMarkupsPlaneNode::GetSizeModeAsString(sizeMode), sizeMode);
   }
 
-  QObject::connect(this->planeTypeComboBox, SIGNAL(currentIndexChanged(int)),
-                   q, SLOT(onPlaneTypeIndexChanged()));
-  QObject::connect(this->planeSizeModeComboBox, SIGNAL(currentIndexChanged(int)),
-    q, SLOT(onPlaneSizeModeIndexChanged()));
+  QObject::connect(this->planeTypeComboBox, SIGNAL(currentIndexChanged(int)), q, SLOT(onPlaneTypeIndexChanged()));
+  QObject::connect(this->planeSizeModeComboBox, SIGNAL(currentIndexChanged(int)), q, SLOT(onPlaneSizeModeIndexChanged()));
 
-  QObject::connect(this->sizeXSpinBox, SIGNAL(valueChanged(double)),
-    q, SLOT(onPlaneSizeSpinBoxChanged()));
-  QObject::connect(this->sizeYSpinBox, SIGNAL(valueChanged(double)),
-    q, SLOT(onPlaneSizeSpinBoxChanged()));
+  QObject::connect(this->sizeXSpinBox, SIGNAL(valueChanged(double)), q, SLOT(onPlaneSizeSpinBoxChanged()));
+  QObject::connect(this->sizeYSpinBox, SIGNAL(valueChanged(double)), q, SLOT(onPlaneSizeSpinBoxChanged()));
 
+  QObject::connect(this->boundsXMinSpinBox, SIGNAL(valueChanged(double)), q, SLOT(onPlaneBoundsSpinBoxChanged()));
+  QObject::connect(this->boundsXMaxSpinBox, SIGNAL(valueChanged(double)), q, SLOT(onPlaneBoundsSpinBoxChanged()));
+  QObject::connect(this->boundsYMinSpinBox, SIGNAL(valueChanged(double)), q, SLOT(onPlaneBoundsSpinBoxChanged()));
+  QObject::connect(this->boundsYMaxSpinBox, SIGNAL(valueChanged(double)), q, SLOT(onPlaneBoundsSpinBoxChanged()));
 
-  QObject::connect(this->boundsXMinSpinBox, SIGNAL(valueChanged(double)),
-    q, SLOT(onPlaneBoundsSpinBoxChanged()));
-  QObject::connect(this->boundsXMaxSpinBox, SIGNAL(valueChanged(double)),
-    q, SLOT(onPlaneBoundsSpinBoxChanged()));
-  QObject::connect(this->boundsYMinSpinBox, SIGNAL(valueChanged(double)),
-    q, SLOT(onPlaneBoundsSpinBoxChanged()));
-  QObject::connect(this->boundsYMaxSpinBox, SIGNAL(valueChanged(double)),
-    q, SLOT(onPlaneBoundsSpinBoxChanged()));
-
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+  QObject::connect(this->normalVisibilityCheckBox, &QCheckBox::checkStateChanged, q, &qMRMLMarkupsPlaneWidget::onNormalVisibilityCheckBoxChanged);
+#else
   QObject::connect(this->normalVisibilityCheckBox, SIGNAL(stateChanged(int)), q, SLOT(onNormalVisibilityCheckBoxChanged()));
+#endif
   QObject::connect(this->normalOpacitySlider, SIGNAL(valueChanged(double)), q, SLOT(onNormalOpacitySliderChanged()));
+  QObject::connect(this->flipPlaneNormalButton, SIGNAL(clicked()), q, SLOT(onFlipPlaneNormalButtonClicked()));
 
   q->setEnabled(vtkMRMLMarkupsPlaneNode::SafeDownCast(q->MarkupsNode) != nullptr);
   q->setVisible(vtkMRMLMarkupsPlaneNode::SafeDownCast(q->MarkupsNode) != nullptr);
@@ -104,14 +99,10 @@ QString qMRMLMarkupsPlaneWidgetPrivate::planeTypeName(int planeType)
 {
   switch (planeType)
   {
-    case vtkMRMLMarkupsPlaneNode::PlaneType3Points:
-      return qMRMLMarkupsPlaneWidget::tr("Three points");
-    case vtkMRMLMarkupsPlaneNode::PlaneTypePointNormal:
-      return qMRMLMarkupsPlaneWidget::tr("Point normal");
-    case vtkMRMLMarkupsPlaneNode::PlaneTypePlaneFit:
-      return qMRMLMarkupsPlaneWidget::tr("Plane fit");
-    default:
-      break;
+    case vtkMRMLMarkupsPlaneNode::PlaneType3Points: return qMRMLMarkupsPlaneWidget::tr("Three points");
+    case vtkMRMLMarkupsPlaneNode::PlaneTypePointNormal: return qMRMLMarkupsPlaneWidget::tr("Point normal");
+    case vtkMRMLMarkupsPlaneNode::PlaneTypePlaneFit: return qMRMLMarkupsPlaneWidget::tr("Plane fit");
+    default: break;
   }
   return "";
 }
@@ -121,7 +112,8 @@ QString qMRMLMarkupsPlaneWidgetPrivate::planeTypeName(int planeType)
 
 // --------------------------------------------------------------------------
 qMRMLMarkupsPlaneWidget::qMRMLMarkupsPlaneWidget(QWidget* parent)
-  : Superclass(parent), d_ptr(new qMRMLMarkupsPlaneWidgetPrivate(*this))
+  : Superclass(parent)
+  , d_ptr(new qMRMLMarkupsPlaneWidgetPrivate(*this))
 {
   this->setup();
 }
@@ -137,7 +129,7 @@ void qMRMLMarkupsPlaneWidget::setup()
 }
 
 // --------------------------------------------------------------------------
-vtkMRMLMarkupsPlaneNode* qMRMLMarkupsPlaneWidget::mrmlPlaneNode()const
+vtkMRMLMarkupsPlaneNode* qMRMLMarkupsPlaneWidget::mrmlPlaneNode() const
 {
   Q_D(const qMRMLMarkupsPlaneWidget);
   return vtkMRMLMarkupsPlaneNode::SafeDownCast(this->MarkupsNode);
@@ -146,8 +138,7 @@ vtkMRMLMarkupsPlaneNode* qMRMLMarkupsPlaneWidget::mrmlPlaneNode()const
 // --------------------------------------------------------------------------
 void qMRMLMarkupsPlaneWidget::setMRMLMarkupsNode(vtkMRMLMarkupsNode* markupsNode)
 {
-  this->qvtkReconnect(this->MarkupsNode, markupsNode, vtkCommand::ModifiedEvent,
-    this, SLOT(updateWidgetFromMRML()));
+  this->qvtkReconnect(this->MarkupsNode, markupsNode, vtkCommand::ModifiedEvent, this, SLOT(updateWidgetFromMRML()));
 
   this->MarkupsNode = markupsNode;
   this->updateWidgetFromMRML();
@@ -313,7 +304,18 @@ void qMRMLMarkupsPlaneWidget::onNormalOpacitySliderChanged()
 }
 
 //-----------------------------------------------------------------------------
-bool qMRMLMarkupsPlaneWidget::canManageMRMLMarkupsNode(vtkMRMLMarkupsNode *markupsNode) const
+void qMRMLMarkupsPlaneWidget::onFlipPlaneNormalButtonClicked()
+{
+  vtkMRMLMarkupsPlaneNode* planeNode = vtkMRMLMarkupsPlaneNode::SafeDownCast(this->MarkupsNode);
+  if (!planeNode)
+  {
+    return;
+  }
+  planeNode->FlipNormal();
+}
+
+//-----------------------------------------------------------------------------
+bool qMRMLMarkupsPlaneWidget::canManageMRMLMarkupsNode(vtkMRMLMarkupsNode* markupsNode) const
 {
   Q_D(const qMRMLMarkupsPlaneWidget);
 

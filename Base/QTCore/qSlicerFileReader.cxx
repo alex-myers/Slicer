@@ -20,6 +20,9 @@
 
 /// Qt includes
 #include <QFileInfo>
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+# include <QRegularExpression>
+#endif
 
 // CTK includes
 #include <ctkUtils.h>
@@ -45,20 +48,20 @@ qSlicerFileReader::qSlicerFileReader(QObject* _parent)
 qSlicerFileReader::~qSlicerFileReader() = default;
 
 //----------------------------------------------------------------------------
-QStringList qSlicerFileReader::extensions()const
+QStringList qSlicerFileReader::extensions() const
 {
   return QStringList() << "*.*";
 }
 
 //----------------------------------------------------------------------------
-bool qSlicerFileReader::canLoadFile(const QString& fileName)const
+bool qSlicerFileReader::canLoadFile(const QString& fileName) const
 {
   QStringList res = this->supportedNameFilters(fileName);
   return res.count() > 0;
 }
 
 //----------------------------------------------------------------------------
-double qSlicerFileReader::canLoadFileConfidence(const QString& fileName)const
+double qSlicerFileReader::canLoadFileConfidence(const QString& fileName) const
 {
   if (!this->canLoadFile(fileName))
   {
@@ -74,7 +77,7 @@ double qSlicerFileReader::canLoadFileConfidence(const QString& fileName)const
 }
 
 //----------------------------------------------------------------------------
-QStringList qSlicerFileReader::supportedNameFilters(const QString& fileName, int* longestExtensionMatchPtr /* =nullptr */)const
+QStringList qSlicerFileReader::supportedNameFilters(const QString& fileName, int* longestExtensionMatchPtr /* =nullptr */) const
 {
   if (longestExtensionMatchPtr)
   {
@@ -82,19 +85,27 @@ QStringList qSlicerFileReader::supportedNameFilters(const QString& fileName, int
   }
   QStringList matchingNameFilters;
   QFileInfo file(fileName);
-  if (!file.isFile() ||
-      !file.isReadable() ||
-      file.suffix().contains('~')) //temporary file
+  if (!file.isFile() ||            //
+      !file.isReadable() ||        //
+      file.suffix().contains('~')) // temporary file
   {
     return matchingNameFilters;
   }
-  foreach(const QString& nameFilter, this->extensions())
+  for (const QString& nameFilter : this->extensions())
   {
-    foreach(QString extension, ctk::nameFilterToExtensions(nameFilter))
+    for (QString extension : ctk::nameFilterToExtensions(nameFilter))
     {
+      // QRegularExpression::wildcardToRegularExpression could be used from Qt 5.12, but its behavior
+      // slightly changes across Qt5 versions, so stick to QRegExp for Qt5 to keep things simple.
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+      QRegularExpression regExp = QRegularExpression::fromWildcard(extension, Qt::CaseInsensitive);
+      Q_ASSERT(regExp.isValid());
+      if (regExp.match(file.fileName()).hasMatch())
+#else
       QRegExp regExp(extension, Qt::CaseInsensitive, QRegExp::Wildcard);
       Q_ASSERT(regExp.isValid());
       if (regExp.exactMatch(file.absoluteFilePath()))
+#endif
       {
         extension.remove('*'); // wildcard does not count, that's not a specific match
         int matchedExtensionLength = extension.size();
@@ -109,7 +120,6 @@ QStringList qSlicerFileReader::supportedNameFilters(const QString& fileName, int
   matchingNameFilters.removeDuplicates();
   return matchingNameFilters;
 }
-
 
 //----------------------------------------------------------------------------
 bool qSlicerFileReader::load(const IOProperties& properties)
@@ -128,17 +138,17 @@ void qSlicerFileReader::setLoadedNodes(const QStringList& nodes)
 }
 
 //----------------------------------------------------------------------------
-QStringList qSlicerFileReader::loadedNodes()const
+QStringList qSlicerFileReader::loadedNodes() const
 {
   Q_D(const qSlicerFileReader);
   return d->LoadedNodes;
 }
 
 //----------------------------------------------------------------------------
-bool qSlicerFileReader::examineFileInfoList(QFileInfoList &fileInfoList, QFileInfo &archetypeFileInfo, qSlicerIO::IOProperties &ioProperties)const
+bool qSlicerFileReader::examineFileInfoList(QFileInfoList& fileInfoList, QFileInfo& archetypeFileInfo, qSlicerIO::IOProperties& ioProperties) const
 {
   Q_UNUSED(fileInfoList);
   Q_UNUSED(archetypeFileInfo);
   Q_UNUSED(ioProperties);
-  return(false);
+  return (false);
 }

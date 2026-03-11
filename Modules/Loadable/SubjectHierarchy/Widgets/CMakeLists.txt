@@ -8,12 +8,8 @@ set(${KIT}_INCLUDE_DIRECTORIES
   ${vtkSlicerSubjectHierarchyModuleLogic_INCLUDE_DIRS}
   ${qSlicerTerminologiesModuleWidgets_INCLUDE_DIRS}
   ${MRMLCore_INCLUDE_DIRS}
+  ${MRMLCLI_INCLUDE_DIRS}
   )
-if(Slicer_BUILD_CLI_SUPPORT)
-  list(APPEND ${KIT}_INCLUDE_DIRECTORIES
-    ${MRMLCLI_INCLUDE_DIRS}
-  )
-endif()
 
 set(${KIT}_SRCS
   qMRMLSubjectHierarchyModel.cxx
@@ -59,31 +55,6 @@ if(Slicer_USE_PYTHONQT)
     )
 endif()
 
-set(${KIT}_MOC_SRCS
-  qSlicerSubjectHierarchyPluginLogic.h
-  qSlicerSubjectHierarchyAbstractPlugin.h
-  qSlicerSubjectHierarchyPluginHandler.h
-  qSlicerSubjectHierarchyDefaultPlugin.h
-  qSlicerSubjectHierarchyCloneNodePlugin.h
-  qSlicerSubjectHierarchyParseLocalDataPlugin.h
-  qSlicerSubjectHierarchyRegisterPlugin.h
-  qSlicerSubjectHierarchyFolderPlugin.h
-  qSlicerSubjectHierarchyOpacityPlugin.h
-  qSlicerSubjectHierarchyViewContextMenuPlugin.h
-  qSlicerSubjectHierarchyVisibilityPlugin.h
-  qMRMLSubjectHierarchyTreeView.h
-  qMRMLSubjectHierarchyComboBox.h
-  qMRMLSubjectHierarchyModel.h
-  qMRMLSortFilterSubjectHierarchyProxyModel.h
-  qSlicerSubjectHierarchyExportPlugin.h
-  qSlicerSubjectHierarchyExpandToDepthPlugin.h
-  )
-if(Slicer_USE_PYTHONQT)
-  list(APPEND ${KIT}_MOC_SRCS
-    qSlicerSubjectHierarchyScriptedPlugin.h
-    )
-endif()
-
 set(${KIT}_UI_SRCS
   )
 
@@ -99,12 +70,8 @@ set(${KIT}_TARGET_LIBRARIES
   qSlicerTerminologiesModuleWidgets
   MRMLCore
   vtkSlicerVolumesModuleLogic
+  MRMLCLI
   )
-if(Slicer_BUILD_CLI_SUPPORT)
-  list(APPEND ${KIT}_TARGET_LIBRARIES
-    MRMLCLI
-  )
-endif()
 
 #-----------------------------------------------------------------------------
 SlicerMacroBuildModuleWidgets(
@@ -112,7 +79,6 @@ SlicerMacroBuildModuleWidgets(
   EXPORT_DIRECTIVE ${${KIT}_EXPORT_DIRECTIVE}
   INCLUDE_DIRECTORIES ${${KIT}_INCLUDE_DIRECTORIES}
   SRCS ${${KIT}_SRCS}
-  MOC_SRCS ${${KIT}_MOC_SRCS}
   UI_SRCS ${${KIT}_UI_SRCS}
   TARGET_LIBRARIES ${${KIT}_TARGET_LIBRARIES}
   RESOURCES ${${KIT}_RESOURCES}

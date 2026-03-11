@@ -34,7 +34,7 @@
 #include <vtkNew.h>
 
 // ----------------------------------------------------------------------------
-class qMRMLCheckableNodeComboBoxTester: public QObject
+class qMRMLCheckableNodeComboBoxTester : public QObject
 {
   Q_OBJECT
   qMRMLCheckableNodeComboBox* ComboBox;
@@ -48,9 +48,7 @@ private slots:
   void testCheck();
   void testRename();
   void testRename_data();
-
 };
-
 
 // ----------------------------------------------------------------------------
 void qMRMLCheckableNodeComboBoxTester::init()
@@ -158,4 +156,4 @@ void qMRMLCheckableNodeComboBoxTester::testRename_data()
 
 // ----------------------------------------------------------------------------
 CTK_TEST_MAIN(qMRMLCheckableNodeComboBoxTest)
-#include "moc_qMRMLCheckableNodeComboBoxTest.cxx"
+#include "qMRMLCheckableNodeComboBoxTest.moc"

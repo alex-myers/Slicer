@@ -48,6 +48,7 @@
 #include <vtkMRMLDisplayNode.h>
 #include <vtkMRMLMarkupsDisplayNode.h>
 #include <vtkMRMLMarkupsPlaneDisplayNode.h>
+#include <vtkMRMLMarkupsPlaneNode.h>
 #include <vtkMRMLMarkupsROIDisplayNode.h>
 #include <vtkMRMLMarkupsNode.h>
 #include <vtkMRMLScene.h>
@@ -73,6 +74,7 @@
 // Slicer includes
 #include "qSlicerAbstractModuleWidget.h"
 #include "qSlicerApplication.h"
+#include "qSlicerUtils.h"
 
 //-----------------------------------------------------------------------------
 const char* INTERACTION_HANDLE_TYPE_PROPERTY = "InteractionHandleType";
@@ -81,8 +83,10 @@ const char* INTERACTION_HANDLE_TYPE_PROPERTY = "InteractionHandleType";
 class qSlicerSubjectHierarchyMarkupsPluginPrivate : public QObject
 {
   Q_DECLARE_PUBLIC(qSlicerSubjectHierarchyMarkupsPlugin);
+
 protected:
   qSlicerSubjectHierarchyMarkupsPlugin* const q_ptr;
+
 public:
   qSlicerSubjectHierarchyMarkupsPluginPrivate(qSlicerSubjectHierarchyMarkupsPlugin& object);
   ~qSlicerSubjectHierarchyMarkupsPluginPrivate() override;
@@ -92,31 +96,33 @@ public:
   void jumpToPoint(int controlPointIndex);
 
 public:
-  QAction* RenamePointAction{nullptr};
-  QAction* RefocusCameraAction{nullptr};
-  QAction* DeletePointAction{nullptr};
-  QAction* DeleteNodeAction{nullptr};
-  QAction* ToggleSelectPointAction{nullptr};
-  QAction* JumpToPreviousPointAction{nullptr};
-  QAction* JumpToNextPointAction{nullptr};
-  QAction* JumpToClosestPointAction{nullptr};
-  QAction* EditNodeTerminologyAction{nullptr};
-  QAction* ToggleCurrentItemHandleInteractive{nullptr};
-  QAction* ToggleHandleInteractive{nullptr};
+  QAction* RenamePointAction{ nullptr };
+  QAction* RefocusCameraAction{ nullptr };
+  QAction* DeletePointAction{ nullptr };
+  QAction* DeleteNodeAction{ nullptr };
+  QAction* ToggleSelectPointAction{ nullptr };
+  QAction* JumpToPreviousPointAction{ nullptr };
+  QAction* JumpToNextPointAction{ nullptr };
+  QAction* JumpToClosestPointAction{ nullptr };
+  QAction* EditNodeTerminologyAction{ nullptr };
+  QAction* ToggleCurrentItemHandleInteractive{ nullptr };
+  QAction* ToggleHandleInteractive{ nullptr };
 
-  QMenu* CurrentItemHandleVisibilityMenu{nullptr};
-  QAction* CurrentItemHandleVisibilityAction{nullptr};
-  QAction* ToggleCurrentItemTranslateHandleVisible{nullptr};
-  QAction* ToggleCurrentItemRotateHandleVisible{nullptr};
-  QAction* ToggleCurrentItemScaleHandleVisible{nullptr};
+  QMenu* CurrentItemHandleVisibilityMenu{ nullptr };
+  QAction* CurrentItemHandleVisibilityAction{ nullptr };
+  QAction* ToggleCurrentItemTranslateHandleVisible{ nullptr };
+  QAction* ToggleCurrentItemRotateHandleVisible{ nullptr };
+  QAction* ToggleCurrentItemScaleHandleVisible{ nullptr };
 
-  QMenu* HandleVisibilityMenu{nullptr};
-  QAction* HandleVisibilityAction{nullptr};
-  QAction* ToggleTranslateHandleVisible{nullptr};
-  QAction* ToggleRotateHandleVisible{nullptr};
-  QAction* ToggleScaleHandleVisible{nullptr};
+  QMenu* HandleVisibilityMenu{ nullptr };
+  QAction* HandleVisibilityAction{ nullptr };
+  QAction* ToggleTranslateHandleVisible{ nullptr };
+  QAction* ToggleRotateHandleVisible{ nullptr };
+  QAction* ToggleScaleHandleVisible{ nullptr };
 
-  QList< vtkWeakPointer<vtkMRMLMarkupsNode> > NodesToDelete;
+  QAction* FlipPlaneNormalAction{ nullptr };
+
+  QList<vtkWeakPointer<vtkMRMLMarkupsNode>> NodesToDelete;
 
   QVariantMap ViewContextMenuEventData;
 };
@@ -126,7 +132,7 @@ public:
 
 //-----------------------------------------------------------------------------
 qSlicerSubjectHierarchyMarkupsPluginPrivate::qSlicerSubjectHierarchyMarkupsPluginPrivate(qSlicerSubjectHierarchyMarkupsPlugin& object)
-: q_ptr(&object)
+  : q_ptr(&object)
 {
 }
 
@@ -247,6 +253,12 @@ void qSlicerSubjectHierarchyMarkupsPluginPrivate::init()
 
   this->CurrentItemHandleVisibilityAction = new QAction(qSlicerSubjectHierarchyMarkupsPlugin::tr("Interaction options"));
   this->CurrentItemHandleVisibilityAction->setMenu(this->CurrentItemHandleVisibilityMenu);
+
+  // Plane-specific actions
+  this->FlipPlaneNormalAction = new QAction(qSlicerSubjectHierarchyMarkupsPlugin::tr("Flip normal"), q);
+  this->FlipPlaneNormalAction->setObjectName("FlipPlaneNormalAction");
+  q->setActionPosition(this->FlipPlaneNormalAction, qSlicerSubjectHierarchyAbstractPlugin::SectionNode);
+  QObject::connect(this->FlipPlaneNormalAction, SIGNAL(triggered()), q, SLOT(flipPlaneNormal()));
 }
 
 //-----------------------------------------------------------------------------
@@ -293,7 +305,7 @@ void qSlicerSubjectHierarchyMarkupsPluginPrivate::jumpToPoint(int controlPointIn
     return;
   }
 
-  vtkSlicerMarkupsLogic* markupsLogic = vtkSlicerMarkupsLogic::SafeDownCast(appLogic->GetModuleLogic(/*no tr*/"Markups"));
+  vtkSlicerMarkupsLogic* markupsLogic = vtkSlicerMarkupsLogic::SafeDownCast(appLogic->GetModuleLogic(/*no tr*/ "Markups"));
   if (!markupsLogic)
   {
     qCritical() << Q_FUNC_INFO << ": could not get the Markups module logic.";
@@ -303,8 +315,8 @@ void qSlicerSubjectHierarchyMarkupsPluginPrivate::jumpToPoint(int controlPointIn
   int viewGroup = -1;
   if (this->ViewContextMenuEventData.contains("ViewNodeID"))
   {
-    vtkMRMLAbstractViewNode* viewNode = vtkMRMLAbstractViewNode::SafeDownCast(
-      markupsNode->GetScene()->GetNodeByID(ViewContextMenuEventData["ViewNodeID"].toString().toStdString()));
+    vtkMRMLAbstractViewNode* viewNode =
+      vtkMRMLAbstractViewNode::SafeDownCast(markupsNode->GetScene()->GetNodeByID(ViewContextMenuEventData["ViewNodeID"].toString().toStdString()));
     if (viewNode)
     {
       viewGroup = viewNode->GetViewGroup();
@@ -318,8 +330,8 @@ void qSlicerSubjectHierarchyMarkupsPluginPrivate::jumpToPoint(int controlPointIn
 
 //-----------------------------------------------------------------------------
 qSlicerSubjectHierarchyMarkupsPlugin::qSlicerSubjectHierarchyMarkupsPlugin(QObject* parent)
- : Superclass(parent)
- , d_ptr( new qSlicerSubjectHierarchyMarkupsPluginPrivate(*this) )
+  : Superclass(parent)
+  , d_ptr(new qSlicerSubjectHierarchyMarkupsPluginPrivate(*this))
 {
   this->m_Name = QString("Markups");
 
@@ -331,8 +343,7 @@ qSlicerSubjectHierarchyMarkupsPlugin::qSlicerSubjectHierarchyMarkupsPlugin(QObje
 qSlicerSubjectHierarchyMarkupsPlugin::~qSlicerSubjectHierarchyMarkupsPlugin() = default;
 
 //-----------------------------------------------------------------------------
-double qSlicerSubjectHierarchyMarkupsPlugin::canAddNodeToSubjectHierarchy(
-  vtkMRMLNode* node, vtkIdType parentItemID/*=vtkMRMLSubjectHierarchyNode::INVALID_ITEM_ID*/)const
+double qSlicerSubjectHierarchyMarkupsPlugin::canAddNodeToSubjectHierarchy(vtkMRMLNode* node, vtkIdType parentItemID /*=vtkMRMLSubjectHierarchyNode::INVALID_ITEM_ID*/) const
 {
   Q_UNUSED(parentItemID);
   if (!node)
@@ -348,14 +359,14 @@ double qSlicerSubjectHierarchyMarkupsPlugin::canAddNodeToSubjectHierarchy(
     return 0.0;
   }
 
-  vtkSlicerMarkupsLogic* markupsLogic = vtkSlicerMarkupsLogic::SafeDownCast(appLogic->GetModuleLogic(/*no tr*/"Markups"));
+  vtkSlicerMarkupsLogic* markupsLogic = vtkSlicerMarkupsLogic::SafeDownCast(appLogic->GetModuleLogic(/*no tr*/ "Markups"));
   if (!markupsLogic)
   {
     qCritical() << Q_FUNC_INFO << ": could not get the Markups module logic.";
     return 0.0;
   }
 
-  vtkMRMLMarkupsNode* markupsNode= vtkMRMLMarkupsNode::SafeDownCast(node);
+  vtkMRMLMarkupsNode* markupsNode = vtkMRMLMarkupsNode::SafeDownCast(node);
   if (!markupsNode)
   {
     return 0.0;
@@ -373,7 +384,7 @@ double qSlicerSubjectHierarchyMarkupsPlugin::canAddNodeToSubjectHierarchy(
 }
 
 //---------------------------------------------------------------------------
-double qSlicerSubjectHierarchyMarkupsPlugin::canOwnSubjectHierarchyItem(vtkIdType itemID)const
+double qSlicerSubjectHierarchyMarkupsPlugin::canOwnSubjectHierarchyItem(vtkIdType itemID) const
 {
   if (itemID == vtkMRMLSubjectHierarchyNode::INVALID_ITEM_ID)
   {
@@ -391,7 +402,7 @@ double qSlicerSubjectHierarchyMarkupsPlugin::canOwnSubjectHierarchyItem(vtkIdTyp
   vtkMRMLNode* associatedNode = shNode->GetItemDataNode(itemID);
   if (!associatedNode)
   {
-    //NOTE: should there be a warning here?
+    // NOTE: should there be a warning here?
     return 0.0;
   }
 
@@ -402,7 +413,7 @@ double qSlicerSubjectHierarchyMarkupsPlugin::canOwnSubjectHierarchyItem(vtkIdTyp
     return 0.0;
   }
 
-  vtkSlicerMarkupsLogic* markupsLogic = vtkSlicerMarkupsLogic::SafeDownCast(appLogic->GetModuleLogic(/*no tr*/"Markups"));
+  vtkSlicerMarkupsLogic* markupsLogic = vtkSlicerMarkupsLogic::SafeDownCast(appLogic->GetModuleLogic(/*no tr*/ "Markups"));
   if (!markupsLogic)
   {
     qCritical() << Q_FUNC_INFO << ": could not get the Markups module logic.";
@@ -425,9 +436,39 @@ double qSlicerSubjectHierarchyMarkupsPlugin::canOwnSubjectHierarchyItem(vtkIdTyp
 }
 
 //---------------------------------------------------------------------------
-const QString qSlicerSubjectHierarchyMarkupsPlugin::roleForPlugin()const
+const QString qSlicerSubjectHierarchyMarkupsPlugin::roleForPlugin() const
 {
   return "Markup";
+}
+
+//-----------------------------------------------------------------------------
+QString qSlicerSubjectHierarchyMarkupsPlugin::tooltip(vtkIdType itemID) const
+{
+  if (itemID == vtkMRMLSubjectHierarchyNode::INVALID_ITEM_ID)
+  {
+    qCritical() << Q_FUNC_INFO << ": Invalid input item";
+    return tr("Invalid");
+  }
+  vtkMRMLSubjectHierarchyNode* shNode = qSlicerSubjectHierarchyPluginHandler::instance()->subjectHierarchyNode();
+  if (!shNode)
+  {
+    qCritical() << Q_FUNC_INFO << ": Failed to access subject hierarchy node";
+    return tr("Invalid");
+  }
+
+  // Get basic tooltip from abstract plugin
+  QString tooltipString = Superclass::tooltip(itemID);
+
+  vtkMRMLMarkupsNode* markupsNode = vtkMRMLMarkupsNode::SafeDownCast(shNode->GetItemDataNode(itemID));
+  if (!markupsNode)
+  {
+    qCritical() << Q_FUNC_INFO << ": Subject hierarchy item not associated to valid markups node";
+    return tooltipString;
+  }
+
+  // Add number of control points info
+  tooltipString.append(tr(" (Number of control points: %1)").arg(markupsNode->GetNumberOfControlPoints()));
+  return tooltipString;
 }
 
 //---------------------------------------------------------------------------
@@ -457,7 +498,7 @@ QIcon qSlicerSubjectHierarchyMarkupsPlugin::icon(vtkIdType itemID)
     return QIcon();
   }
 
-  vtkMRMLMarkupsNode *markupsNode = vtkMRMLMarkupsNode::SafeDownCast(node);
+  vtkMRMLMarkupsNode* markupsNode = vtkMRMLMarkupsNode::SafeDownCast(node);
   if (markupsNode == nullptr)
   {
     return QIcon();
@@ -476,143 +517,34 @@ QIcon qSlicerSubjectHierarchyMarkupsPlugin::visibilityIcon(int visible)
 //-----------------------------------------------------------------------------
 void qSlicerSubjectHierarchyMarkupsPlugin::setDisplayColor(vtkIdType itemID, QColor color, QMap<int, QVariant> terminologyMetaData)
 {
-  if (itemID == vtkMRMLSubjectHierarchyNode::INVALID_ITEM_ID)
-  {
-    qCritical() << Q_FUNC_INFO << ": Invalid input item";
-    return;
-  }
-  vtkMRMLSubjectHierarchyNode* shNode = qSlicerSubjectHierarchyPluginHandler::instance()->subjectHierarchyNode();
-  if (!shNode)
-  {
-    qCritical() << Q_FUNC_INFO << ": Failed to access subject hierarchy node";
-    return;
-  }
-
-  // Get display node
-  vtkMRMLDisplayableNode* displayableNode = vtkMRMLDisplayableNode::SafeDownCast(shNode->GetItemDataNode(itemID));
-  if (!displayableNode)
-  {
-    qCritical() << Q_FUNC_INFO << ": Unable to find node for subject hierarchy item " << shNode->GetItemName(itemID).c_str();
-    return;
-  }
-  vtkMRMLDisplayNode* displayNode = displayableNode->GetDisplayNode();
-  if (!displayNode)
-  {
-    qCritical() << Q_FUNC_INFO << ": No display node";
-    return;
-  }
-
-  // Set terminology metadata
-  if (terminologyMetaData.contains(qSlicerTerminologyItemDelegate::TerminologyRole))
-  {
-    displayableNode->SetAttribute(vtkSegment::GetTerminologyEntryTagName(),
-      terminologyMetaData[qSlicerTerminologyItemDelegate::TerminologyRole].toString().toUtf8().constData() );
-  }
-  if (terminologyMetaData.contains(qSlicerTerminologyItemDelegate::NameRole))
-  {
-    displayableNode->SetName(
-      terminologyMetaData[qSlicerTerminologyItemDelegate::NameRole].toString().toUtf8().constData() );
-  }
-  if (terminologyMetaData.contains(qSlicerTerminologyItemDelegate::NameAutoGeneratedRole))
-  {
-    displayableNode->SetAttribute( vtkSlicerTerminologiesModuleLogic::GetNameAutoGeneratedAttributeName(),
-      terminologyMetaData[qSlicerTerminologyItemDelegate::NameAutoGeneratedRole].toString().toUtf8().constData() );
-  }
-  if (terminologyMetaData.contains(qSlicerTerminologyItemDelegate::ColorAutoGeneratedRole))
-  {
-    displayableNode->SetAttribute( vtkSlicerTerminologiesModuleLogic::GetColorAutoGeneratedAttributeName(),
-      terminologyMetaData[qSlicerTerminologyItemDelegate::ColorAutoGeneratedRole].toString().toUtf8().constData() );
-  }
-
-  // Set color
-  double* oldColorArray = displayNode->GetColor();
-  QColor oldColor = QColor::fromRgbF(oldColorArray[0], oldColorArray[1], oldColorArray[2]);
-  if (oldColor != color)
-  {
-    displayNode->SetSelectedColor(color.redF(), color.greenF(), color.blueF());
-
-    // Trigger update of color swatch
-    shNode->ItemModified(itemID);
-  }
+  this->setColorAndTerminologyToDisplayableNode(itemID, color, terminologyMetaData, true, false);
 }
 
 //-----------------------------------------------------------------------------
-QColor qSlicerSubjectHierarchyMarkupsPlugin::getDisplayColor(vtkIdType itemID, QMap<int, QVariant> &terminologyMetaData)const
+QColor qSlicerSubjectHierarchyMarkupsPlugin::getDisplayColor(vtkIdType itemID, QMap<int, QVariant>& terminologyMetaData) const
 {
-  if (itemID == vtkMRMLSubjectHierarchyNode::INVALID_ITEM_ID)
-  {
-    qCritical() << Q_FUNC_INFO << ": Invalid input item";
-    return QColor(0,0,0,0);
-  }
-  vtkMRMLSubjectHierarchyNode* shNode = qSlicerSubjectHierarchyPluginHandler::instance()->subjectHierarchyNode();
-  if (!shNode)
-  {
-    qCritical() << Q_FUNC_INFO << ": Failed to access subject hierarchy node";
-    return QColor(0,0,0,0);
-  }
-  vtkMRMLScene* scene = qSlicerSubjectHierarchyPluginHandler::instance()->mrmlScene();
-  if (!scene)
-  {
-    qCritical() << Q_FUNC_INFO << ": Invalid MRML scene";
-    return QColor(0,0,0,0);
-  }
-
-  if (scene->IsImporting())
-  {
-    // During import SH node may be created before the segmentation is read into the scene,
-    // so don't attempt to access the segment yet
-    return QColor(0,0,0,0);
-  }
-
-  // Get display node
-  vtkMRMLDisplayableNode* displayableNode = vtkMRMLDisplayableNode::SafeDownCast(shNode->GetItemDataNode(itemID));
-  if (!displayableNode)
-  {
-    qCritical() << Q_FUNC_INFO << ": Unable to find node for subject hierarchy item " << shNode->GetItemName(itemID).c_str();
-    return QColor(0,0,0,0);
-  }
-  vtkMRMLDisplayNode* displayNode = displayableNode->GetDisplayNode();
-  if (!displayNode)
-  {
-    // this is normal when the markups node is being created
-    return QColor(0,0,0,0);
-  }
-
-  // Get terminology metadata
-  terminologyMetaData.clear();
-  terminologyMetaData[qSlicerTerminologyItemDelegate::TerminologyRole] =
-    displayableNode->GetAttribute(vtkSegment::GetTerminologyEntryTagName());
-  terminologyMetaData[qSlicerTerminologyItemDelegate::NameRole] = displayableNode->GetName();
-  // If auto generated flags are not initialized, then set them to the default
-  // (color: on, name: off - this way color will be set from the selector but name will not)
-  bool nameAutoGenerated = false;
-  if (displayableNode->GetAttribute(vtkSlicerTerminologiesModuleLogic::GetNameAutoGeneratedAttributeName()))
-  {
-    nameAutoGenerated = QVariant(displayableNode->GetAttribute(vtkSlicerTerminologiesModuleLogic::GetNameAutoGeneratedAttributeName())).toBool();
-  }
-  terminologyMetaData[qSlicerTerminologyItemDelegate::NameAutoGeneratedRole] = nameAutoGenerated;
-  bool colorAutoGenerated = true;
-  if (displayableNode->GetAttribute(vtkSlicerTerminologiesModuleLogic::GetColorAutoGeneratedAttributeName()))
-  {
-    colorAutoGenerated = QVariant(displayableNode->GetAttribute(vtkSlicerTerminologiesModuleLogic::GetColorAutoGeneratedAttributeName())).toBool();
-  }
-  terminologyMetaData[qSlicerTerminologyItemDelegate::ColorAutoGeneratedRole] = colorAutoGenerated;
-
-  // Get and return color
-  double* colorArray = displayNode->GetSelectedColor();
-  return QColor::fromRgbF(colorArray[0], colorArray[1], colorArray[2]);
+  return this->colorAndTerminologyFromDisplayableNode(itemID, terminologyMetaData, true);
 }
 
 //-----------------------------------------------------------------------------
-QList<QAction*> qSlicerSubjectHierarchyMarkupsPlugin::viewContextMenuActions()const
+QList<QAction*> qSlicerSubjectHierarchyMarkupsPlugin::viewContextMenuActions() const
 {
   Q_D(const qSlicerSubjectHierarchyMarkupsPlugin);
 
   QList<QAction*> actions;
-  actions << d->RenamePointAction << d->RefocusCameraAction << d->ToggleSelectPointAction
-    << d->JumpToPreviousPointAction << d->JumpToNextPointAction << d->JumpToClosestPointAction
-    << d->DeletePointAction << d->DeleteNodeAction << d->EditNodeTerminologyAction
-    << d->ToggleHandleInteractive << d->HandleVisibilityAction;
+  actions << d->RenamePointAction << d->RefocusCameraAction << d->ToggleSelectPointAction            //
+          << d->JumpToPreviousPointAction << d->JumpToNextPointAction << d->JumpToClosestPointAction //
+          << d->DeletePointAction << d->DeleteNodeAction << d->EditNodeTerminologyAction             //
+          << d->ToggleHandleInteractive << d->HandleVisibilityAction << d->FlipPlaneNormalAction;
+  return actions;
+}
+
+//-----------------------------------------------------------------------------
+QList<QAction*> qSlicerSubjectHierarchyMarkupsPlugin::itemContextMenuActions() const
+{
+  Q_D(const qSlicerSubjectHierarchyMarkupsPlugin);
+  QList<QAction*> actions;
+  actions << d->FlipPlaneNormalAction;
   return actions;
 }
 
@@ -642,15 +574,14 @@ void qSlicerSubjectHierarchyMarkupsPlugin::showViewContextMenuActionsForItem(vtk
   }
 
   d->ViewContextMenuEventData = eventData;
-  d->ViewContextMenuEventData["NodeID"] = QVariant(associatedNode->GetID());
+  d->ViewContextMenuEventData["NodeID"] = qSlicerUtils::safeQStringFromUtf8Ptr(associatedNode->GetID());
 
   int componentType = d->ViewContextMenuEventData["ComponentType"].toInt();
-  bool pointActionsDisabled =
-    componentType == vtkMRMLMarkupsDisplayNode::ComponentTranslationHandle ||
-    componentType == vtkMRMLMarkupsDisplayNode::ComponentRotationHandle ||
-    componentType == vtkMRMLMarkupsDisplayNode::ComponentScaleHandle ||
-    componentType == vtkMRMLMarkupsDisplayNode::ComponentPlane ||
-    componentType == vtkMRMLMarkupsROIDisplayNode::ComponentROI;
+  bool pointActionsDisabled = componentType == vtkMRMLMarkupsDisplayNode::ComponentTranslationHandle || //
+                              componentType == vtkMRMLMarkupsDisplayNode::ComponentRotationHandle ||    //
+                              componentType == vtkMRMLMarkupsDisplayNode::ComponentScaleHandle ||       //
+                              componentType == vtkMRMLMarkupsDisplayNode::ComponentPlane ||             //
+                              componentType == vtkMRMLMarkupsROIDisplayNode::ComponentROI;
 
   d->RenamePointAction->setVisible(!pointActionsDisabled);
   d->DeletePointAction->setVisible(!pointActionsDisabled);
@@ -668,8 +599,8 @@ void qSlicerSubjectHierarchyMarkupsPlugin::showViewContextMenuActionsForItem(vtk
   d->DeleteNodeAction->setVisible(true);
   d->ToggleSelectPointAction->setVisible(!pointActionsDisabled);
 
-  d->JumpToClosestPointAction->setVisible(componentType == vtkMRMLMarkupsDisplayNode::ComponentLine
-    && d->ViewContextMenuEventData.find("WorldPosition") != d->ViewContextMenuEventData.end());
+  d->JumpToClosestPointAction->setVisible(componentType == vtkMRMLMarkupsDisplayNode::ComponentLine //
+                                          && d->ViewContextMenuEventData.find("WorldPosition") != d->ViewContextMenuEventData.end());
 
   bool isControlPoint = componentType == vtkMRMLMarkupsDisplayNode::ComponentControlPoint;
   d->RenamePointAction->setVisible(isControlPoint);
@@ -683,10 +614,10 @@ void qSlicerSubjectHierarchyMarkupsPlugin::showViewContextMenuActionsForItem(vtk
     d->JumpToPreviousPointAction->setEnabled(false);
     d->JumpToNextPointAction->setEnabled(false);
     int currentControlPointIndex = d->ViewContextMenuEventData["ComponentIndex"].toInt();
-    for (int controlPointIndex = currentControlPointIndex-1; controlPointIndex >= 0; controlPointIndex--)
+    for (int controlPointIndex = currentControlPointIndex - 1; controlPointIndex >= 0; controlPointIndex--)
     {
-      if (associatedNode->GetNthControlPointPositionStatus(controlPointIndex) == vtkMRMLMarkupsNode::PositionDefined
-        && associatedNode->GetNthControlPointVisibility(controlPointIndex))
+      if (associatedNode->GetNthControlPointPositionStatus(controlPointIndex) == vtkMRMLMarkupsNode::PositionDefined //
+          && associatedNode->GetNthControlPointVisibility(controlPointIndex))
       {
         // found previous control point
         d->JumpToPreviousPointAction->setEnabled(true);
@@ -694,10 +625,10 @@ void qSlicerSubjectHierarchyMarkupsPlugin::showViewContextMenuActionsForItem(vtk
         break;
       }
     }
-    for (int controlPointIndex = currentControlPointIndex+1; controlPointIndex < associatedNode->GetNumberOfControlPoints(); controlPointIndex++)
+    for (int controlPointIndex = currentControlPointIndex + 1; controlPointIndex < associatedNode->GetNumberOfControlPoints(); controlPointIndex++)
     {
-      if (associatedNode->GetNthControlPointPositionStatus(controlPointIndex) == vtkMRMLMarkupsNode::PositionDefined
-        && associatedNode->GetNthControlPointVisibility(controlPointIndex))
+      if (associatedNode->GetNthControlPointPositionStatus(controlPointIndex) == vtkMRMLMarkupsNode::PositionDefined //
+          && associatedNode->GetNthControlPointVisibility(controlPointIndex))
       {
         // found next control point
         d->JumpToNextPointAction->setEnabled(true);
@@ -710,7 +641,7 @@ void qSlicerSubjectHierarchyMarkupsPlugin::showViewContextMenuActionsForItem(vtk
   d->EditNodeTerminologyAction->setVisible(!pointActionsDisabled);
 
   // Update action text with relevant markup type
-  QString markup_type = associatedNode->GetTypeDisplayName();
+  QString markup_type = QString::fromStdString(associatedNode->GetTypeDisplayName());
   d->DeleteNodeAction->setText(tr("Delete %1").arg(markup_type));
   d->EditNodeTerminologyAction->setText(tr("Edit %1 terminology...").arg(markup_type));
 
@@ -726,6 +657,10 @@ void qSlicerSubjectHierarchyMarkupsPlugin::showViewContextMenuActionsForItem(vtk
     d->ToggleScaleHandleVisible->setChecked(displayNode->GetScaleHandleVisibility());
     d->ToggleScaleHandleVisible->setChecked(displayNode->GetScaleHandleVisibility());
   }
+
+  // Show flip normal action only for plane nodes
+  vtkMRMLMarkupsPlaneNode* planeNode = vtkMRMLMarkupsPlaneNode::SafeDownCast(associatedNode);
+  d->FlipPlaneNormalAction->setVisible(planeNode != nullptr);
 }
 
 //-----------------------------------------------------------------------------
@@ -764,8 +699,8 @@ void qSlicerSubjectHierarchyMarkupsPlugin::showVisibilityContextMenuActionsForIt
     vtkMRMLMarkupsDisplayNode* displayNode = vtkMRMLMarkupsDisplayNode::SafeDownCast(associatedNode->GetDisplayNode());
     d->ToggleCurrentItemHandleInteractive->setVisible(displayNode != nullptr);
     d->CurrentItemHandleVisibilityAction->setVisible(displayNode != nullptr);
-    d->ToggleCurrentItemScaleHandleVisible->setVisible(vtkMRMLMarkupsROIDisplayNode::SafeDownCast(displayNode) != nullptr
-      || vtkMRMLMarkupsPlaneDisplayNode::SafeDownCast(displayNode) != nullptr);
+    d->ToggleCurrentItemScaleHandleVisible->setVisible(vtkMRMLMarkupsROIDisplayNode::SafeDownCast(displayNode) != nullptr //
+                                                       || vtkMRMLMarkupsPlaneDisplayNode::SafeDownCast(displayNode) != nullptr);
     if (displayNode)
     {
       d->ToggleCurrentItemHandleInteractive->setChecked(displayNode->GetHandlesInteractive());
@@ -777,11 +712,33 @@ void qSlicerSubjectHierarchyMarkupsPlugin::showVisibilityContextMenuActionsForIt
 }
 
 //-----------------------------------------------------------------------------
-void qSlicerSubjectHierarchyMarkupsPlugin::showContextMenuActionsForItem(vtkIdType)
+void qSlicerSubjectHierarchyMarkupsPlugin::showContextMenuActionsForItem(vtkIdType itemID)
 {
   Q_D(qSlicerSubjectHierarchyMarkupsPlugin);
   // make sure we don't use metadata from some previous view context menu calls
   d->ViewContextMenuEventData.clear();
+  if (itemID == vtkMRMLSubjectHierarchyNode::INVALID_ITEM_ID)
+  {
+    qCritical() << Q_FUNC_INFO << ": Invalid input item";
+    return;
+  }
+  vtkMRMLSubjectHierarchyNode* shNode = qSlicerSubjectHierarchyPluginHandler::instance()->subjectHierarchyNode();
+  if (!shNode)
+  {
+    qCritical() << Q_FUNC_INFO << ": Failed to access subject hierarchy node";
+    return;
+  }
+
+  // Markup
+  vtkMRMLMarkupsNode* associatedNode = vtkMRMLMarkupsNode::SafeDownCast(shNode->GetItemDataNode(itemID));
+  if (!associatedNode)
+  {
+    return;
+  }
+
+  // Show flip normal action only for plane nodes
+  vtkMRMLMarkupsPlaneNode* planeNode = vtkMRMLMarkupsPlaneNode::SafeDownCast(associatedNode);
+  d->FlipPlaneNormalAction->setVisible(planeNode != nullptr);
 }
 
 //-----------------------------------------------------------------------------
@@ -834,7 +791,7 @@ void qSlicerSubjectHierarchyMarkupsPlugin::refocusCamera()
   // Get point index
   int componentIndex = d->ViewContextMenuEventData["ComponentIndex"].toInt();
 
-  vtkSlicerMarkupsLogic* markupsLogic = vtkSlicerMarkupsLogic::SafeDownCast(appLogic->GetModuleLogic(/*no tr*/"Markups"));
+  vtkSlicerMarkupsLogic* markupsLogic = vtkSlicerMarkupsLogic::SafeDownCast(appLogic->GetModuleLogic(/*no tr*/ "Markups"));
   if (!markupsLogic)
   {
     qCritical() << Q_FUNC_INFO << ": could not get the Markups module logic.";
@@ -900,7 +857,7 @@ void qSlicerSubjectHierarchyMarkupsPlugin::removeNodesToBeDeleted()
     return;
   }
 
-  foreach(vtkWeakPointer<vtkMRMLMarkupsNode> markupsNode, d->NodesToDelete)
+  for (const vtkWeakPointer<vtkMRMLMarkupsNode>& markupsNode : d->NodesToDelete)
   {
     if (!markupsNode)
     {
@@ -996,13 +953,6 @@ void qSlicerSubjectHierarchyMarkupsPlugin::editNodeTerminology()
     qCritical() << Q_FUNC_INFO << ": Failed to access subject hierarchy node";
     return;
   }
-  vtkSlicerTerminologiesModuleLogic* terminologiesLogic = vtkSlicerTerminologiesModuleLogic::SafeDownCast(
-    qSlicerCoreApplication::application()->moduleLogic(/*no tr*/"Terminologies"));
-  if (!terminologiesLogic)
-  {
-    qCritical() << Q_FUNC_INFO << ": Failed to get Terminologies module logic";
-    return;
-  }
 
   // Make sure display node exists to be able to access and set color based on terminology
   markupsNode->CreateDefaultDisplayNodes();
@@ -1013,11 +963,15 @@ void qSlicerSubjectHierarchyMarkupsPlugin::editNodeTerminology()
     return;
   }
 
-  // Convert string list to VTK terminology entry. Do not check success, as an empty terminology is also a valid starting point
+  // Get terminology entry
+  std::string oldTerminologyString = vtkSlicerTerminologiesModuleLogic::GetTerminologyEntryAsString(markupsNode);
   vtkNew<vtkSlicerTerminologyEntry> terminologyEntry;
-  const char* oldTerminologyAttribute = markupsNode->GetAttribute(vtkSegment::GetTerminologyEntryTagName());
-  std::string oldTerminologyString(oldTerminologyAttribute ? oldTerminologyAttribute : "");
-  terminologiesLogic->DeserializeTerminologyEntry(oldTerminologyString, terminologyEntry);
+  vtkSlicerTerminologiesModuleLogic::GetTerminologyEntry(markupsNode, terminologyEntry);
+  // Use default terminology if current terminology is not defined
+  if (terminologyEntry->IsEmpty())
+  {
+    vtkSlicerTerminologiesModuleLogic::GetDefaultTerminologyEntry(markupsNode, terminologyEntry);
+  }
 
   // If auto generated flags are not initialized, then set them to the default
   // (color: on, name: off - this way color will be set from the selector but name will not)
@@ -1050,6 +1004,7 @@ void qSlicerSubjectHierarchyMarkupsPlugin::editNodeTerminology()
   {
     QMap<int, QVariant> terminologyMetaData;
     terminologyMetaData[qSlicerTerminologyItemDelegate::TerminologyRole] = newTerminologyString;
+    // DefaultTerminologyRole is skipped, as the terminology selector does not change it
     terminologyMetaData[qSlicerTerminologyItemDelegate::NameRole] = terminologyInfo.Name;
     terminologyMetaData[qSlicerTerminologyItemDelegate::NameAutoGeneratedRole] = terminologyInfo.NameAutoGenerated;
     terminologyMetaData[qSlicerTerminologyItemDelegate::ColorAutoGeneratedRole] = terminologyInfo.ColorAutoGenerated;
@@ -1188,6 +1143,42 @@ void qSlicerSubjectHierarchyMarkupsPlugin::toggleHandleTypeVisibility()
 
   int componentType = sender->property(INTERACTION_HANDLE_TYPE_PROPERTY).toInt();
   displayNode->SetHandleVisibility(componentType, !displayNode->GetHandleVisibility(componentType));
+}
+
+//-----------------------------------------------------------------------------
+void qSlicerSubjectHierarchyMarkupsPlugin::flipPlaneNormal()
+{
+  Q_D(qSlicerSubjectHierarchyMarkupsPlugin);
+
+  vtkMRMLMarkupsNode* markupsNode = d->markupsNodeFromViewContextMenuEventData();
+  if (!markupsNode)
+  {
+    // Item is selected from the item context menu (not the view context menu)
+    vtkMRMLSubjectHierarchyNode* shNode = qSlicerSubjectHierarchyPluginHandler::instance()->subjectHierarchyNode();
+    if (shNode)
+    {
+      vtkIdType selectedItemID = qSlicerSubjectHierarchyPluginHandler::instance()->currentItem();
+      if (selectedItemID != vtkMRMLSubjectHierarchyNode::INVALID_ITEM_ID)
+      {
+        markupsNode = vtkMRMLMarkupsNode::SafeDownCast(shNode->GetItemDataNode(selectedItemID));
+      }
+    }
+  }
+
+  if (!markupsNode)
+  {
+    qCritical() << Q_FUNC_INFO << ": Failed to get markups node";
+    return;
+  }
+
+  vtkMRMLMarkupsPlaneNode* planeNode = vtkMRMLMarkupsPlaneNode::SafeDownCast(markupsNode);
+  if (!planeNode)
+  {
+    qCritical() << Q_FUNC_INFO << ": Node is not a plane node";
+    return;
+  }
+
+  planeNode->FlipNormal();
 }
 
 //-----------------------------------------------------------------------------

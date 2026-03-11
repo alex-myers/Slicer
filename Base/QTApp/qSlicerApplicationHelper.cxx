@@ -22,7 +22,11 @@
 
 // Qt includes
 #include <QFont>
+#include <QtGlobal> // For Q_OS_*, QT_VERSION
 #include <QLabel>
+#if defined(Q_OS_MACOS) && (QT_VERSION < QT_VERSION_CHECK(5, 15, 10))
+# include <QLoggingCategory>
+#endif
 #include <QSettings>
 #include <QSysInfo>
 #include <QThread>
@@ -31,10 +35,8 @@
 
 // Slicer includes
 #include "qSlicerApplication.h"
-#ifdef Slicer_BUILD_CLI_SUPPORT
-# include "qSlicerCLIExecutableModuleFactory.h"
-# include "qSlicerCLILoadableModuleFactory.h"
-#endif
+#include "qSlicerCLIExecutableModuleFactory.h"
+#include "qSlicerCLILoadableModuleFactory.h"
 #include "qSlicerCommandOptions.h"
 #include "qSlicerCoreModuleFactory.h"
 #include "qSlicerLoadableModuleFactory.h"
@@ -74,11 +76,12 @@
 #endif
 
 #ifdef _WIN32
-#include <Windows.h> //for SHELLEXECUTEINFO
+# include <Windows.h> //for SHELLEXECUTEINFO
 #endif
 
 //----------------------------------------------------------------------------
-qSlicerApplicationHelper::qSlicerApplicationHelper(QObject * parent) : Superclass(parent)
+qSlicerApplicationHelper::qSlicerApplicationHelper(QObject* parent)
+  : Superclass(parent)
 {
 }
 
@@ -86,9 +89,13 @@ qSlicerApplicationHelper::qSlicerApplicationHelper(QObject * parent) : Superclas
 qSlicerApplicationHelper::~qSlicerApplicationHelper() = default;
 
 //----------------------------------------------------------------------------
-void qSlicerApplicationHelper::preInitializeApplication(
-    const char* argv0, ctkProxyStyle* style)
+void qSlicerApplicationHelper::preInitializeApplication(const char* argv0, ctkProxyStyle* style)
 {
+#if defined(Q_OS_MACOS) && (QT_VERSION < QT_VERSION_CHECK(5, 15, 10))
+  // See https://github.com/Slicer/Slicer/issues/7261
+  QLoggingCategory::setFilterRules("qt.qpa.fonts=false");
+#endif
+
   vtkLogger::SetStderrVerbosity(vtkLogger::VERBOSITY_OFF);
   itk::itkFactoryRegistration();
   qMRMLWidget::preInitializeApplication();
@@ -105,7 +112,7 @@ void qSlicerApplicationHelper::preInitializeApplication(
   QCoreApplication::setApplicationName(applicationName);
 
   QCoreApplication::setApplicationVersion(Slicer_MAIN_PROJECT_VERSION_FULL);
-  //vtkObject::SetGlobalWarningDisplay(false);
+  // vtkObject::SetGlobalWarningDisplay(false);
   QApplication::setDesktopSettingsAware(false);
   if (style)
   {
@@ -116,7 +123,7 @@ void qSlicerApplicationHelper::preInitializeApplication(
 }
 
 //----------------------------------------------------------------------------
-void qSlicerApplicationHelper::setupModuleFactoryManager(qSlicerModuleFactoryManager * moduleFactoryManager)
+void qSlicerApplicationHelper::setupModuleFactoryManager(qSlicerModuleFactoryManager* moduleFactoryManager)
 {
   qSlicerApplication* app = qSlicerApplication::application();
   // Register module factories
@@ -124,7 +131,7 @@ void qSlicerApplicationHelper::setupModuleFactoryManager(qSlicerModuleFactoryMan
 
   qSlicerCommandOptions* options = qSlicerApplication::application()->commandOptions();
 
-  if(options->disableModules())
+  if (options->disableModules())
   {
     return;
   }
@@ -132,8 +139,8 @@ void qSlicerApplicationHelper::setupModuleFactoryManager(qSlicerModuleFactoryMan
   if (!options->disableLoadableModules())
   {
     moduleFactoryManager->registerFactory(new qSlicerLoadableModuleFactory);
-    if (!options->disableBuiltInModules() &&
-        !options->disableBuiltInLoadableModules() &&
+    if (!options->disableBuiltInModules() &&         //
+        !options->disableBuiltInLoadableModules() && //
         !options->runPythonAndExit())
     {
       QString loadablePath = app->slicerHome() + "/" + Slicer_QTLOADABLEMODULES_LIB_DIR + "/";
@@ -148,11 +155,10 @@ void qSlicerApplicationHelper::setupModuleFactoryManager(qSlicerModuleFactoryMan
 #ifdef Slicer_USE_PYTHONQT
   if (!options->disableScriptedLoadableModules())
   {
-    moduleFactoryManager->registerFactory(
-      new qSlicerScriptedLoadableModuleFactory);
-    if (!options->disableBuiltInModules() &&
-        !options->disableBuiltInScriptedLoadableModules() &&
-        !qSlicerApplication::testAttribute(qSlicerApplication::AA_DisablePython) &&
+    moduleFactoryManager->registerFactory(new qSlicerScriptedLoadableModuleFactory);
+    if (!options->disableBuiltInModules() &&                                        //
+        !options->disableBuiltInScriptedLoadableModules() &&                        //
+        !qSlicerApplication::testAttribute(qSlicerApplication::AA_DisablePython) && //
         !options->runPythonAndExit())
     {
       QString scriptedPath = app->slicerHome() + "/" + Slicer_QTSCRIPTEDMODULES_LIB_DIR + "/";
@@ -165,11 +171,9 @@ void qSlicerApplicationHelper::setupModuleFactoryManager(qSlicerModuleFactoryMan
   }
 #endif
 
-#ifdef Slicer_BUILD_CLI_SUPPORT
   if (!options->disableCLIModules())
   {
-    QString tempDirectory =
-      qSlicerCoreApplication::application()->temporaryPath();
+    QString tempDirectory = qSlicerCoreApplication::application()->temporaryPath();
 
     // Always prefer executable CLIs. While launching a new process and transfer data via files may take slightly
     // longer, the file transfer is more robust, the CLI module can be stopped at any time (while a thread may be
@@ -186,8 +190,8 @@ void qSlicerApplicationHelper::setupModuleFactoryManager(qSlicerModuleFactoryMan
     cliExecutableFactory->setTempDirectory(tempDirectory);
     moduleFactoryManager->registerFactory(cliExecutableFactory, preferExecutableCLIs ? 1 : 0);
 
-    if (!options->disableBuiltInModules() &&
-        !options->disableBuiltInCLIModules() &&
+    if (!options->disableBuiltInModules() &&    //
+        !options->disableBuiltInCLIModules() && //
         !options->runPythonAndExit())
     {
       QString cliPath = app->slicerHome() + "/" + Slicer_CLIMODULES_LIB_DIR + "/";
@@ -201,15 +205,13 @@ void qSlicerApplicationHelper::setupModuleFactoryManager(qSlicerModuleFactoryMan
 #endif
     }
   }
-#endif
-  moduleFactoryManager->addSearchPaths(
-    app->toSlicerHomeAbsolutePaths(app->revisionUserSettings()->value("Modules/AdditionalPaths").toStringList()));
 
-  QStringList modulesToAlwaysIgnore =
-    app->revisionUserSettings()->value("Modules/IgnoreModules").toStringList();
+  moduleFactoryManager->addSearchPaths(app->toSlicerHomeAbsolutePaths(app->revisionUserSettings()->value("Modules/AdditionalPaths").toStringList()));
+
+  QStringList modulesToAlwaysIgnore = app->revisionUserSettings()->value("Modules/IgnoreModules").toStringList();
   QStringList modulesToTemporarlyIgnore = options->modulesToIgnore();
   // Discard modules already listed in the settings
-  foreach(const QString& moduleToAlwaysIgnore, modulesToAlwaysIgnore)
+  for (const QString& moduleToAlwaysIgnore : modulesToAlwaysIgnore)
   {
     modulesToTemporarlyIgnore.removeAll(moduleToAlwaysIgnore);
   }
@@ -227,10 +229,7 @@ void qSlicerApplicationHelper::showMRMLEventLoggerWidget()
   logger->setConsoleOutputEnabled(false);
   logger->setMRMLScene(qSlicerApplication::application()->mrmlScene());
 
-  QObject::connect(qSlicerApplication::application(),
-                   SIGNAL(mrmlSceneChanged(vtkMRMLScene*)),
-                   logger,
-                   SLOT(setMRMLScene(vtkMRMLScene*)));
+  QObject::connect(qSlicerApplication::application(), SIGNAL(mrmlSceneChanged(vtkMRMLScene*)), logger, SLOT(setMRMLScene(vtkMRMLScene*)));
 
   logger->show();
 }
@@ -248,15 +247,14 @@ bool qSlicerApplicationHelper::checkRenderingCapabilities()
   qWarning("Graphics capability of this computer is not sufficient to run this application");
 
   QString message = tr("Graphics capability of this computer is not sufficient to "
-    "run this application. The application most likely will not function properly.");
+                       "run this application. The application most likely will not function properly.");
 
-  QString details = tr(
-    "See more information and help at:\n%1/user_guide/get_help.html#slicer-application-does-not-start\n\n"
-    "Graphics capabilities of this computer:\n\n")
-    .arg(qSlicerApplication::application()->documentationBaseUrl());
+  QString details = tr("See more information and help at:\n%1/user_guide/get_help.html#slicer-application-does-not-start\n\n"
+                       "Graphics capabilities of this computer:\n\n")
+                      .arg(qSlicerApplication::application()->documentationBaseUrl());
   details += systemInfo->GetRenderingCapabilitiesDetails().c_str();
 
-  ctkMessageBox *messageBox = new ctkMessageBox(nullptr);
+  ctkMessageBox* messageBox = new ctkMessageBox(nullptr);
   messageBox->setAttribute(Qt::WA_DeleteOnClose, true);
   messageBox->setIcon(QMessageBox::Warning);
   messageBox->setWindowTitle(tr("Insufficient graphics capability"));
@@ -299,37 +297,55 @@ bool qSlicerApplicationHelper::checkRenderingCapabilities()
 }
 
 //----------------------------------------------------------------------------
-int qSlicerApplicationHelper::runAsAdmin(QString executable, QString parameters/*=QString()*/, QString workingDir/*=QString()*/)
+int qSlicerApplicationHelper::runAsAdmin(QString executable, QString parameters /*=QString()*/, QString workingDir /*=QString()*/)
 {
 #if defined(_WIN32)
   // Run tscon system tool to create a new session, which terminates
   // the existing session (closes remote desktop connection).
   SHELLEXECUTEINFO shExecInfo;
+  ZeroMemory(&shExecInfo, sizeof(shExecInfo));
   shExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
   shExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
   shExecInfo.hwnd = nullptr;
   // tscon requires administrator access, therefore "runas" verb is needed.
   // UAC popup will be displayed.
-  shExecInfo.lpVerb = "runas";
-  shExecInfo.lpFile = executable.toUtf8().constData();
-  shExecInfo.lpParameters = nullptr;
-  if (!parameters.isEmpty())
-  {
-    shExecInfo.lpParameters = parameters.toUtf8().constData();
-  }
-  shExecInfo.lpDirectory = nullptr;
-  if (!workingDir.isEmpty())
-  {
-    shExecInfo.lpDirectory = workingDir.toUtf8().constData();
-  }
+  shExecInfo.lpVerb = TEXT("runas");
+
+# ifdef UNICODE
+  // ShellExecuteExW expects UTF-16
+  // Keep all converted strings alive during the entire call.
+  std::wstring exeW = executable.toStdWString();
+  std::wstring paramsW = parameters.isEmpty() ? L"" : parameters.toStdWString();
+  std::wstring workdirW = workingDir.isEmpty() ? L"" : workingDir.toStdWString();
+
+  shExecInfo.lpFile = exeW.c_str();
+  shExecInfo.lpParameters = paramsW.empty() ? nullptr : paramsW.c_str();
+  shExecInfo.lpDirectory = workdirW.empty() ? nullptr : workdirW.c_str();
+# else
+  // ShellExecuteExA expects ANSI (current ACP). Use UTF-8 and let Windows convert.
+  // Keep all converted strings alive during the entire call.
+  QByteArray exeA = executable.toUtf8();
+  QByteArray paramsA = parameters.toUtf8();
+  QByteArray workdirA = workingDir.toUtf8();
+
+  shExecInfo.lpFile = exeA.constData();
+  shExecInfo.lpParameters = parameters.isEmpty() ? nullptr : paramsA.constData();
+  shExecInfo.lpDirectory = workingDir.isEmpty() ? nullptr : workdirA.constData();
+# endif
+
   shExecInfo.nShow = SW_MAXIMIZE;
   shExecInfo.hInstApp = nullptr;
-  ShellExecuteEx(&shExecInfo);
+  if (!ShellExecuteEx(&shExecInfo))
+  {
+    return -1;
+  }
+
   WaitForSingleObject(shExecInfo.hProcess, INFINITE);
   DWORD exitCode = 0;
   GetExitCodeProcess(shExecInfo.hProcess, &exitCode);
   CloseHandle(shExecInfo.hProcess);
-  return exitCode;
+  return static_cast<int>(exitCode);
+
 #else
   Q_UNUSED(executable);
   Q_UNUSED(parameters);

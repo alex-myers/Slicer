@@ -35,15 +35,17 @@
 #include <vtkNew.h>
 #include "qMRMLWidget.h"
 
+// STD includes
+#include <iostream>
 
 // Common test driver includes
 #include "qMRMLWidgetCxxTests.h"
 
-int qMRMLNodeComboBoxTest3( int argc, char * argv [] )
+int qMRMLNodeComboBoxTest3(int argc, char* argv[])
 {
   if (argc < 2)
   {
-    std::cerr<< "Wrong number of arguments." << std::endl;
+    std::cerr << "Wrong number of arguments." << std::endl;
     return EXIT_FAILURE;
   }
 

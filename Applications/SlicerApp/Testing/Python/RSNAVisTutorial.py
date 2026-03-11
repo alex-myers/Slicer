@@ -192,6 +192,7 @@ class RSNAVisTutorialTest(ScriptedLoadableModuleTest):
 
         dicomFilesDirectory = SampleData.downloadFromURL(
             fileNames="dataset1_Thorax_Abdomen.zip",
+            loadFileTypes="ZipFile",
             uris=TESTING_DATA_URL + "SHA256/17a4199aad03a373dab27dc17e5bfcf84fc194d0a30975b4073e5b595d43a56a",
             checksums="SHA256:17a4199aad03a373dab27dc17e5bfcf84fc194d0a30975b4073e5b595d43a56a")[0]
 
@@ -321,9 +322,9 @@ class RSNAVisTutorialTest(ScriptedLoadableModuleTest):
             mainWindow = slicer.util.mainWindow()
             layoutManager = slicer.app.layoutManager()
             threeDView = layoutManager.threeDWidget(0).threeDView()
-            redWidget = layoutManager.sliceWidget("Red")
+            redWidget = layoutManager.sliceWidget("vtkMRMLSliceNode1")  # it would be 'Red' in a recent scene
             redController = redWidget.sliceController()
-            greenWidget = layoutManager.sliceWidget("Green")
+            greenWidget = layoutManager.sliceWidget("vtkMRMLSliceNode3")  # it would be 'Green' in a recent scene
             greenController = greenWidget.sliceController()
 
             mainWindow.moduleSelector().selectModule("Models")
@@ -362,7 +363,7 @@ class RSNAVisTutorialTest(ScriptedLoadableModuleTest):
 
             # hemispheric_white_matter.GetDisplayNode().SetClipping(1)
             skull.GetDisplayNode().SetClipping(1)
-            clip = slicer.util.getNode(pattern="vtkMRMLClipModelsNode1")
+            clip = slicer.util.getNode("ClipModelsParameters1")
             clip.SetRedSliceClipState(0)
             clip.SetYellowSliceClipState(0)
             clip.SetGreenSliceClipState(2)

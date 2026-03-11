@@ -14,8 +14,8 @@ class vtkMRMLAbstractViewNode;
 class VTK_MRML_EXPORT vtkMRMLLayoutNode : public vtkMRMLAbstractLayoutNode
 {
 public:
-  static vtkMRMLLayoutNode *New();
-  vtkTypeMacro(vtkMRMLLayoutNode,vtkMRMLAbstractLayoutNode);
+  static vtkMRMLLayoutNode* New();
+  vtkTypeMacro(vtkMRMLLayoutNode, vtkMRMLAbstractLayoutNode);
   vtkMRMLNode* CreateNodeInstance() override;
   void PrintSelf(ostream& os, vtkIndent indent) override;
 
@@ -24,13 +24,13 @@ public:
   //--------------------------------------------------------------------------
 
   /// Set node attributes
-  void ReadXMLAttributes( const char** atts) override;
+  void ReadXMLAttributes(const char** atts) override;
 
   /// Write this node's information to a MRML file in XML format.
   void WriteXML(ostream& of, int indent) override;
 
   /// Copy the node's attributes to this object
-  void Copy(vtkMRMLNode *node) override;
+  void CopyContent(vtkMRMLNode* node, bool deepCopy = true) override;
 
   /// \brief Reimplemented to reset maximized view node.
   void Reset(vtkMRMLNode* defaultNode) override;
@@ -59,11 +59,49 @@ public:
   vtkGetMacro(NumberOfCompareViewColumns, int);
   vtkSetClampMacro(NumberOfCompareViewColumns, int, 1, 50);
 
-  /// CompareView lightbox configuration Get/Set methods
-  vtkGetMacro(NumberOfCompareViewLightboxRows, int);
-  vtkSetClampMacro(NumberOfCompareViewLightboxRows, int, 1, 50);
-  vtkGetMacro(NumberOfCompareViewLightboxColumns, int);
-  vtkSetClampMacro(NumberOfCompareViewLightboxColumns, int, 1, 50);
+  /// @{
+  /// \deprecated
+  /// Following removal of the LightBox feature, compareView lightbox configuration
+  /// through Get/Set methods is not supported.
+  int GetNumberOfCompareViewLightboxRows()
+  {
+    vtkWarningMacro("" << __func__ << ": Function is deprecated. LightBox support has been removed.");
+    return 1;
+  }
+  void SetNumberOfCompareViewLightboxRows(int vtkNotUsed(value)) //
+  {
+    vtkWarningMacro("" << __func__ << ": Function is deprecated. LightBox support has been removed.");
+  }
+  int GetNumberOfCompareViewLightboxRowsMinValue()
+  {
+    vtkWarningMacro("" << __func__ << ": Function is deprecated. LightBox support has been removed.");
+    return 1;
+  }
+  int GetNumberOfCompareViewLightboxRowsMaxValue()
+  {
+    vtkWarningMacro("" << __func__ << ": Function is deprecated. LightBox support has been removed.");
+    return 1;
+  }
+  int GetNumberOfCompareViewLightboxColumns()
+  {
+    vtkWarningMacro("" << __func__ << ": Function is deprecated. LightBox support has been removed.");
+    return 1;
+  }
+  void SetNumberOfCompareViewLightboxColumns(int vtkNotUsed(value)) //
+  {
+    vtkWarningMacro("" << __func__ << ": Function is deprecated. LightBox support has been removed.");
+  }
+  int GetNumberOfCompareViewLightboxColumnsMinValue()
+  {
+    vtkWarningMacro("" << __func__ << ": Function is deprecated. LightBox support has been removed.");
+    return 1;
+  }
+  int GetNumberOfCompareViewLightboxColumnsMaxValue()
+  {
+    vtkWarningMacro("" << __func__ << ": Function is deprecated. LightBox support has been removed.");
+    return 1;
+  }
+  /// @}
 
   /// Set/Get the size of the main and secondary panels (size of Frame1
   /// in each panel)
@@ -72,7 +110,8 @@ public:
   vtkGetMacro(SecondaryPanelSize, int);
   vtkSetMacro(SecondaryPanelSize, int);
 
-  /// Set/Get the size of the last selected module
+  /// Set/Get the name of the last selected module
+  /// Note: this is property is no longer used and may be removed in the future.
   vtkGetStringMacro(SelectedModule);
   vtkSetStringMacro(SelectedModule);
 
@@ -86,7 +125,7 @@ public:
   bool IsMaximizedViewNode(vtkMRMLAbstractViewNode* viewNode);
 
   /// Get node XML tag name (like Volume, Model)
-  const char* GetNodeTagName() override {return "Layout";}
+  const char* GetNodeTagName() override { return "Layout"; }
 
   enum SlicerLayout
   {
@@ -104,7 +143,6 @@ public:
     SlicerLayoutNone = 14,
     SlicerLayoutDual3DView = 15,
     SlicerLayoutConventionalWidescreenView = 16,
-    SlicerLayoutCompareWidescreenView = 17,
     SlicerLayoutTriple3DEndoscopyView = 19, // Up to here, all layouts are Slicer 3 compatible
     SlicerLayoutThreeOverThreeView = 21,
     SlicerLayoutFourOverFourView = 22,
@@ -187,17 +225,15 @@ protected:
   int ViewArrangement;
   int NumberOfCompareViewRows;
   int NumberOfCompareViewColumns;
-  int NumberOfCompareViewLightboxRows;
-  int NumberOfCompareViewLightboxColumns;
 
-  char *SelectedModule;
+  char* SelectedModule;
 
   int MainPanelSize;
   int SecondaryPanelSize;
 
   std::map<int, std::string> Layouts;
-  char*                      CurrentLayoutDescription;
-  vtkXMLDataElement*         LayoutRootElement;
+  char* CurrentLayoutDescription;
+  vtkXMLDataElement* LayoutRootElement;
 };
 
 #endif

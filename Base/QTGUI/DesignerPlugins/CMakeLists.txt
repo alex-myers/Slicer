@@ -27,31 +27,15 @@ set(${KIT}_SRCS
   qSlicerWidgetPlugin.h
   )
 
-# Headers that should run through moc
-set(${KIT}_MOC_SRCS
-  qSlicerQTGUIPlugins.h
-
-  qSlicerDirectoryListViewPlugin.h
-  qSlicerModulePanelPlugin.h
-  qSlicerModulesListViewPlugin.h
-  qSlicerMouseModeToolBarPlugin.h
-  qSlicerWidgetPlugin.h
-  )
-
 set(${KIT}_TARGET_LIBRARIES
   qSlicerBaseQTGUI
+  qSlicerBaseQTCLI
   )
-if(Slicer_BUILD_CLI_SUPPORT)
-  list(APPEND ${KIT}_TARGET_LIBRARIES
-    qSlicerBaseQTCLI
-    )
-endif()
 
 ctkMacroBuildQtDesignerPlugin(
   NAME ${PROJECT_NAME}
   EXPORT_DIRECTIVE ${${KIT}_EXPORT}
   FOLDER "Core-Base"
   SRCS ${${KIT}_SRCS}
-  MOC_SRCS ${${KIT}_MOC_SRCS}
   TARGET_LIBRARIES ${${KIT}_TARGET_LIBRARIES}
   )

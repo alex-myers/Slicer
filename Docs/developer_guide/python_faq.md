@@ -158,7 +158,7 @@ cliNode = slicer.cli.runSync(slicer.modules.simpleregiongrowingsegmentation, Non
 
 ### Running CLI in the background
 
-If the CLI module is executed using `slicer.cli.run` method then the CLI module runs in a background thread, so the call to `startProcessing` will return right away and the user interface will not be blocked. The `slicer.cli.run` call returns a cliNode (an instance of [vtkMRMLCommandLineModuleNode](https://slicer.org/doc/html/classvtkMRMLCommandLineModuleNode.html)) which can be used to monitor the progress of the module.
+If the CLI module is executed using `slicer.cli.run` method then the CLI module runs in a background thread, so the call to `startProcessing` will return right away and the user interface will not be blocked. The `slicer.cli.run` call returns a cliNode (an instance of [vtkMRMLCommandLineModuleNode](slicerapidocs:classvtkMRMLCommandLineModuleNode.html)) which can be used to monitor the progress of the module.
 
 In this example we create a simple callback `onProcessingStatusUpdate` that will be called whenever the cliNode is modified.  The status will tell you if the nodes is Pending, Running, or Completed.
 
@@ -328,7 +328,7 @@ So that the following code can run within `MySlicerModule.py`:
 from MySlicerModuleLib import utils, cool_maths
 ```
 
-By default, only the Slicer module (`MySlicerModule.py`) will be included in the package distributed via the [Extensions Manager](../user_guide/extensions_manager) (see [a related issue on GitHub](https://github.com/Slicer/ExtensionsIndex/issues/1749)).
+By default, only the Slicer module (`MySlicerModule.py`) will be included in the package distributed via the [Extensions Manager](../user_guide/extensions.md#extensions-manager) (see [a related issue on GitHub](https://github.com/Slicer/ExtensionsIndex/issues/1749)).
 To make sure all the necessary files are included in the package, the `CMakeLists.txt` file associated with the Slicer module needs to be modified.
 Initially, the second section of `CMakeLists.txt` will look like this:
 

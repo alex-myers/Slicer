@@ -13,14 +13,15 @@ set(qtmodules
   SubjectHierarchy
   Colors # Colors depends on SubjectHierarchy
   Annotations
-  SceneViews
-  Markups # Markups depends on SceneViews (for testing) and Annotations
   Transforms
+  GeneralizedReformat
   Data
   Models
   Plots
   Segmentations
   Sequences
+  SceneViews # Scene views depends on Sequences
+  Markups # Markups depends on SceneViews (for testing) and Annotations
   SlicerWelcome
   Tables
   Texts
@@ -28,12 +29,8 @@ set(qtmodules
   ViewControllers
   Volumes
   VolumeRendering # Volume Rendering depends of Volumes
+  CropVolume # CropVolume depends of Volumes
   )
-if(Slicer_BUILD_CLI_SUPPORT)
-  list(APPEND qtmodules
-    CropVolume
-    )
-endif()
 
 include(SlicerCheckModuleEnabled)
 

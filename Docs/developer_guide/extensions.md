@@ -1,12 +1,12 @@
 # Extensions
 
-Developers can create extensions to provide additional features to users. See an overview of extensions in the [Extensions manager page](../user_guide/extensions_manager).
+Developers can create extensions to provide additional features to users. See an overview of extensions in the [Extensions manager page](../user_guide/extensions.md#extensions-manager).
 
 ## Create an extension
 
 If you have developed a script or module that you would like to share with others then it is recommended to submit it to the Slicer Extensions Index. Indexed extensions get listed in the Extensions Manager in Slicer and user can install them by a few mouse clicks.
 
-- Scan through the [user](../user_guide/extensions_manager.md) and [developer](https://www.slicer.org/wiki/Documentation/Nightly/Developers/FAQ/Extensions) extension FAQs
+- Scan through the [user](../user_guide/extensions.md#extensions-manager) and [developer](https://www.slicer.org/wiki/Documentation/Nightly/Developers/FAQ/Extensions) extension FAQs
 - Inform a community about your plans on the [Slicer forum](https://discourse.slicer.org) to get information about potential parallel efforts (other developers may already work on a similar idea and you could join or build on each other's work), past efforts (related tools might have been available in earlier Slicer versions or in other software that you may reuse), and get early feedback from prospective users. You may also seek advice on the name of your extension and how to organize features into modules. All these can save you a lot of time in the long term.
 - If you have not done already, use the [Extension Wizard](/user_guide/modules/extensionwizard.md#extension-wizard) module in Slicer to create an extension that will contain your module(s).
 - If developing [C++ loadable or CLI modules](module_overview.md) (not needed if developing in Python):
@@ -716,7 +716,7 @@ Extensions integrating third party libraries should follow the [SuperBuild exten
 
 Each third party libraries will be configured and built using a dedicated `External_MyLib.cmake` file, the install location of binaries and libraries should be set to `Slicer_INSTALL_BIN_DIR` and `Slicer_INSTALL_LIB_DIR`.
 
-Also, starting with [Slicer r25959](http://viewvc.slicer.org/viewvc.cgi/Slicer4?view=revision&revision=25959), extension can package python modules and packages using `PYTHON_SITE_PACKAGES_SUBDIR` CMake variable to specify the install destination.
+Also, starting with [Slicer v4.8.0](https://github.com/Slicer/Slicer/releases/tag/v4.8.0) (introduced in [this commit](https://github.com/Slicer/Slicer/commit/b16753775e49bca14c456a4b45803e8fb9e97eab)), extension can package python modules and packages using `PYTHON_SITE_PACKAGES_SUBDIR` CMake variable to specify the install destination.
 
 These relative paths are the one that the extensions manager will consider when generating the launcher and application settings for a given extension.
 

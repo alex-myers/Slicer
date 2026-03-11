@@ -55,12 +55,14 @@ class vtkProp;
 class QFrame;
 
 //-----------------------------------------------------------------------------
-class qSlicerSegmentEditorAbstractEffectPrivate: public QObject
+class qSlicerSegmentEditorAbstractEffectPrivate : public QObject
 {
   Q_OBJECT
   Q_DECLARE_PUBLIC(qSlicerSegmentEditorAbstractEffect);
+
 protected:
   qSlicerSegmentEditorAbstractEffect* const q_ptr;
+
 public:
   qSlicerSegmentEditorAbstractEffectPrivate(qSlicerSegmentEditorAbstractEffect& object);
   ~qSlicerSegmentEditorAbstractEffectPrivate() override;
@@ -68,8 +70,9 @@ signals:
   // Signals that are used for effects to request operations from the editor
   // without having any dependency on the editor.
   void selectEffectSignal(QString);
-  void updateVolumeSignal(void*,bool&);
+  void updateVolumeSignal(void*, bool&);
   void saveStateForUndoSignal();
+
 public:
   /// Segment editor parameter set node
   vtkWeakPointer<vtkMRMLSegmentEditorNode> ParameterSetNode;
@@ -108,6 +111,8 @@ public:
   /// Changing it does not change the reference geometry of the segment, it is just a copy,
   /// for convenience.
   vtkWeakPointer<vtkOrientedImageData> ReferenceGeometryImage;
+
+  vtkWeakPointer<vtkSlicerSegmentEditorLogic> Logic;
 };
 
 #endif

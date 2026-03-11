@@ -28,15 +28,15 @@ class vtkMRMLVolumeNode;
 class VTK_MRML_EXPORT vtkMRMLVolumeArchetypeStorageNode : public vtkMRMLStorageNode
 {
 public:
-  static vtkMRMLVolumeArchetypeStorageNode *New();
-  vtkTypeMacro(vtkMRMLVolumeArchetypeStorageNode,vtkMRMLStorageNode);
+  static vtkMRMLVolumeArchetypeStorageNode* New();
+  vtkTypeMacro(vtkMRMLVolumeArchetypeStorageNode, vtkMRMLStorageNode);
   void PrintSelf(ostream& os, vtkIndent indent) override;
 
   vtkMRMLNode* CreateNodeInstance() override;
 
   ///
   /// Read node attributes from XML file
-  void ReadXMLAttributes( const char** atts) override;
+  void ReadXMLAttributes(const char** atts) override;
 
   ///
   /// Do a temp write to update the file list in this storage node with all
@@ -46,7 +46,7 @@ public:
   /// write.
   /// If move is false then the temporary directory is removed
   /// and an empty string is returned.
-  std::string UpdateFileList(vtkMRMLNode *refNode, bool move=false);
+  std::string UpdateFileList(vtkMRMLNode* refNode, bool move = false);
 
   ///
   /// Write this node's information to a MRML file in XML format.
@@ -54,11 +54,11 @@ public:
 
   ///
   /// Copy the node's attributes to this object
-  void Copy(vtkMRMLNode *node) override;
+  void Copy(vtkMRMLNode* node) override;
 
   ///
   /// Get node XML tag name (like Storage, Model)
-  const char* GetNodeTagName() override {return "VolumeArchetypeStorage";}
+  const char* GetNodeTagName() override { return "VolumeArchetypeStorage"; }
 
   ///
   /// Center image on read
@@ -86,6 +86,11 @@ public:
   vtkBooleanMacro(ForceRightHandedIJKCoordinateSystem, bool);
   //@}
 
+  /// Convert voxel vector type enum from vtkITK type to MRML type
+  static int ConvertVoxelVectorTypeVTKITKToMRML(int vtkitkType);
+  /// Convert voxel vector type enum from MRML type to vtkITK type
+  static int ConvertVoxelVectorTypeMRMLToVTKITK(int mrmlType);
+
   /// Return true if the reference node is supported by the storage node
   bool CanReadInReferenceNode(vtkMRMLNode* refNode) override;
   bool CanWriteFromReferenceNode(vtkMRMLNode* refNode) override;
@@ -112,21 +117,18 @@ protected:
   /// Initialize all the supported write file types
   void InitializeSupportedWriteFileTypes() override;
 
-  vtkITKArchetypeImageSeriesReader* InstantiateVectorVolumeReader(const std::string &fullName);
-
-  void ConvertSpatialVectorVoxelsBetweenRasLps(vtkImageData* imageData);
+  vtkITKArchetypeImageSeriesReader* InstantiateVectorVolumeReader(const std::string& fullName);
 
   /// Read data and set it in the referenced node
-  int ReadDataInternal(vtkMRMLNode *refNode) override;
+  int ReadDataInternal(vtkMRMLNode* refNode) override;
 
   /// Write data from a referenced node
-  int WriteDataInternal(vtkMRMLNode *refNode) override;
+  int WriteDataInternal(vtkMRMLNode* refNode) override;
 
   int CenterImage;
   int SingleFile;
   int UseOrientationFromFile;
   bool ForceRightHandedIJKCoordinateSystem;
-
 };
 
 #endif

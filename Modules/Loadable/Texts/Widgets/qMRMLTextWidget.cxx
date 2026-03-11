@@ -32,15 +32,15 @@
 #include <QStyle>
 
 //-----------------------------------------------------------------------------
-class qMRMLTextWidgetPrivate
-  : public Ui_qMRMLTextWidget
+class qMRMLTextWidgetPrivate : public Ui_qMRMLTextWidget
 {
   Q_DECLARE_PUBLIC(qMRMLTextWidget);
+
 protected:
   qMRMLTextWidget* const q_ptr;
 
 public:
-  qMRMLTextWidgetPrivate( qMRMLTextWidget& object);
+  qMRMLTextWidgetPrivate(qMRMLTextWidget& object);
   ~qMRMLTextWidgetPrivate();
   virtual void setupUi(qMRMLTextWidget*);
 
@@ -98,7 +98,7 @@ void qMRMLTextWidgetPrivate::setEditing(bool editing)
 
 //-----------------------------------------------------------------------------
 qMRMLTextWidget::qMRMLTextWidget(QWidget* parentWidget)
-  : Superclass( parentWidget )
+  : Superclass(parentWidget)
   , d_ptr(new qMRMLTextWidgetPrivate(*this))
 {
   this->setup();
@@ -152,14 +152,14 @@ void qMRMLTextWidget::setMRMLTextNode(vtkMRMLTextNode* node)
 }
 
 //------------------------------------------------------------------------------
-vtkMRMLTextNode* qMRMLTextWidget::mrmlTextNode()const
+vtkMRMLTextNode* qMRMLTextWidget::mrmlTextNode() const
 {
   Q_D(const qMRMLTextWidget);
   return d->CurrentTextNode;
 }
 
 //------------------------------------------------------------------------------
-vtkMRMLNode* qMRMLTextWidget::mrmlNode()const
+vtkMRMLNode* qMRMLTextWidget::mrmlNode() const
 {
   Q_D(const qMRMLTextWidget);
   return d->CurrentTextNode;
@@ -238,7 +238,7 @@ void qMRMLTextWidget::updateWidgetFromMRML()
     d->TextEdit->setText(text.c_str());
     d->TextNodeContentsModified = false;
     QTextCursor cursor = d->TextEdit->textCursor();
-    position = std::min(position, d->TextEdit->toPlainText().length());
+    position = std::min(position, static_cast<int>(d->TextEdit->toPlainText().length()));
     cursor.setPosition(position);
     d->TextEdit->setTextCursor(cursor);
   }

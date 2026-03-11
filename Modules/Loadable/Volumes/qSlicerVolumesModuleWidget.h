@@ -29,18 +29,18 @@
 class qSlicerVolumesModuleWidgetPrivate;
 class vtkMRMLNode;
 
-class Q_SLICER_QTMODULES_VOLUMES_EXPORT qSlicerVolumesModuleWidget :
-  public qSlicerAbstractModuleWidget
+class Q_SLICER_QTMODULES_VOLUMES_EXPORT qSlicerVolumesModuleWidget : public qSlicerAbstractModuleWidget
 {
   Q_OBJECT
 
 public:
-
   typedef qSlicerAbstractModuleWidget Superclass;
-  qSlicerVolumesModuleWidget(QWidget *parent=nullptr);
+  qSlicerVolumesModuleWidget(QWidget* parent = nullptr);
   ~qSlicerVolumesModuleWidget() override;
 
   bool setEditedNode(vtkMRMLNode* node, QString role = QString(), QString context = QString()) override;
+
+  void enter() override;
 
 protected:
   void setup() override;
